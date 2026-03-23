@@ -1,65 +1,107 @@
-import Image from "next/image";
+import { Show } from "@clerk/nextjs";
+import { ArrowRight, LockKeyhole, ShieldCheck, UserRoundCheck } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+
+const features = [
+  {
+    icon: ShieldCheck,
+    title: "Protected routes",
+    description:
+      "Clerk runs in proxy.ts and keeps the /dashboard experience behind an authenticated session.",
+  },
+  {
+    icon: LockKeyhole,
+    title: "Custom auth pages",
+    description:
+      "Dedicated /sign-in and /sign-up routes are ready for Clerk's prebuilt components.",
+  },
+  {
+    icon: UserRoundCheck,
+    title: "Session-aware UI",
+    description:
+      "The landing page, header, and dashboard all react to Clerk's signed-in and signed-out state.",
+  },
+] as const;
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="relative flex flex-1 overflow-hidden">
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,_rgba(17,24,39,0.12),_transparent_38%),radial-gradient(circle_at_bottom_right,_rgba(120,113,108,0.16),_transparent_30%)]" />
+      <section className="mx-auto grid w-full max-w-6xl gap-16 px-6 py-16 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,420px)] lg:py-24">
+        <div className="flex flex-col justify-center gap-8">
+          <div className="inline-flex w-fit items-center rounded-full border border-border/80 bg-background/80 px-4 py-2 text-xs font-medium tracking-[0.22em] text-muted-foreground uppercase shadow-sm backdrop-blur">
+            Next.js 16 + Clerk
+          </div>
+          <div className="space-y-6">
+            <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
+              Authentication is now first-class in PineQuest.
+            </h1>
+            <p className="max-w-2xl text-lg leading-8 text-muted-foreground">
+              Clerk is connected to the app router with dedicated sign-in and
+              sign-up pages, a protected dashboard route, and session-aware UI
+              across the app shell.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Show when="signed-out">
+              <Button asChild size="lg" className="min-w-40">
+                <Link href="/sign-up">Create account</Link>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="min-w-40">
+                <Link href="/sign-in">Open sign in</Link>
+              </Button>
+            </Show>
+            <Show when="signed-in">
+              <Button asChild size="lg" className="min-w-40">
+                <Link href="/dashboard" prefetch={false}>
+                  Open dashboard
+                </Link>
+              </Button>
+            </Show>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <div className="grid gap-4 self-center">
+          {features.map((feature) => {
+            const Icon = feature.icon;
+
+            return (
+              <article
+                key={feature.title}
+                className="rounded-3xl border border-border/70 bg-card/85 p-6 shadow-sm backdrop-blur"
+              >
+                <div className="mb-5 flex size-12 items-center justify-center rounded-2xl bg-muted text-foreground">
+                  <Icon className="size-5" />
+                </div>
+                <h2 className="text-xl font-semibold tracking-tight">
+                  {feature.title}
+                </h2>
+                <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                  {feature.description}
+                </p>
+              </article>
+            );
+          })}
+
+          <div className="rounded-3xl border border-border/70 bg-foreground p-6 text-background shadow-lg">
+            <p className="text-sm font-medium tracking-[0.22em] text-background/70 uppercase">
+              Ready to test
+            </p>
+            <p className="mt-3 text-2xl font-semibold tracking-tight">
+              Create a Clerk user and land straight in the protected dashboard.
+            </p>
+            <Link
+              href="/dashboard"
+              prefetch={false}
+              className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-background/90 transition hover:text-background"
+            >
+              Try the protected route
+              <ArrowRight className="size-4" />
+            </Link>
+          </div>
         </div>
-      </main>
-    </div>
+      </section>
+    </main>
   );
 }
