@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            service/package-lock.json
+            web/package-lock.json
+
+      - name: Install service
+        run: npm ci --prefix service
+
+      - name: Validate Prisma schema
+        working-directory: service
+        run: npx prisma validate --schema=./prisma/schema.prisma
+
+      - name: Install web
+        run: npm ci --prefix web
+
+      - name: Lint web
+        run: npm run lint --prefix web
+
+      - name: Build web
+        run: npm run build --prefix web
