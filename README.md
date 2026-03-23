@@ -6,7 +6,7 @@ The `web/` Next.js app is now wired to Clerk with:
 
 - a shared `ClerkProvider` in the app layout
 - custom `/sign-in` and `/sign-up` routes
-- a protected `/dashboard` route through `web/proxy.ts`
+- a protected `/dashboard` route through `web/middleware.ts`
 
 ## Run locally
 
