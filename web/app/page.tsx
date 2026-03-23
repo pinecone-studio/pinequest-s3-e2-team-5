@@ -8,7 +8,7 @@ const features = [
     icon: ShieldCheck,
     title: "Protected routes",
     description:
-      "Clerk runs in proxy.ts and keeps the /dashboard experience behind an authenticated session.",
+      "Clerk runs in middleware.ts and keeps the /dashboard experience behind an authenticated session.",
   },
   {
     icon: LockKeyhole,

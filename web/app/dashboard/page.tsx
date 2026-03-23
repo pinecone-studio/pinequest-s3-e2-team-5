@@ -7,7 +7,7 @@ const checks = [
   {
     icon: ShieldCheck,
     title: "Route protection",
-    description: "This page is protected by Clerk in web/proxy.ts.",
+    description: "This page is protected by Clerk in web/middleware.ts.",
   },
   {
     icon: Fingerprint,
