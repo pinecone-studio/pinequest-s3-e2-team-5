@@ -11,3 +11,16 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+model User {
+  id    String   @id @default(uuid())
+  name  String
+  email String
+  phone String
+  role  UserRole @default(STUDENT)
+}
+
+enum UserRole {
+  STUDENT
+  TEACHER
+}
