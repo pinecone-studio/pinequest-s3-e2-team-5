@@ -6,6 +6,7 @@ import {
   UserRoundCheck,
 } from "lucide-react";
 import Link from "next/link";
+import { BarChart, DoughnutChart, type ChartData } from "@/components/charts";
 import { MathBlock, MathInline } from "@/components/math";
 import { Button } from "@/components/ui/button";
 
@@ -33,6 +34,39 @@ const features = [
 const blockEquation = String.raw`\int_0^1 x^2\,dx = \frac{1}{3}`;
 
 const inlineEquation = String.raw`e^{i\pi} + 1 = 0`;
+
+const activityChartData: ChartData<"bar"> = {
+  labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+  datasets: [
+    {
+      label: "Solved quizzes",
+      data: [18, 24, 20, 31, 27, 36],
+      backgroundColor: [
+        "#111827",
+        "#1f2937",
+        "#334155",
+        "#0f766e",
+        "#0f766e",
+        "#f59e0b",
+      ],
+      borderRadius: 999,
+      borderSkipped: false,
+      maxBarThickness: 26,
+    },
+  ],
+};
+
+const progressChartData: ChartData<"doughnut"> = {
+  labels: ["Completed", "In review", "Needs retry"],
+  datasets: [
+    {
+      data: [62, 23, 15],
+      backgroundColor: ["#111827", "#0f766e", "#f59e0b"],
+      borderWidth: 0,
+      hoverOffset: 6,
+    },
+  ],
+};
 
 export default function Home() {
   return (
@@ -112,6 +146,34 @@ export default function Home() {
                 className="ml-2 text-foreground"
               />
             </p>
+          </article>
+
+          <article className="overflow-hidden rounded-3xl border border-border/70 bg-card/85 p-6 shadow-sm backdrop-blur">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium tracking-[0.22em] text-muted-foreground uppercase">
+                  Chart.js ready
+                </p>
+                <h2 className="mt-3 text-xl font-semibold tracking-tight">
+                  Charts now plug into the app with a single import.
+                </h2>
+                <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                  The registration boilerplate lives in one wrapper, so pages
+                  can render charts directly with <code>BarChart</code> or <code>DoughnutChart</code>.
+                </p>
+              </div>
+              <div className="hidden rounded-full border border-border/70 px-3 py-1 text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase sm:block">
+                Demo data
+              </div>
+            </div>
+            <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(220px,280px)]">
+              <div className="rounded-2xl bg-muted/60 p-4">
+                <BarChart data={activityChartData} className="h-64" />
+              </div>
+              <div className="rounded-2xl bg-muted/60 p-4">
+                <DoughnutChart data={progressChartData} className="h-64" />
+              </div>
+            </div>
           </article>
 
           <div className="rounded-3xl border border-border/70 bg-foreground p-6 text-background shadow-lg">
