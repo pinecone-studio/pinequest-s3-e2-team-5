@@ -1,0 +1,45 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Student {
+  id String @id
+
+  fullName String
+  email    String
+  phone    String
+
+  exams Exam[]
+}
+
+model Teacher {
+  id String @id
+
+  fullName String
+  email    String
+  phone    String
+
+  exams Exam[]
+}
+
+model Exam {
+  id String @id @default(uuid())
+
+  name String
+
+  student   Student? @relation(fields: [studentId], references: [id])
+  studentId String?
+
+  teacher   Teacher @relation(fields: [teacherId], references: [id])
+  teacherId String
+}
