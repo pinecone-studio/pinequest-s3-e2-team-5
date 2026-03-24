@@ -1,6 +1,12 @@
 import { Show } from "@clerk/nextjs";
-import { ArrowRight, LockKeyhole, ShieldCheck, UserRoundCheck } from "lucide-react";
+import {
+  ArrowRight,
+  LockKeyhole,
+  ShieldCheck,
+  UserRoundCheck,
+} from "lucide-react";
 import Link from "next/link";
+import { MathBlock, MathInline } from "@/components/math";
 import { Button } from "@/components/ui/button";
 
 const features = [
@@ -23,6 +29,10 @@ const features = [
       "The landing page, header, and dashboard all react to Clerk's signed-in and signed-out state.",
   },
 ] as const;
+
+const blockEquation = String.raw`\int_0^1 x^2\,dx = \frac{1}{3}`;
+
+const inlineEquation = String.raw`e^{i\pi} + 1 = 0`;
 
 export default function Home() {
   return (
@@ -83,6 +93,26 @@ export default function Home() {
               </article>
             );
           })}
+
+          <article className="overflow-hidden rounded-3xl border border-border/70 bg-card/85 p-6 shadow-sm backdrop-blur">
+            <p className="text-sm font-medium tracking-[0.22em] text-muted-foreground uppercase">
+              KaTeX ready
+            </p>
+            <h2 className="mt-3 text-xl font-semibold tracking-tight">
+              Formula rendering is available in the app shell.
+            </h2>
+            <MathBlock
+              math={blockEquation}
+              className="mt-4 overflow-x-auto rounded-2xl bg-muted/70 px-4 py-5 text-foreground"
+            />
+            <p className="mt-4 text-sm leading-7 text-muted-foreground">
+              Inline math also works:
+              <MathInline
+                math={inlineEquation}
+                className="ml-2 text-foreground"
+              />
+            </p>
+          </article>
 
           <div className="rounded-3xl border border-border/70 bg-foreground p-6 text-background shadow-lg">
             <p className="text-sm font-medium tracking-[0.22em] text-background/70 uppercase">
