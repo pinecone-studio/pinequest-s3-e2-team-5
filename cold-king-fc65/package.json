@@ -19,6 +19,8 @@
 		"wrangler": "^4.76.0"
 	},
 	"dependencies": {
+		"@clerk/backend": "^3.2.2",
+		"@clerk/nextjs": "^7.0.6",
 		"@prisma/adapter-pg": "^7.5.0",
 		"@prisma/client": "^7.5.0",
 		"dotenv": "^17.3.1",
