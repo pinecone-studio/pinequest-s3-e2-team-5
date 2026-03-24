@@ -7,7 +7,6 @@ import { useEffect, useState, type FormEvent } from "react";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
 import { getRoleLabel, roleOptions, type UserRole } from "@/lib/auth-role";
-import { Phone } from "lucide-react";
 
 function getErrorMessages(errors: unknown) {
   if (!Array.isArray(errors)) {

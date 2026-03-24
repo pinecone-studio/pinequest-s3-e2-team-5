@@ -25,14 +25,14 @@ jobs:
           node-version: 20
           cache: npm
           cache-dependency-path: |
-            service/package-lock.json
+            cold-king-fc65/package-lock.json
             web/package-lock.json
 
-      - name: Install service
-        run: npm ci --prefix service
+      - name: Install backend
+        run: npm ci --prefix cold-king-fc65
 
       - name: Validate Prisma schema
-        working-directory: service
+        working-directory: cold-king-fc65
         run: npx prisma validate --schema=./prisma/schema.prisma
 
       - name: Install web
