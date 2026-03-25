@@ -1,0 +1,1 @@
+ALTER TABLE `choices` ADD `label` text NOT NULL;
