@@ -34,8 +34,11 @@ export default async function DashboardPage() {
     user?.primaryEmailAddress?.emailAddress ?? "No primary email returned";
   const rawRole = user?.unsafeMetadata?.role;
   const rawFullName = user?.unsafeMetadata?.fullName;
+  const rawManagerName = user?.unsafeMetadata?.managerName;
   const rawPhone = user?.unsafeMetadata?.phone;
   const rawSchool = user?.unsafeMetadata?.school;
+  const rawAddress = user?.unsafeMetadata?.address;
+  const rawAimag = user?.unsafeMetadata?.aimag;
   const rawGrade = user?.unsafeMetadata?.grade;
   const rawClassName = user?.unsafeMetadata?.className;
   const rawInviteCode = user?.unsafeMetadata?.inviteCode;
@@ -47,13 +50,18 @@ export default async function DashboardPage() {
       : displayName;
   const phone = typeof rawPhone === "string" ? rawPhone : "";
   const school = typeof rawSchool === "string" ? rawSchool : "";
+  const managerName = typeof rawManagerName === "string" ? rawManagerName : "";
+  const address = typeof rawAddress === "string" ? rawAddress : "";
+  const aimag = typeof rawAimag === "string" ? rawAimag : "";
   const grade = typeof rawGrade === "string" ? rawGrade : "";
   const className = typeof rawClassName === "string" ? rawClassName : "";
   const inviteCode = typeof rawInviteCode === "string" ? rawInviteCode : "";
   const subject = typeof rawSubject === "string" ? rawSubject : "";
   const roleLabel = getRoleLabel(role);
   const roleDescription =
-    role === "teacher"
+    role === "school"
+      ? "Your school manager account is ready for approving teachers and managing school-level settings."
+      : role === "teacher"
       ? "Your teacher account is ready for managing learners, creating assessments, and reviewing outcomes."
       : "Your student account is ready for joining classes, taking exams, and following your progress.";
 
@@ -119,6 +127,9 @@ export default async function DashboardPage() {
               className={className}
               inviteCode={inviteCode}
               subject={subject}
+              managerName={managerName}
+              address={address}
+              aimag={aimag}
               role={role}
             />
             <Button
