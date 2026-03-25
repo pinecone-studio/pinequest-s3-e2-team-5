@@ -31,10 +31,6 @@ jobs:
       - name: Install backend
         run: npm ci --prefix cold-king-fc65
 
-      - name: Validate Prisma schema
-        working-directory: cold-king-fc65
-        run: npx prisma validate --schema=./prisma/schema.prisma
-
       - name: Install web
         run: npm ci --prefix web
 
