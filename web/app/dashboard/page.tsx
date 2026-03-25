@@ -1,6 +1,7 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { ArrowRight, Fingerprint, Mail, ShieldCheck } from "lucide-react";
 import Link from "next/link";
+import { CloudflareStudentSync } from "@/components/auth/cloudflare-student-sync";
 import { Button } from "@/components/ui/button";
 import { getRoleLabel, isUserRole } from "@/lib/auth-role";
 
@@ -32,7 +33,14 @@ export default async function DashboardPage() {
   const email =
     user?.primaryEmailAddress?.emailAddress ?? "No primary email returned";
   const rawRole = user?.unsafeMetadata?.role;
+  const rawFullName = user?.unsafeMetadata?.fullName;
+  const rawPhone = user?.unsafeMetadata?.phone;
   const role = isUserRole(rawRole) ? rawRole : "student";
+  const fullName =
+    typeof rawFullName === "string" && rawFullName.trim()
+      ? rawFullName
+      : displayName;
+  const phone = typeof rawPhone === "string" ? rawPhone : "";
   const roleLabel = getRoleLabel(role);
   const roleDescription =
     role === "teacher"
@@ -92,6 +100,12 @@ export default async function DashboardPage() {
             <p className="mt-2 break-all text-sm leading-7 text-background/80">
               {email}
             </p>
+            <CloudflareStudentSync
+              email={email}
+              fullName={fullName}
+              phone={phone}
+              role={role}
+            />
             <Button
               asChild
               variant="secondary"
