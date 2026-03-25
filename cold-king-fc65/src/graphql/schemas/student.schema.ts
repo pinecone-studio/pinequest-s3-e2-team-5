@@ -28,7 +28,15 @@ export const studentTypeDefs = gql`
         inviteCode: String!
     }
 
+    input registerStudentByClassCodeInput {
+        fullName: String!
+        email: String!
+        phone: String!
+        inviteCode: String!
+    }
+
     type Mutation{
         upsertStudent(input: upsertStudentInput!): Student 
+        registerStudentByClassCode(input: registerStudentByClassCodeInput!): Student
     }
 `

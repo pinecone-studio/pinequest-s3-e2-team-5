@@ -3,9 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, FileText, Users } from "lucide-react";
+import { LayoutGrid, FileText, Users, School } from "lucide-react";
 
 const navItems = [
+  {
+    label: "Сургууль хүсэлт",
+    href: "/teacher",
+    icon: School,
+  },
   {
     label: "Хяналтын самбар",
     href: "/teacher/dashboard",
@@ -40,7 +45,10 @@ export function TeacherHeader() {
         <nav className="flex items-center gap-8 lg:gap-10">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const isActive =
+              item.href === "/teacher"
+                ? pathname === item.href
+                : pathname === item.href || pathname.startsWith(`${item.href}/`);
 
             return (
               <Link

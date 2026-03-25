@@ -2,9 +2,6 @@ type SyncStudentInput = {
   fullName: string;
   email: string;
   phone: string;
-  school: string;
-  grade: string;
-  className: string;
   inviteCode: string;
 };
 
@@ -39,15 +36,18 @@ type SyncResponse = {
     upsertStudent?: {
       id: string;
     } | null;
-    upsertTeacher?: {
+    registerStudentByClassCode?: {
+      id: string;
+    } | null;
+    requestTeacherAccess?: {
       id: string;
     } | null;
   };
 };
 
-const upsertStudentMutation = `
-  mutation SyncStudentProfile($input: upsertStudentInput!) {
-    upsertStudent(input: $input) {
+const registerStudentByClassCodeMutation = `
+  mutation RegisterStudentByClassCode($input: registerStudentByClassCodeInput!) {
+    registerStudentByClassCode(input: $input) {
       id
     }
   }
@@ -61,9 +61,9 @@ const upsertSchoolMutation = `
   }
 `;
 
-const upsertTeacherMutation = `
-  mutation SyncTeacherProfile($input: upsertTeacherInput!) {
-    upsertTeacher(input: $input) {
+const requestTeacherAccessMutation = `
+  mutation RequestTeacherAccess($input: requestTeacherAccessInput!) {
+    requestTeacherAccess(input: $input) {
       id
     }
   }
@@ -98,8 +98,8 @@ export async function syncRoleProfileToCloudflare({
     role === "school"
       ? upsertSchoolMutation
       : role === "teacher"
-        ? upsertTeacherMutation
-        : upsertStudentMutation;
+        ? requestTeacherAccessMutation
+        : registerStudentByClassCodeMutation;
   const response = await fetch(apiUrl, {
     method: "POST",
     headers: {
@@ -129,8 +129,8 @@ export async function syncRoleProfileToCloudflare({
     role === "school"
       ? payload.data?.upsertSchoolProfile?.id
       : role === "teacher"
-        ? payload.data?.upsertTeacher?.id
-        : payload.data?.upsertStudent?.id;
+        ? payload.data?.requestTeacherAccess?.id
+        : payload.data?.registerStudentByClassCode?.id;
 
   if (!recordId) {
     throw new Error("Cloudflare sync did not return a profile record.");

@@ -10,6 +10,10 @@ export const schoolTypeDefs = gql`
         aimag: String!
     }
 
+    type Query {
+        schools: [School]!
+    }
+
     input upsertSchoolInput {
         schoolName: String!
         email: String!

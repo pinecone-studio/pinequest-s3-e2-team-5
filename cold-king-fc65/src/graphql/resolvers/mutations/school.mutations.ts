@@ -1,8 +1,26 @@
 import { eq } from "drizzle-orm";
+import { mockSchools } from "../../../config/mock-schools";
 import { schools } from "../../../db/schemas/school.schema";
 import type { GraphQLContext } from "../../../server";
 
 export const schoolMutation = {
+	Query: {
+		schools: async (_: unknown, __: unknown, context: GraphQLContext) => {
+			if (!context.auth.userId || !context.auth.isAuthenticated) {
+				throw new Error("Unauthorized");
+			}
+
+			const dbSchools = await context.db.select().from(schools).all();
+			const existingNames = new Set(
+				dbSchools.map((item) => item.schoolName.trim().toLowerCase()),
+			);
+			const missingMocks = mockSchools.filter(
+				(item) => !existingNames.has(item.schoolName.trim().toLowerCase()),
+			);
+
+			return [...dbSchools, ...missingMocks];
+		},
+	},
 	Mutation: {
 		upsertSchoolProfile: async (
 			_: unknown,

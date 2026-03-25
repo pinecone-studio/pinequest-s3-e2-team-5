@@ -1,9 +1,12 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { ArrowRight, Fingerprint, Mail, ShieldCheck } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { CloudflareStudentSync } from "@/components/auth/cloudflare-student-sync";
+import { SchoolOnboardingTestPanel } from "@/components/school/school-onboarding-test-panel";
+import { SchoolTeacherApprovals } from "@/components/school/school-teacher-approvals";
 import { Button } from "@/components/ui/button";
-import { getRoleLabel, isUserRole } from "@/lib/auth-role";
+import { getRoleLabel, isUserRole, type UserRole } from "@/lib/auth-role";
 
 const checks = [
   {
@@ -43,7 +46,12 @@ export default async function DashboardPage() {
   const rawClassName = user?.unsafeMetadata?.className;
   const rawInviteCode = user?.unsafeMetadata?.inviteCode;
   const rawSubject = user?.unsafeMetadata?.subject;
-  const role = isUserRole(rawRole) ? rawRole : "student";
+  const role: UserRole | null = isUserRole(rawRole) ? rawRole : null;
+
+  if (role === "teacher") {
+    redirect("/teacher");
+  }
+
   const fullName =
     typeof rawFullName === "string" && rawFullName.trim()
       ? rawFullName
@@ -57,13 +65,13 @@ export default async function DashboardPage() {
   const className = typeof rawClassName === "string" ? rawClassName : "";
   const inviteCode = typeof rawInviteCode === "string" ? rawInviteCode : "";
   const subject = typeof rawSubject === "string" ? rawSubject : "";
-  const roleLabel = getRoleLabel(role);
+  const roleLabel = role ? getRoleLabel(role) : "Account";
   const roleDescription =
     role === "school"
       ? "Your school manager account is ready for approving teachers and managing school-level settings."
-      : role === "teacher"
-      ? "Your teacher account is ready for managing learners, creating assessments, and reviewing outcomes."
-      : "Your student account is ready for joining classes, taking exams, and following your progress.";
+      : role === "student"
+        ? "Your student account is ready for joining classes, taking exams, and following your progress."
+        : "Your role metadata is still syncing. Please wait a few seconds and refresh.";
 
   return (
     <main className="relative flex flex-1 overflow-hidden">
@@ -80,6 +88,19 @@ export default async function DashboardPage() {
             {roleDescription}
           </p>
         </div>
+
+        {role === "school" ? (
+          <>
+            <SchoolOnboardingTestPanel
+              email={email}
+              schoolName={school}
+              managerName={managerName}
+              address={address}
+              aimag={aimag}
+            />
+            <SchoolTeacherApprovals schoolName={school} />
+          </>
+        ) : null}
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="grid gap-4 md:grid-cols-3">
@@ -118,20 +139,22 @@ export default async function DashboardPage() {
             <p className="mt-2 break-all text-sm leading-7 text-background/80">
               {email}
             </p>
-            <CloudflareStudentSync
-              email={email}
-              fullName={fullName}
-              phone={phone}
-              school={school}
-              grade={grade}
-              className={className}
-              inviteCode={inviteCode}
-              subject={subject}
-              managerName={managerName}
-              address={address}
-              aimag={aimag}
-              role={role}
-            />
+            {role ? (
+              <CloudflareStudentSync
+                email={email}
+                fullName={fullName}
+                phone={phone}
+                school={school}
+                grade={grade}
+                className={className}
+                inviteCode={inviteCode}
+                subject={subject}
+                managerName={managerName}
+                address={address}
+                aimag={aimag}
+                role={role}
+              />
+            ) : null}
             <Button
               asChild
               variant="secondary"
