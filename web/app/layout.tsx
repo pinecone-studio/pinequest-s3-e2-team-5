@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
-import { ClerkProvider, Show, UserButton } from "@clerk/nextjs";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { ClerkProvider } from "@clerk/nextjs";
 import { clerkAppearance } from "@/lib/clerk-appearance";
 import "./globals.css";
 import "katex/dist/katex.min.css";
