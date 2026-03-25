@@ -1,4 +1,3 @@
-import { getDb } from "../../../db/client";
 import { students } from "../../../db/schemas/student.schema";
 import type { GraphQLContext } from "../../../server";
 
@@ -13,21 +12,13 @@ export const studentMutation = {
 					phone: string;
 				};
 			},
-			context: {
-				env: Env,
-				auth: {
-					userId: string | null,
-					isAuthenticated: boolean
-				}
-			}
+			context: GraphQLContext
 		) => {
 			if (!context.auth.userId || !context.auth.isAuthenticated) {
 				throw new Error("Unauthorized");
 			}
 
-			const db = getDb(context.env.shalgalt_db);
-
-			const inserted = await db
+			const inserted = await context.db
 				.insert(students)
 				.values({
 					id: context.auth.userId,

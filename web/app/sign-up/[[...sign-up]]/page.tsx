@@ -44,6 +44,7 @@ export default function SignUpPage() {
   const { isSignedIn } = useAuth();
   const router = useRouter();
   const [role, setRole] = useState<UserRole>("student");
+  const [fullName, setFullName] = useState("");
   const [emailAddress, setEmailAddress] = useState("");
   const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
@@ -63,6 +64,8 @@ export default function SignUpPage() {
       emailAddress,
       password,
       unsafeMetadata: {
+        fullName,
+        phone,
         role,
       },
     });
@@ -223,6 +226,25 @@ export default function SignUpPage() {
                 );
               })}
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <label
+              htmlFor="fullName"
+              className="text-sm font-medium tracking-tight text-foreground"
+            >
+              Full name
+            </label>
+            <input
+              id="fullName"
+              type="text"
+              autoComplete="name"
+              className={inputClassName}
+              placeholder="Your full name"
+              value={fullName}
+              onChange={(event) => setFullName(event.target.value)}
+              required
+            />
           </div>
 
           <div className="space-y-2">
