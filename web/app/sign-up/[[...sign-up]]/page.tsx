@@ -45,16 +45,45 @@ function getGradeFromClassName(value: string) {
   return match ? match[1] : trimmed;
 }
 
+const mongoliaAimags = [
+  "Arkhangai",
+  "Bayan-Olgii",
+  "Bayankhongor",
+  "Bulgan",
+  "Darkhan-Uul",
+  "Dornod",
+  "Dornogovi",
+  "Dundgovi",
+  "Govi-Altai",
+  "Govisumber",
+  "Khentii",
+  "Khovd",
+  "Khuvsgul",
+  "Orkhon",
+  "Ovorkhangai",
+  "Omnogovi",
+  "Selenge",
+  "Sukhbaatar",
+  "Tov",
+  "Uvs",
+  "Zavkhan",
+] as const;
+
 export default function SignUpPage() {
   const { signUp, errors, fetchStatus } = useSignUp();
   const { isSignedIn } = useAuth();
   const router = useRouter();
   const [role, setRole] = useState<UserRole>("student");
   const [fullName, setFullName] = useState("");
+  const [managerName, setManagerName] = useState("");
   const [emailAddress, setEmailAddress] = useState("");
   const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
   const [school, setSchool] = useState("");
+  const [address, setAddress] = useState("");
+  const [aimag, setAimag] = useState<(typeof mongoliaAimags)[number]>(
+    mongoliaAimags[0],
+  );
   const [className, setClassName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [subject, setSubject] = useState("");
@@ -72,9 +101,12 @@ export default function SignUpPage() {
     const normalizedPhone = phone.trim();
     const metadata = {
       role,
-      fullName: fullName.trim(),
-      phone: normalizedPhone || "",
+      fullName: role === "school" ? undefined : fullName.trim(),
+      managerName: role === "school" ? managerName.trim() : undefined,
+      phone: role === "school" ? undefined : normalizedPhone || "",
       school: school.trim(),
+      address: role === "school" ? address.trim() : undefined,
+      aimag: role === "school" ? aimag : undefined,
       grade: role === "student" ? getGradeFromClassName(className) : undefined,
       className: role === "student" ? className.trim().toUpperCase() : undefined,
       inviteCode: role === "student" ? inviteCode.trim().toUpperCase() : undefined,
@@ -212,10 +244,10 @@ export default function SignUpPage() {
                 Account role
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Choose whether this account belongs to a student or a teacher.
+                Choose whether this account belongs to a school manager, teacher, or student.
               </p>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-3">
               {roleOptions.map((option) => {
                 const isActive = role === option.value;
 
@@ -250,24 +282,45 @@ export default function SignUpPage() {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label
-              htmlFor="fullName"
-              className="text-sm font-medium tracking-tight text-foreground"
-            >
-              Full name
-            </label>
-            <input
-              id="fullName"
-              type="text"
-              autoComplete="name"
-              className={inputClassName}
-              placeholder="Your full name"
-              value={fullName}
-              onChange={(event) => setFullName(event.target.value)}
-              required
-            />
-          </div>
+          {role === "school" ? (
+            <div className="space-y-2">
+              <label
+                htmlFor="managerName"
+                className="text-sm font-medium tracking-tight text-foreground"
+              >
+                Manager name
+              </label>
+              <input
+                id="managerName"
+                type="text"
+                autoComplete="name"
+                className={inputClassName}
+                placeholder="School manager full name"
+                value={managerName}
+                onChange={(event) => setManagerName(event.target.value)}
+                required
+              />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <label
+                htmlFor="fullName"
+                className="text-sm font-medium tracking-tight text-foreground"
+              >
+                Full name
+              </label>
+              <input
+                id="fullName"
+                type="text"
+                autoComplete="name"
+                className={inputClassName}
+                placeholder="Your full name"
+                value={fullName}
+                onChange={(event) => setFullName(event.target.value)}
+                required
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <label
@@ -293,7 +346,7 @@ export default function SignUpPage() {
               htmlFor="school"
               className="text-sm font-medium tracking-tight text-foreground"
             >
-              School
+              {role === "school" ? "School name" : "School"}
             </label>
             <input
               id="school"
@@ -307,7 +360,51 @@ export default function SignUpPage() {
             />
           </div>
 
-          {role === "student" ? (
+          {role === "school" ? (
+            <>
+              <div className="space-y-2">
+                <label
+                  htmlFor="address"
+                  className="text-sm font-medium tracking-tight text-foreground"
+                >
+                  Address
+                </label>
+                <input
+                  id="address"
+                  type="text"
+                  className={inputClassName}
+                  placeholder="School address"
+                  value={address}
+                  onChange={(event) => setAddress(event.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label
+                  htmlFor="aimag"
+                  className="text-sm font-medium tracking-tight text-foreground"
+                >
+                  Aimag
+                </label>
+                <select
+                  id="aimag"
+                  className={inputClassName}
+                  value={aimag}
+                  onChange={(event) =>
+                    setAimag(event.target.value as (typeof mongoliaAimags)[number])
+                  }
+                  required
+                >
+                  {mongoliaAimags.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          ) : role === "student" ? (
             <>
               <div className="space-y-2">
                 <label

@@ -13,6 +13,9 @@ type CloudflareStudentSyncProps = {
   fullName: string;
   phone: string;
   school: string;
+  managerName: string;
+  address: string;
+  aimag: string;
   grade: string;
   className: string;
   inviteCode: string;
@@ -25,6 +28,9 @@ export function CloudflareStudentSync({
   fullName,
   phone,
   school,
+  managerName,
+  address,
+  aimag,
   grade,
   className,
   inviteCode,
@@ -57,11 +63,32 @@ export function CloudflareStudentSync({
           throw new Error("Missing Clerk session token.");
         }
 
-        if (!email || !fullName || !school) {
-          throw new Error("Cloudflare sync needs name, email, and school.");
-        }
+        if (role === "school") {
+          if (!email || !school || !managerName) {
+            throw new Error("School sync needs manager name, email, and school.");
+          }
 
-        if (role === "student") {
+          if (!managerName || !address || !aimag) {
+            throw new Error("School sync needs manager name, address, and aimag.");
+          }
+
+          await syncRoleProfileToCloudflare({
+            token,
+            apiUrl,
+            role,
+            input: {
+              schoolName: school,
+              email,
+              managerName,
+              address,
+              aimag,
+            },
+          });
+        } else if (role === "student") {
+          if (!email || !fullName || !school) {
+            throw new Error("Student sync needs name, email, and school.");
+          }
+
           if (!phone || !className || !inviteCode) {
             throw new Error("Student sync needs phone, class, and invite code.");
           }
@@ -81,6 +108,10 @@ export function CloudflareStudentSync({
             },
           });
         } else {
+          if (!email || !fullName || !school) {
+            throw new Error("Teacher sync needs name, email, and school.");
+          }
+
           if (!subject) {
             throw new Error("Teacher sync needs subject.");
           }
@@ -112,6 +143,9 @@ export function CloudflareStudentSync({
     fullName,
     getToken,
     grade,
+    managerName,
+    address,
+    aimag,
     inviteCode,
     isLoaded,
     isSignedIn,
