@@ -6,6 +6,10 @@ export const studentTypeDefs = gql`
         fullName: String!
         email: String!
         phone: String!
+        school: String!
+        grade: String!
+        className: String!
+        inviteCode: String!
         exams: [Exam]!
     }
 
@@ -18,6 +22,10 @@ export const studentTypeDefs = gql`
         fullName: String!
         email: String!
         phone: String!
+        school: String!
+        grade: String!
+        className: String!
+        inviteCode: String!
     }
 
     type Mutation{

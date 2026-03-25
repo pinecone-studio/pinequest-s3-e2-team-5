@@ -12,6 +12,11 @@ type CloudflareStudentSyncProps = {
   email: string;
   fullName: string;
   phone: string;
+  school: string;
+  grade: string;
+  className: string;
+  inviteCode: string;
+  subject: string;
   role: UserRole;
 };
 
@@ -19,6 +24,11 @@ export function CloudflareStudentSync({
   email,
   fullName,
   phone,
+  school,
+  grade,
+  className,
+  inviteCode,
+  subject,
   role,
 }: CloudflareStudentSyncProps) {
   const { getToken, isLoaded, isSignedIn } = useAuth();
@@ -36,11 +46,6 @@ export function CloudflareStudentSync({
       return;
     }
 
-    if (!email || !fullName || !phone) {
-      setStatus("Cloudflare sync needs full name, email, and phone.");
-      return;
-    }
-
     hasAttemptedRef.current = true;
 
     void (async () => {
@@ -52,16 +57,47 @@ export function CloudflareStudentSync({
           throw new Error("Missing Clerk session token.");
         }
 
-        await syncRoleProfileToCloudflare({
-          token,
-          apiUrl,
-          role,
-          input: {
-            email,
-            fullName,
-            phone,
-          },
-        });
+        if (!email || !fullName || !school) {
+          throw new Error("Cloudflare sync needs name, email, and school.");
+        }
+
+        if (role === "student") {
+          if (!phone || !className || !inviteCode) {
+            throw new Error("Student sync needs phone, class, and invite code.");
+          }
+
+          await syncRoleProfileToCloudflare({
+            token,
+            apiUrl,
+            role,
+            input: {
+              fullName,
+              email,
+              phone,
+              school,
+              grade: grade || className,
+              className,
+              inviteCode,
+            },
+          });
+        } else {
+          if (!subject) {
+            throw new Error("Teacher sync needs subject.");
+          }
+
+          await syncRoleProfileToCloudflare({
+            token,
+            apiUrl,
+            role,
+            input: {
+              fullName,
+              email,
+              phone,
+              school,
+              subject,
+            },
+          });
+        }
 
         setStatus(`Cloudflare ${role} profile synced.`);
       } catch (error) {
@@ -70,7 +106,20 @@ export function CloudflareStudentSync({
         setStatus(message);
       }
     })();
-  }, [email, fullName, getToken, isLoaded, isSignedIn, phone, role]);
+  }, [
+    className,
+    email,
+    fullName,
+    getToken,
+    grade,
+    inviteCode,
+    isLoaded,
+    isSignedIn,
+    phone,
+    role,
+    school,
+    subject,
+  ]);
 
   if (!status) {
     return null;

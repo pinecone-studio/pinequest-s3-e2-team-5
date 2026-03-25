@@ -15,6 +15,13 @@
       "when": 1774422000000,
       "tag": "0001_tidy_teacher_sync",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1774430400000,
+      "tag": "0002_nifty_profile_fields",
+      "breakpoints": true
     }
   ]
 }

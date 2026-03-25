@@ -1,4 +1,5 @@
 import { students } from "../../../db/schemas/student.schema";
+import { eq } from "drizzle-orm";
 import type { GraphQLContext } from "../../../server";
 
 export const studentMutation = {
@@ -10,6 +11,10 @@ export const studentMutation = {
 					fullName: string;
 					email: string;
 					phone: string;
+					school: string;
+					grade: string;
+					className: string;
+					inviteCode: string;
 				};
 			},
 			context: GraphQLContext
@@ -18,26 +23,40 @@ export const studentMutation = {
 				throw new Error("Unauthorized");
 			}
 
-			const inserted = await context.db
+			const userId = context.auth.userId;
+			const values = {
+				fullName: args.input.fullName,
+				email: args.input.email,
+				phone: args.input.phone,
+				school: args.input.school,
+				grade: args.input.grade,
+				className: args.input.className,
+				inviteCode: args.input.inviteCode,
+			};
+
+			const existing = await context.db
+				.select({ id: students.id })
+				.from(students)
+				.where(eq(students.id, userId))
+				.get();
+
+			if (existing) {
+				return context.db
+					.update(students)
+					.set(values)
+					.where(eq(students.id, userId))
+					.returning()
+					.get();
+			}
+
+			return context.db
 				.insert(students)
 				.values({
-					id: context.auth.userId,
-					fullName: args.input.fullName,
-					email: args.input.email,
-					phone: args.input.phone,
+					id: userId,
+					...values,
 				})
-				.onConflictDoUpdate({
-					target: students.id,
-					set: {
-						fullName: args.input.fullName,
-						email: args.input.email,
-						phone: args.input.phone,
-					},
-				}).returning().get()
-
-			console.log("INSERTED:", inserted);
-
-			return inserted
+				.returning()
+				.get();
 		},
 	},
 };

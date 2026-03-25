@@ -5,4 +5,6 @@ export const teachers = sqliteTable("teachers", {
 	fullName: text().notNull(),
 	email: text().notNull(),
 	phone: text().notNull(),
+	school: text().notNull(),
+	subject: text().notNull(),
 });

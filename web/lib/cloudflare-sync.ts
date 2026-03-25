@@ -2,6 +2,18 @@ type SyncStudentInput = {
   fullName: string;
   email: string;
   phone: string;
+  school: string;
+  grade: string;
+  className: string;
+  inviteCode: string;
+};
+
+type SyncTeacherInput = {
+  fullName: string;
+  email: string;
+  phone: string;
+  school: string;
+  subject: string;
 };
 
 type SyncRole = "student" | "teacher";
@@ -22,18 +34,17 @@ type SyncResponse = {
   };
 };
 
-const syncRoleMutation = `
-  mutation SyncRoleProfile(
-    $studentInput: upsertStudentInput!
-    $teacherInput: upsertTeacherInput!
-    $isStudent: Boolean!
-    $isTeacher: Boolean!
-  ) {
-    upsertStudent(input: $studentInput) @include(if: $isStudent) {
+const upsertStudentMutation = `
+  mutation SyncStudentProfile($input: upsertStudentInput!) {
+    upsertStudent(input: $input) {
       id
     }
+  }
+`;
 
-    upsertTeacher(input: $teacherInput) @include(if: $isTeacher) {
+const upsertTeacherMutation = `
+  mutation SyncTeacherProfile($input: upsertTeacherInput!) {
+    upsertTeacher(input: $input) {
       id
     }
   }
@@ -62,8 +73,9 @@ export async function syncRoleProfileToCloudflare({
   token: string;
   apiUrl: string;
   role: SyncRole;
-  input: SyncStudentInput;
+  input: SyncStudentInput | SyncTeacherInput;
 }) {
+  const query = role === "teacher" ? upsertTeacherMutation : upsertStudentMutation;
   const response = await fetch(apiUrl, {
     method: "POST",
     headers: {
@@ -71,12 +83,9 @@ export async function syncRoleProfileToCloudflare({
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({
-      query: syncRoleMutation,
+      query,
       variables: {
-        studentInput: input,
-        teacherInput: input,
-        isStudent: role === "student",
-        isTeacher: role === "teacher",
+        input,
       },
     }),
   });

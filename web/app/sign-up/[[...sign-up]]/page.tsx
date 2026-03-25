@@ -39,6 +39,12 @@ function getErrorMessages(errors: unknown) {
 const inputClassName =
   "h-11 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground shadow-none outline-none transition-colors placeholder:text-muted-foreground focus:border-foreground/25 focus:ring-2 focus:ring-ring/30";
 
+function getGradeFromClassName(value: string) {
+  const trimmed = value.trim();
+  const match = trimmed.match(/^(\d{1,2})/);
+  return match ? match[1] : trimmed;
+}
+
 export default function SignUpPage() {
   const { signUp, errors, fetchStatus } = useSignUp();
   const { isSignedIn } = useAuth();
@@ -48,26 +54,37 @@ export default function SignUpPage() {
   const [emailAddress, setEmailAddress] = useState("");
   const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
+  const [school, setSchool] = useState("");
+  const [className, setClassName] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
+  const [subject, setSubject] = useState("");
   const [code, setCode] = useState("");
   const [pendingVerification, setPendingVerification] = useState(false);
 
   useEffect(() => {
     if (isSignedIn) {
-      router.replace("/dashboard");
+      router.replace(role === "student" ? "/student" : "/dashboard");
     }
-  }, [isSignedIn, router]);
+  }, [isSignedIn, role, router]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const normalizedPhone = phone.trim();
+    const metadata = {
+      role,
+      fullName: fullName.trim(),
+      phone: normalizedPhone || "",
+      school: school.trim(),
+      grade: role === "student" ? getGradeFromClassName(className) : undefined,
+      className: role === "student" ? className.trim().toUpperCase() : undefined,
+      inviteCode: role === "student" ? inviteCode.trim().toUpperCase() : undefined,
+      subject: role === "teacher" ? subject.trim() : undefined,
+    };
 
     const { error } = await signUp.password({
       emailAddress,
       password,
-      unsafeMetadata: {
-        fullName,
-        phone,
-        role,
-      },
+      unsafeMetadata: metadata,
     });
 
     if (error) {
@@ -95,6 +112,11 @@ export default function SignUpPage() {
       await signUp.finalize({
         navigate: ({ session, decorateUrl }) => {
           if (session?.currentTask) {
+            return;
+          }
+
+          if (role === "student") {
+            router.push("/student");
             return;
           }
 
@@ -265,24 +287,123 @@ export default function SignUpPage() {
               required
             />
           </div>
+
           <div className="space-y-2">
             <label
-              htmlFor="phone"
+              htmlFor="school"
               className="text-sm font-medium tracking-tight text-foreground"
             >
-              Phone
+              School
             </label>
             <input
-              id="phone"
-              type="phone"
-              autoComplete="phone"
+              id="school"
+              type="text"
+              autoComplete="organization"
               className={inputClassName}
-              placeholder="Your phone number"
-              value={phone}
-              onChange={(event) => setPhone(event.target.value)}
+              placeholder="School name"
+              value={school}
+              onChange={(event) => setSchool(event.target.value)}
               required
             />
           </div>
+
+          {role === "student" ? (
+            <>
+              <div className="space-y-2">
+                <label
+                  htmlFor="className"
+                  className="text-sm font-medium tracking-tight text-foreground"
+                >
+                  Class / Grade
+                </label>
+                <input
+                  id="className"
+                  type="text"
+                  className={inputClassName}
+                  placeholder="10A"
+                  value={className}
+                  onChange={(event) => setClassName(event.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label
+                  htmlFor="phone"
+                  className="text-sm font-medium tracking-tight text-foreground"
+                >
+                  Student phone
+                </label>
+                <input
+                  id="phone"
+                  type="tel"
+                  autoComplete="tel"
+                  className={inputClassName}
+                  placeholder="Student phone number"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label
+                  htmlFor="inviteCode"
+                  className="text-sm font-medium tracking-tight text-foreground"
+                >
+                  Class code
+                </label>
+                <input
+                  id="inviteCode"
+                  type="text"
+                  className={inputClassName}
+                  placeholder="TEACHER-CODE"
+                  value={inviteCode}
+                  onChange={(event) => setInviteCode(event.target.value)}
+                  required
+                />
+              </div>
+
+            </>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <label
+                  htmlFor="subject"
+                  className="text-sm font-medium tracking-tight text-foreground"
+                >
+                  Subject
+                </label>
+                <input
+                  id="subject"
+                  type="text"
+                  className={inputClassName}
+                  placeholder="Mathematics"
+                  value={subject}
+                  onChange={(event) => setSubject(event.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label
+                  htmlFor="phone"
+                  className="text-sm font-medium tracking-tight text-foreground"
+                >
+                  Phone (optional)
+                </label>
+                <input
+                  id="phone"
+                  type="tel"
+                  autoComplete="tel"
+                  className={inputClassName}
+                  placeholder="Your phone number"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                />
+              </div>
+            </>
+          )}
 
           <div className="space-y-2">
             <label

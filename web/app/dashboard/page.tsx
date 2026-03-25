@@ -35,12 +35,22 @@ export default async function DashboardPage() {
   const rawRole = user?.unsafeMetadata?.role;
   const rawFullName = user?.unsafeMetadata?.fullName;
   const rawPhone = user?.unsafeMetadata?.phone;
+  const rawSchool = user?.unsafeMetadata?.school;
+  const rawGrade = user?.unsafeMetadata?.grade;
+  const rawClassName = user?.unsafeMetadata?.className;
+  const rawInviteCode = user?.unsafeMetadata?.inviteCode;
+  const rawSubject = user?.unsafeMetadata?.subject;
   const role = isUserRole(rawRole) ? rawRole : "student";
   const fullName =
     typeof rawFullName === "string" && rawFullName.trim()
       ? rawFullName
       : displayName;
   const phone = typeof rawPhone === "string" ? rawPhone : "";
+  const school = typeof rawSchool === "string" ? rawSchool : "";
+  const grade = typeof rawGrade === "string" ? rawGrade : "";
+  const className = typeof rawClassName === "string" ? rawClassName : "";
+  const inviteCode = typeof rawInviteCode === "string" ? rawInviteCode : "";
+  const subject = typeof rawSubject === "string" ? rawSubject : "";
   const roleLabel = getRoleLabel(role);
   const roleDescription =
     role === "teacher"
@@ -104,6 +114,11 @@ export default async function DashboardPage() {
               email={email}
               fullName={fullName}
               phone={phone}
+              school={school}
+              grade={grade}
+              className={className}
+              inviteCode={inviteCode}
+              subject={subject}
               role={role}
             />
             <Button
