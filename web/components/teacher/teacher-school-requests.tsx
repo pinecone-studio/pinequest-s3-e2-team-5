@@ -21,7 +21,7 @@ type ClassroomItem = {
   createdAt: number;
 };
 
-interface myClassroomData {
+type myClassroomData = {
   classroomsByTeacher: ClassroomItem[]
 }
 
@@ -78,7 +78,8 @@ export function TeacherSchoolRequests() {
 
   useEffect(() => {
     console.log(myClassroomData)
-  }, [myClassroomData])
+    console.log(myClassroomError)
+  }, [myClassroomData, myClassroomError])
 
   const loadClassroomData = async () => {
     const token = await getToken()
@@ -141,6 +142,11 @@ export function TeacherSchoolRequests() {
       }
 
       setShowClassCode(true)
+      useEffect(() => {
+        console.log(res.error)
+
+      }, [res])
+
       setClassName("");
       await loadClassroomData();
     } catch (error) {
@@ -162,12 +168,6 @@ export function TeacherSchoolRequests() {
 
 
         <div className="mt-4 grid gap-3 md:grid-cols-[220px_1fr_auto]">
-          <select
-            className="h-11 rounded-xl border border-[#E7E8F0] bg-white px-3 text-sm"
-            value={selectedSchoolId}
-            onChange={(event) => setSelectedSchoolId(event.target.value)}
-          >
-          </select>
           <input
             className="h-11 rounded-xl border border-[#E7E8F0] bg-white px-3 text-sm"
             placeholder="Class name (ex: 10A)"
