@@ -14,7 +14,7 @@ const navItems = [
     key: "account",
   },
   {
-    href: "/student/account/myResult.tsx",
+    href: "/student/account/myResult",
     label: "Үр дүн",
     icon: BarChart2,
     key: "result",
@@ -27,15 +27,15 @@ function isNavItemActive(
 ) {
   if (key === "result") {
     return (
-      pathname === "/student/account/myResult.tsx" ||
-      pathname.startsWith("/student/account/myResult.tsx/")
+      pathname === "/student/account/myResult" ||
+      pathname.startsWith("/student/account/myResult/")
     );
   }
 
   return (
     pathname === "/student/account" ||
     (pathname.startsWith("/student/account/") &&
-      !pathname.startsWith("/student/account/myResult.tsx"))
+      !pathname.startsWith("/student/account/myResult"))
   );
 }
 
@@ -48,9 +48,9 @@ export default function Header() {
     typeof rawFullName === "string" && rawFullName.trim()
       ? rawFullName
       : [user?.lastName, user?.firstName].filter(Boolean).join(" ") ||
-        user?.firstName ||
-        user?.username ||
-        "Сурагч";
+      user?.firstName ||
+      user?.username ||
+      "Сурагч";
   const initials = displayName
     .split(/\s+/)
     .filter(Boolean)
@@ -85,11 +85,10 @@ export default function Header() {
               <Link
                 key={href}
                 href={href}
-                className={`flex items-center gap-2 rounded-full px-5 py-2 text-[14px] font-medium transition-all duration-200 ${
-                  active
-                    ? "text-[#896FD4]"
-                    : "text-gray-500 hover:bg-gray-50 hover:text-gray-800"
-                }`}
+                className={`flex items-center gap-2 rounded-full px-5 py-2 text-[14px] font-medium transition-all duration-200 ${active
+                  ? "text-[#896FD4]"
+                  : "text-gray-500 hover:bg-gray-50 hover:text-gray-800"
+                  }`}
               >
                 <Icon
                   size={15}
@@ -105,7 +104,7 @@ export default function Header() {
         <div className="ml-4 flex items-center gap-3 border-l border-[#D8DAE3] pl-5">
           <button
             type="button"
-            onClick={() => void signOut({ redirectUrl: "/student" })}
+            onClick={() => void signOut({ redirectUrl: "/sign-in" })}
             className="inline-flex h-10 items-center gap-2 rounded-full border border-[#D8DAE3] px-4 text-[13px] font-medium text-[#51475A] transition hover:border-[#8B7FE8] hover:bg-[#F7F3FF] hover:text-[#6A54D8]"
           >
             <LogOut size={14} />

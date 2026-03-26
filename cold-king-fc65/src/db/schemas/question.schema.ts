@@ -16,6 +16,4 @@ export const questions = sqliteTable('questions', {
     topic: text(),
 
     difficulty: text(),
-
-    createdAt: int({ mode: "timestamp" })
 })

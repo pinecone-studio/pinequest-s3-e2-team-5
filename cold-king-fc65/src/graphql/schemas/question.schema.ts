@@ -9,7 +9,6 @@ enum QuestionType {
     open,
     short
 }
-    scalar DateTime
 
     type Question{
         id: ID!
@@ -17,13 +16,13 @@ enum QuestionType {
         question: String!
 
         examId: String!
+        indexOnExam: Int!
 
         imageUrl: String
         videoUrl: String
 
         topic: String
         difficulty: String
-        createdAt: DateTime
     }
 
     type Query {
@@ -35,13 +34,13 @@ enum QuestionType {
         question: String!
         
         examId: String!
+        indexOnExam: Int!
 
         imageUrl: String
         videoUrl: String
 
         topic: String
         difficulty: String
-        createdAt: Int
 
         choices: [createChoiceInput!]!
     }

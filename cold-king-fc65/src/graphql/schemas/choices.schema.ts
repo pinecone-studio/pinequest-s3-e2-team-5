@@ -16,10 +16,9 @@ export const choiceTypeDefs = gql`
     }
 
     input createChoiceInput{
-        questionId: String!
+        id: String!
         text: String!
         label: String!
         isCorrect: Boolean!
     }
-
 `
