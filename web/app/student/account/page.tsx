@@ -549,7 +549,7 @@ export default function ShalgaltuudPage() {
         </p>
       </div>
 
-      <div className="mx-auto grid justify-center gap-5 [grid-template-columns:repeat(auto-fit,minmax(264px,264px))]">
+      <div className="mx-auto grid gap-10 [grid-template-columns:repeat(auto-fit,minmax(264px,264px))]">
         {exams.map((exam) => (
           <ExamCard
             key={exam.id}

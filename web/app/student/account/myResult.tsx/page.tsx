@@ -1,22 +1,14 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import {
-  BookA,
-  ChevronLeft,
-  Clock3,
-  FlaskConical,
-  NotebookText,
-  PenLine,
-  Radical,
-} from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import {
   completedExamStorageKey,
   defaultCompletedExams,
   mergeCompletedExams,
   type CompletedExamRecord,
-  type StudentExamIconKey,
 } from "../../_data/completed-exams";
+import ExamCard from "../../_component/ExamCard";
 
 type ReviewPaletteStatus = "default" | "correct" | "wrong";
 
@@ -64,7 +56,59 @@ const reviewPalette = [
   { order: 25, status: "correct" },
 ] as const satisfies { order: number; status: ReviewPaletteStatus }[];
 
-const reviewQuestions: ReviewQuestion[] = [
+const additionalReviewPrompts = [
+  "Иргэний үндсэн эрхийн нэг аль вэ?",
+  "Төрийн гурван өндөрлөгт аль нь багтдаг вэ?",
+  "Үндсэн хууль ямар үүрэгтэй вэ?",
+  "Нийгмийн бүлгийн жишээ аль вэ?",
+  "Сонгуулийн гол зорилго юу вэ?",
+  "Хариуцлагатай иргэн гэж хэнийг хэлэх вэ?",
+  "Орон нутгийн өөрөө удирдах байгууллага аль вэ?",
+  "Хууль зөрчвөл ямар үр дагавартай вэ?",
+  "Ардчилалд хэвлэл мэдээлэл ямар үүрэгтэй вэ?",
+  "Татварын үндсэн зориулалт юу вэ?",
+  "Хүний эрхийг хамгаалах байгууллага аль вэ?",
+  "Нийгмийн шударга ёс гэж юу вэ?",
+  "Улсын бэлгэдэлд аль нь хамаарах вэ?",
+  "Боловсролын гол ач холбогдол юу вэ?",
+  "Иргэний үүргийн жишээ аль вэ?",
+  "Төр ба иргэний харилцааны үндэс юу вэ?",
+  "Хуулийн өмнө хүн бүр ямар байх ёстой вэ?",
+  "Иргэний нийгмийн байгууллагын үүрэг юу вэ?",
+  "Зөрчил гарвал ямар хариуцлага үүсэх вэ?",
+  "Нийтийн ашиг сонирхол гэж юуг хэлэх вэ?",
+  "Иргэдийн оролцоо нийгэмд ямар нөлөөтэй вэ?",
+  "Төрийн байгууллага юунд захирагдах ёстой вэ?",
+] as const;
+
+const reviewOptionTemplates = [
+  [
+    { id: "a", label: "A.", text: "Хувийн сонирхлыг дээдлэх" },
+    { id: "b", label: "Б.", text: "Хуулиар олгогдсон боломж" },
+    { id: "c", label: "В.", text: "Бусдыг үл хүндэтгэх" },
+    { id: "d", label: "Г.", text: "Дүрэм зөрчих эрх" },
+  ],
+  [
+    { id: "a", label: "A.", text: "Иргэдийн дуу хоолойг тусгах" },
+    { id: "b", label: "Б.", text: "Нууцаар шийдвэр гаргах" },
+    { id: "c", label: "В.", text: "Хувийн ашиг сонирхлыг түрүүлэх" },
+    { id: "d", label: "Г.", text: "Хариуцлагаас зайлсхийх" },
+  ],
+  [
+    { id: "a", label: "A.", text: "Нийгмийн дэг журмыг хамгаалах" },
+    { id: "b", label: "Б.", text: "Зөвхөн шийтгэл өгөх" },
+    { id: "c", label: "В.", text: "Маргаан үүсгэх" },
+    { id: "d", label: "Г.", text: "Хяналтгүй орхих" },
+  ],
+  [
+    { id: "a", label: "A.", text: "Хамтын амьдралыг зохион байгуулах" },
+    { id: "b", label: "Б.", text: "Хүчээр захирах" },
+    { id: "c", label: "В.", text: "Мэдээллийг нуух" },
+    { id: "d", label: "Г.", text: "Эрхийг хязгаарлах" },
+  ],
+] as const;
+
+const baseReviewQuestions: ReviewQuestion[] = [
   {
     id: "review-q1",
     order: 1,
@@ -105,6 +149,33 @@ const reviewQuestions: ReviewQuestion[] = [
   },
 ];
 
+const generatedReviewQuestions: ReviewQuestion[] = additionalReviewPrompts.map(
+  (prompt, index) => {
+    const order = index + 4;
+    const paletteItem = reviewPalette.find((item) => item.order === order);
+    const options = reviewOptionTemplates[index % reviewOptionTemplates.length];
+    const correctOptionId = options[1].id;
+    const selectedOptionId =
+      paletteItem?.status === "wrong" ? options[2].id : correctOptionId;
+
+    return {
+      id: `review-q${order}`,
+      order,
+      prompt,
+      scoreLabel: paletteItem?.status === "wrong" ? "0/1 оноо" : "1/1 оноо",
+      type: "choice",
+      selectedOptionId,
+      correctOptionId,
+      options: [...options],
+    };
+  },
+);
+
+const reviewQuestions: ReviewQuestion[] = [
+  ...baseReviewQuestions,
+  ...generatedReviewQuestions,
+];
+
 const summaryRows = [
   { label: "Анги", value: "10-1" },
   { label: "Хугацаа", value: "28мин" },
@@ -113,79 +184,6 @@ const summaryRows = [
   { label: "Алдсан", value: "4" },
   { label: "Нийт дасгал", value: "28" },
 ] as const;
-
-function ResultIcon({ iconKey }: { iconKey: StudentExamIconKey }) {
-  const className = "h-6 w-6 text-[#1B1825]";
-  const props = { strokeWidth: 2.2, className };
-
-  if (iconKey === "radical") {
-    return <Radical {...props} />;
-  }
-
-  if (iconKey === "flaskConical") {
-    return <FlaskConical {...props} />;
-  }
-
-  if (iconKey === "bookA") {
-    return <BookA {...props} />;
-  }
-
-  return <NotebookText {...props} />;
-}
-
-function ResultCard({
-  subject,
-  topic,
-  grade,
-  minutes,
-  exercises,
-  date,
-  bg,
-  iconBg,
-  iconKey,
-  onClick,
-}: CompletedExamRecord & { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="appearance-none border-0 bg-transparent p-0 text-left"
-    >
-      <article
-        className={`flex min-h-[178px] max-w-[264px] cursor-pointer flex-col rounded-[24px] p-4 shadow-[0_10px_24px_rgba(71,54,124,0.04)] transition-transform duration-200 hover:-translate-y-1 ${bg}`}
-      >
-        <div
-          className={`mb-5 flex h-12 w-12 items-center justify-center rounded-2xl ${iconBg}`}
-        >
-          <ResultIcon iconKey={iconKey} />
-        </div>
-
-        <div>
-          <p className="text-[15px] leading-snug text-[#2A2533]">
-            <span className="font-bold">{subject}</span>{" "}
-            <span className="font-normal text-[#5E5A68]">/{topic}/</span>
-          </p>
-          <p className="mt-3 text-[13px] font-semibold text-[#3A3445]">
-            {grade}
-          </p>
-        </div>
-
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-[12px] font-medium text-[#4C4759] shadow-[0_4px_10px_rgba(17,24,39,0.04)]">
-            <Clock3 className="h-3.5 w-3.5 text-[#6E6780]" />
-            {minutes} мин
-          </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-[12px] font-medium text-[#4C4759] shadow-[0_4px_10px_rgba(17,24,39,0.04)]">
-            <PenLine className="h-3.5 w-3.5 text-[#6E6780]" />
-            {exercises} дасгал
-          </span>
-        </div>
-
-        <p className="mt-auto pt-5 text-[12px] text-[#9B98A8]">{date}</p>
-      </article>
-    </button>
-  );
-}
 
 function getPaletteClasses(status: ReviewPaletteStatus) {
   if (status === "correct") {
@@ -337,7 +335,7 @@ export default function UrDunPage() {
               <article
                 key={question.id}
                 id={`review-question-${question.order}`}
-                className="rounded-[16px] border border-[#E8E4F3] bg-white p-4 shadow-[0_4px_12px_rgba(53,31,107,0.03)]"
+                className="scroll-mt-24 rounded-[16px] border border-[#E8E4F3] bg-white p-4 shadow-[0_4px_12px_rgba(53,31,107,0.03)]"
               >
                 <div className="flex items-start justify-between gap-4">
                   <h2 className="text-[16px] font-semibold text-[#27242F]">
@@ -397,18 +395,18 @@ export default function UrDunPage() {
 
   return (
     <div>
-      <div className="mb-10">
-        <h1 className="text-[26px] font-bold tracking-tight text-[#19161F]">
+      <div className="mb-8">
+        <h1 className="text-[24px] font-bold text-gray-900">
           Миний үр дүнгүүд
         </h1>
-        <p className="mt-1 text-[14px] text-[#6E6A79]">
+        <p className="mt-1 text-[14px] text-[#5B5B5B]">
           Өмнө өгсөн шалгалтуудын дүнгүүд.
         </p>
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mx-auto grid  gap-10 [grid-template-columns:repeat(auto-fit,minmax(264px,264px))]">
         {renderedCompletedExams.map((exam) => (
-          <ResultCard
+          <ExamCard
             key={`${exam.id}-${exam.date}`}
             {...exam}
             onClick={() => {

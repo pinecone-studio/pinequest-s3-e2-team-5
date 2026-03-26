@@ -1,8 +1,17 @@
-import { Clock, PenLine } from "lucide-react";
+import {
+  BookA,
+  Clock,
+  FlaskConical,
+  NotebookText,
+  PenLine,
+  Radical,
+} from "lucide-react";
 import type { ReactNode } from "react";
+import type { StudentExamIconKey } from "../_data/completed-exams";
 
 interface ExamCardProps {
-  icon: ReactNode;
+  icon?: ReactNode;
+  iconKey?: StudentExamIconKey;
   subject: string;
   topic: string;
   grade: string;
@@ -14,8 +23,38 @@ interface ExamCardProps {
   onClick?: () => void;
 }
 
+function ExamCardIcon({
+  icon,
+  iconKey,
+}: {
+  icon?: ReactNode;
+  iconKey?: StudentExamIconKey;
+}) {
+  if (icon) {
+    return icon;
+  }
+
+  const className = "h-6 w-6 text-[#1B1825]";
+  const props = { strokeWidth: 2.2, className };
+
+  if (iconKey === "radical") {
+    return <Radical {...props} />;
+  }
+
+  if (iconKey === "flaskConical") {
+    return <FlaskConical {...props} />;
+  }
+
+  if (iconKey === "bookA") {
+    return <BookA {...props} />;
+  }
+
+  return <NotebookText {...props} />;
+}
+
 export default function ExamCard({
   icon,
+  iconKey,
   subject,
   topic,
   grade,
@@ -33,7 +72,7 @@ export default function ExamCard({
       <div
         className={`flex h-12 w-12 items-center justify-center rounded-2xl ${iconBg}`}
       >
-        {icon}
+        <ExamCardIcon icon={icon} iconKey={iconKey} />
       </div>
       <div className="mt-1">
         <p className="text-[20px] leading-snug text-gray-800">
