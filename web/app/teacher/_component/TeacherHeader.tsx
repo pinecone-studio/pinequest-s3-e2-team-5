@@ -30,13 +30,21 @@ export function TeacherHeader() {
   return (
     <header className="w-full border-b border-[#E7E8F0] bg-white">
       <div className="mx-auto flex w-full max-w-[1360px] items-center justify-between px-6 py-5 lg:px-8">
-        <div className="flex items-center gap-3">
-          <div className="relative h-10 w-10 rotate-45 rounded-[9px] bg-[#8B6FF7]" />
-          <div className="leading-tight">
-            <p className="text-[14px] font-semibold text-[#111111]">Learning</p>
-            <p className="text-[14px] font-semibold text-[#111111]">MS</p>
+        <Link href="/teacher/dashboard" className="flex items-center gap-2.5">
+          <Image
+            src="/logo.png"
+            alt="PineQuest logo"
+            width={44}
+            height={34}
+            className="h-10 w-11 object-contain"
+          />
+          <div className="flex flex-col leading-none text-black">
+            <span className="text-[16px] font-medium tracking-widest uppercase">
+              Learning
+            </span>
+            <span className="text-[17px] tracking-tight">MS</span>
           </div>
-        </div>
+        </Link>
 
         <nav className="flex items-center gap-8 lg:gap-10">
           {navItems.map((item) => {
