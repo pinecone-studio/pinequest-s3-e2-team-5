@@ -20,33 +20,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { gql } from "@apollo/client";
-import { useMutation, useQuery } from "@apollo/client/react";
+import { useMutation } from "@apollo/client/react";
 import { useRouter } from "next/navigation";
-import { getMyClassrooms } from "@/components/teacher/teacher-school-requests";
-
-function StatusBadge({ status }: { status: string }) {
-  if (status === "published") {
-    return (
-      <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-600">
-        Нийтлэгдсэн
-      </span>
-    );
-  }
-
-  if (status === "closed") {
-    return (
-      <span className="rounded-full bg-gray-200 px-3 py-1 text-xs font-semibold text-gray-600">
-        Хаагдсан
-      </span>
-    );
-  }
-
-  return (
-    <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-600">
-      Ноорог
-    </span>
-  );
-}
 
 interface ExamData {
   createExam: {
@@ -63,16 +38,6 @@ const CREATE_EXAM = gql`
       }
   }
 `
-type ClassroomItem = {
-  id: string;
-  className: string;
-  classCode: string;
-  createdAt: number;
-};
-
-type myClassroomData = {
-  classroomsByTeacher: ClassroomItem[]
-}
 
 export default function TeacherDashboardPage() {
   const [activeTab, setActiveTab] = useState<SubjectKey>("all");
@@ -88,12 +53,12 @@ export default function TeacherDashboardPage() {
   const [subject, setSubject] = useState("")
   const [description, setDescription] = useState("")
 
-  const [openStatus, setOpenStatus] = useState(false)
-
   const [duration, setDuration] = useState(60)
   const [grade, setGrade] = useState("")
 
-  const [createExam, { error, loading }] = useMutation<ExamData>(CREATE_EXAM)
+  const [createExam, { error, 
+    // loading 
+  }] = useMutation<ExamData>(CREATE_EXAM)
 
 
   const handleCreateExam = async () => {

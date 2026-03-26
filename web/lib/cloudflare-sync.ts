@@ -49,7 +49,8 @@ const upsertTeacherMutation = `
 `;
 
 export function getCloudflareGraphqlUrl() {
-  const configuredUrl = process.env.NEXT_PUBLIC_CLOUDFLARE_GRAPHQL_URL?.trim();
+  const configuredUrl =
+    process.env.NEXT_PUBLIC_GRAPHQL_URL?.trim();
 
   if (configuredUrl) {
     return configuredUrl;
@@ -64,6 +65,10 @@ export function getCloudflareGraphqlUrl() {
     ) {
       return "http://127.0.0.1:8787/graphql";
     }
+
+    // In production on Cloudflare, prefer the current origin so the frontend
+    // can talk to a co-hosted/proxied GraphQL route without a localhost-only env.
+    return `${window.location.origin}/graphql`;
   }
 
   return null;
