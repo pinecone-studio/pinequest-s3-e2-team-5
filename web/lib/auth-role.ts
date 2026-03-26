@@ -1,11 +1,5 @@
 export const roleOptions = [
   {
-    value: "school",
-    label: "School",
-    description:
-      "Manage your school's teachers, classes, and approvals as the school manager.",
-  },
-  {
     value: "student",
     label: "Student",
     description: "Join classes, take exams, and track your learning progress.",
@@ -24,9 +18,6 @@ export function isUserRole(value: unknown): value is UserRole {
 }
 
 export function getRoleLabel(role: UserRole) {
-  if (role === "school") {
-    return "School";
-  }
 
   return role === "teacher" ? "Teacher" : "Student";
 }

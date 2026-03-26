@@ -1,36 +1,47 @@
 "use client";
 
-import { useAuth, useSignIn, useSignUp } from "@clerk/nextjs";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import { useAuth, useSignIn, useSignUp, useUser } from "@clerk/nextjs";
 import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  useEffect,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type HTMLInputTypeAttribute,
+} from "react";
 import { Button } from "@/components/ui/button";
+import { getRoleHomePath, isUserRole, type UserRole } from "@/lib/auth-role";
+
+type AuthScreenProps = {
+  mode: "sign-in" | "sign-up";
+};
+
+type SignUpRole = Extract<UserRole, "student" | "teacher">;
 
 type FormValues = {
+  role: SignUpRole;
   email: string;
   lastName: string;
   firstName: string;
-  school: string;
-  grade: string;
-  group: string;
+  phone: string;
+  classCode: string;
   password: string;
   confirmPassword: string;
 };
 
 const initialFormValues: FormValues = {
+  role: "student",
   email: "",
   lastName: "",
   firstName: "",
-  school: "",
-  grade: "",
-  group: "",
+  phone: "",
+  classCode: "",
   password: "",
   confirmPassword: "",
 };
-
-type AuthMode = "sign-up" | "sign-in";
 
 const inputClassName =
   "h-12 w-full rounded-[14px] border border-[#EAE6F5] bg-white px-4 text-[15px] text-[#1F1B2D] shadow-none outline-none transition-colors placeholder:text-[#B7B0C8] focus:border-[#A592FF] focus:ring-4 focus:ring-[#A592FF]/10";
@@ -92,7 +103,7 @@ function FormField({
 }: {
   id: keyof FormValues;
   label: string;
-  type?: React.HTMLInputTypeAttribute;
+  type?: HTMLInputTypeAttribute;
   placeholder: string;
   autoComplete?: string;
   value: string;
@@ -117,6 +128,39 @@ function FormField({
         onChange={onChange}
         required
       />
+    </div>
+  );
+}
+
+function SelectField({
+  id,
+  label,
+  value,
+  onChange,
+}: {
+  id: "role";
+  label: string;
+  value: SignUpRole;
+  onChange: (event: ChangeEvent<HTMLSelectElement>) => void;
+}) {
+  return (
+    <div className="space-y-2.5">
+      <label
+        htmlFor={id}
+        className="block text-[15px] font-semibold tracking-tight text-[#292235]"
+      >
+        {label}
+      </label>
+      <select
+        id={id}
+        name={id}
+        className={inputClassName}
+        value={value}
+        onChange={onChange}
+      >
+        <option value="student">Student</option>
+        <option value="teacher">Teacher</option>
+      </select>
     </div>
   );
 }
@@ -175,7 +219,7 @@ function PasswordField({
   );
 }
 
-export function StudentIllustration() {
+function StudentIllustration() {
   return (
     <div
       style={{
@@ -252,7 +296,7 @@ export function StudentIllustration() {
       />
       <Image
         src="/studentHome.png"
-        alt="Student illustration"
+        alt="Auth illustration"
         width={560}
         height={560}
         style={{
@@ -271,30 +315,32 @@ export function StudentIllustration() {
   );
 }
 
-export default function StudentPage() {
+export function AuthScreen({ mode }: AuthScreenProps) {
   const router = useRouter();
-  const { signIn, fetchStatus: signInFetchStatus, errors: signInErrors } = useSignIn();
+  const { signIn, fetchStatus: signInFetchStatus, errors: signInErrors } =
+    useSignIn();
   const { signUp, errors, fetchStatus } = useSignUp();
   const { isSignedIn } = useAuth();
-  const [mode, setMode] = useState<AuthMode>("sign-up");
+  const { user } = useUser();
   const [formValues, setFormValues] = useState<FormValues>(initialFormValues);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [pendingVerification, setPendingVerification] = useState(false);
   const [code, setCode] = useState("");
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [feedback, setFeedback] = useState<{
     tone: "error" | "success";
     message: string;
   } | null>(null);
 
   useEffect(() => {
-    if (isSignedIn) {
-      router.replace("/student/account");
+    if (!isSignedIn) {
+      return;
     }
-  }, [isSignedIn, router]);
 
-  const resolvedFormValues = formValues;
+    const rawRole = user?.unsafeMetadata?.role;
+    const role = isUserRole(rawRole) ? rawRole : null;
+    router.replace(role ? getRoleHomePath(role) : "/dashboard");
+  }, [isSignedIn, router, user]);
 
   const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
@@ -309,11 +355,25 @@ export default function StudentPage() {
     }
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleRoleChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const role = event.target.value as SignUpRole;
+
+    setFormValues((previous) => ({
+      ...previous,
+      role,
+      classCode: role === "student" ? previous.classCode : "",
+    }));
+
+    if (feedback) {
+      setFeedback(null);
+    }
+  };
+
+  const handleSignUp = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setFeedback(null);
 
-    if (resolvedFormValues.password.length < 8) {
+    if (formValues.password.length < 8) {
       setFeedback({
         tone: "error",
         message: "Нууц үг хамгийн багадаа 8 тэмдэгттэй байх хэрэгтэй.",
@@ -321,7 +381,7 @@ export default function StudentPage() {
       return;
     }
 
-    if (resolvedFormValues.password !== resolvedFormValues.confirmPassword) {
+    if (formValues.password !== formValues.confirmPassword) {
       setFeedback({
         tone: "error",
         message: "Нууц үг давтах талбар ижил биш байна.",
@@ -329,30 +389,56 @@ export default function StudentPage() {
       return;
     }
 
-    if (!acceptedTerms) {
+    if (!formValues.firstName || !formValues.lastName) {
       setFeedback({
         tone: "error",
-        message: "Үйлчилгээний нөхцөлийг зөвшөөрнө үү.",
+        message: "no name!"
+      })
+    }
+
+    const firstName = formValues.firstName.trim();
+    const lastName = formValues.lastName.trim();
+    const normalizedPhone = formValues.phone.trim();
+
+
+    if (!normalizedPhone) {
+      setFeedback({
+        tone: "error",
+        message: "Утасны дугаараа оруулна уу.",
       });
       return;
     }
 
-    const grade = resolvedFormValues.grade.trim();
-    const group = resolvedFormValues.group.trim().toUpperCase();
-    const fullName = `${resolvedFormValues.lastName.trim()} ${resolvedFormValues.firstName.trim()}`.trim();
-    const passwordPayload: Parameters<typeof signUp.password>[0] = {
-      emailAddress: resolvedFormValues.email.trim(),
-      password: resolvedFormValues.password,
-      unsafeMetadata: {
-        role: "student",
-        fullName,
-        school: resolvedFormValues.school.trim(),
-        grade,
-        className: group ? `${grade}${group}` : grade,
-      },
-    };
+    if (formValues.role === "student" && !formValues.classCode.trim()) {
+      setFeedback({
+        tone: "error",
+        message: "Ангийн кодоо оруулна уу.",
+      });
+      return;
+    }
 
-    const { error } = await signUp.password(passwordPayload);
+    const unsafeMetadata =
+      formValues.role === "student"
+        ? {
+          role: "student" as const,
+          firstName,
+          lastName,
+          phone: normalizedPhone,
+          inviteCode: formValues.classCode.trim().toUpperCase(),
+          classCode: formValues.classCode.trim().toUpperCase(),
+        }
+        : {
+          role: "teacher" as const,
+          firstName,
+          lastName,
+          phone: normalizedPhone,
+        };
+
+    const { error } = await signUp.password({
+      emailAddress: formValues.email.trim(),
+      password: formValues.password,
+      unsafeMetadata,
+    });
 
     if (error) {
       const requestErrors = getErrorMessages(error);
@@ -396,8 +482,18 @@ export default function StudentPage() {
 
     if (signUp.status === "complete") {
       await signUp.finalize({
-        navigate: () => {
-          router.push("/student/account");
+        navigate: ({ session, decorateUrl }) => {
+          const rawRole = session?.user?.unsafeMetadata?.role;
+          const targetUrl = isUserRole(rawRole)
+            ? getRoleHomePath(rawRole)
+            : "/dashboard";
+          const url = decorateUrl(targetUrl);
+
+          if (url.startsWith("http")) {
+            window.location.href = url;
+          } else {
+            router.push(url);
+          }
         },
       });
     }
@@ -408,8 +504,8 @@ export default function StudentPage() {
     setFeedback(null);
 
     const { error } = await signIn.password({
-      emailAddress: resolvedFormValues.email.trim(),
-      password: resolvedFormValues.password,
+      emailAddress: formValues.email.trim(),
+      password: formValues.password,
     });
 
     if (error) {
@@ -431,7 +527,9 @@ export default function StudentPage() {
           }
 
           const rawRole = session?.user?.unsafeMetadata?.role;
-          const targetUrl = rawRole === "student" ? "/student/account" : "/dashboard";
+          const targetUrl = isUserRole(rawRole)
+            ? getRoleHomePath(rawRole)
+            : "/dashboard";
           const url = decorateUrl(targetUrl);
 
           if (url.startsWith("http")) {
@@ -454,6 +552,8 @@ export default function StudentPage() {
   const signInErrorMessages = getErrorMessages(signInErrors);
   const isSubmitting = fetchStatus === "fetching";
   const isSigningIn = signInFetchStatus === "fetching";
+  const isSignUpMode = mode === "sign-up";
+  const isTeacherRole = formValues.role === "teacher";
 
   if (isSignedIn) {
     return null;
@@ -473,44 +573,11 @@ export default function StudentPage() {
         <div className="order-1 w-full max-w-[420px] justify-self-end lg:order-2">
           <div className="space-y-1">
             <p className="text-[13px] font-semibold tracking-[0.24em] text-[#A29AB9] uppercase">
-              Student Account
+              {isSignUpMode ? "Create Account" : "Account Login"}
             </p>
             <h1 className="text-[40px] leading-tight font-semibold tracking-tight text-[#201A2F]">
-              {mode === "sign-up" ? "Бүртгүүлэх" : "Нэвтрэх"}
+              {isSignUpMode ? "Бүртгэл үүсгэх" : "Нэвтрэх"}
             </h1>
-          </div>
-
-          <div className="mt-6 grid grid-cols-2 gap-2 rounded-[20px] bg-[#F4F0FF] p-1.5">
-            <button
-              type="button"
-              onClick={() => {
-                setMode("sign-up");
-                setPendingVerification(false);
-                setCode("");
-                setFeedback(null);
-              }}
-              className={`h-11 rounded-[16px] text-[15px] font-semibold transition ${mode === "sign-up"
-                ? "bg-white text-[#201A2F] shadow-[0_10px_24px_rgba(90,70,170,0.12)]"
-                : "text-[#7B7394]"
-                }`}
-            >
-              Бүртгэл үүсгэх
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMode("sign-in");
-                setPendingVerification(false);
-                setCode("");
-                setFeedback(null);
-              }}
-              className={`h-11 rounded-[16px] text-[15px] font-semibold transition ${mode === "sign-in"
-                ? "bg-white text-[#201A2F] shadow-[0_10px_24px_rgba(90,70,170,0.12)]"
-                : "text-[#7B7394]"
-                }`}
-            >
-              Нэвтрэх
-            </button>
           </div>
 
           {feedback ? (
@@ -524,7 +591,7 @@ export default function StudentPage() {
             </div>
           ) : null}
 
-          {mode === "sign-up" && pendingVerification ? (
+          {isSignUpMode && pendingVerification ? (
             <form className="mt-8 space-y-5" onSubmit={handleVerify}>
               <div className="space-y-2.5">
                 <label
@@ -574,15 +641,22 @@ export default function StudentPage() {
                 </Button>
               </div>
             </form>
-          ) : mode === "sign-up" ? (
-            <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+          ) : isSignUpMode ? (
+            <form className="mt-8 space-y-5" onSubmit={handleSignUp}>
+              <SelectField
+                id="role"
+                label="Роль сонгох"
+                value={formValues.role}
+                onChange={handleRoleChange}
+              />
+
               <FormField
                 id="email"
                 label="И-мэйл"
                 type="email"
                 autoComplete="email"
                 placeholder="example@school.mn"
-                value={resolvedFormValues.email}
+                value={formValues.email}
                 onChange={handleInputChange}
               />
 
@@ -591,7 +665,7 @@ export default function StudentPage() {
                 label="Овог"
                 autoComplete="family-name"
                 placeholder="Овог"
-                value={resolvedFormValues.lastName}
+                value={formValues.lastName}
                 onChange={handleInputChange}
               />
 
@@ -600,43 +674,39 @@ export default function StudentPage() {
                 label="Нэр"
                 autoComplete="given-name"
                 placeholder="Нэр"
-                value={resolvedFormValues.firstName}
+                value={formValues.firstName}
                 onChange={handleInputChange}
               />
 
               <FormField
-                id="school"
-                label="Сургууль"
-                autoComplete="organization"
-                placeholder="Сургууль"
-                value={resolvedFormValues.school}
+                id="phone"
+                label="Утасны дугаар"
+                autoComplete="tel"
+                placeholder="99112233"
+                value={formValues.phone}
                 onChange={handleInputChange}
               />
 
-              <div className="grid gap-5 sm:grid-cols-2">
-                <FormField
-                  id="grade"
-                  label="Анги"
-                  placeholder="10"
-                  value={resolvedFormValues.grade}
-                  onChange={handleInputChange}
-                />
+              {isTeacherRole ? (
+                <>
 
+                </>
+              ) : (
                 <FormField
-                  id="group"
-                  label="Бүлэг"
-                  placeholder="A"
-                  value={resolvedFormValues.group}
+                  id="classCode"
+                  label="Ангийн код"
+                  placeholder="ABC123"
+                  value={formValues.classCode}
                   onChange={handleInputChange}
                 />
-              </div>
+              )}
 
               <PasswordField
                 id="password"
                 label="Нууц үг"
                 autoComplete="new-password"
                 placeholder="........"
-                value={resolvedFormValues.password}
+                value={formValues.password}
                 visible={showPassword}
                 onChange={handleInputChange}
                 onToggle={() => setShowPassword((previous) => !previous)}
@@ -647,24 +717,13 @@ export default function StudentPage() {
                 label="Нууц үг давтах"
                 autoComplete="new-password"
                 placeholder="........"
-                value={resolvedFormValues.confirmPassword}
+                value={formValues.confirmPassword}
                 visible={showConfirmPassword}
                 onChange={handleInputChange}
-                onToggle={() => setShowConfirmPassword((previous) => !previous)}
+                onToggle={() =>
+                  setShowConfirmPassword((previous) => !previous)
+                }
               />
-
-              <label className="flex items-start gap-3 rounded-[18px] border border-[#EAE6F5] bg-white px-4 py-3 text-[14px] text-[#51475A]">
-                <input
-                  type="checkbox"
-                  checked={acceptedTerms}
-                  onChange={(event) => setAcceptedTerms(event.target.checked)}
-                  className="mt-1 h-4 w-4 rounded border-[#CFC7E6] accent-[#9B85FF]"
-                />
-                <span>
-                  Би PineQuest-ийн үйлчилгээний нөхцөл болон бүртгэлийн
-                  шаардлагыг зөвшөөрч байна.
-                </span>
-              </label>
 
               <div
                 id="clerk-captcha"
@@ -682,7 +741,16 @@ export default function StudentPage() {
                 </div>
               ) : null}
 
-              <div className="flex justify-end pt-4">
+              <div className="flex items-center justify-between gap-4 pt-4">
+                <p className="text-[14px] text-[#6E6783]">
+                  Бүртгэлтэй юу?{" "}
+                  <Link
+                    href="/sign-in"
+                    className="font-semibold text-[#6F5AD8] hover:text-[#5C48C7]"
+                  >
+                    Нэвтрэх
+                  </Link>
+                </p>
                 <Button
                   type="submit"
                   disabled={isSubmitting}
@@ -700,7 +768,7 @@ export default function StudentPage() {
                 type="email"
                 autoComplete="email"
                 placeholder="example@school.mn"
-                value={resolvedFormValues.email}
+                value={formValues.email}
                 onChange={handleInputChange}
               />
 
@@ -709,7 +777,7 @@ export default function StudentPage() {
                 label="Нууц үг"
                 autoComplete="current-password"
                 placeholder="........"
-                value={resolvedFormValues.password}
+                value={formValues.password}
                 visible={showPassword}
                 onChange={handleInputChange}
                 onToggle={() => setShowPassword((previous) => !previous)}
@@ -726,16 +794,12 @@ export default function StudentPage() {
               <div className="flex items-center justify-between gap-4 pt-4">
                 <p className="text-[14px] text-[#6E6783]">
                   Шинэ хэрэглэгч үү?{" "}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMode("sign-up");
-                      setFeedback(null);
-                    }}
+                  <Link
+                    href="/sign-up"
                     className="font-semibold text-[#6F5AD8] hover:text-[#5C48C7]"
                   >
                     Бүртгэл үүсгэх
-                  </button>
+                  </Link>
                 </p>
                 <Button
                   type="submit"
@@ -745,14 +809,6 @@ export default function StudentPage() {
                   {isSigningIn ? "Нэвтэрч байна..." : "Нэвтрэх"}
                 </Button>
               </div>
-
-              <p className="text-center text-[14px] text-[#7B7394]">
-                Нийтлэг нэвтрэх хуудас хэрэгтэй бол{" "}
-                <Link href="/sign-in" className="font-semibold text-[#6F5AD8] hover:text-[#5C48C7]">
-                  энд дарна уу
-                </Link>
-                .
-              </p>
             </form>
           )}
         </div>

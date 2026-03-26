@@ -3,7 +3,6 @@ import { UserButton } from "@clerk/nextjs";
 import { ArrowRight, Fingerprint, Mail, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { CloudflareStudentSync } from "@/components/auth/cloudflare-student-sync";
-import { SchoolTeacherApprovals } from "@/components/school/school-teacher-approvals";
 import { Button } from "@/components/ui/button";
 import { getRoleLabel, isUserRole } from "@/lib/auth-role";
 
@@ -35,35 +34,29 @@ export default async function DashboardPage() {
   const email =
     user?.primaryEmailAddress?.emailAddress ?? "No primary email returned";
   const rawRole = user?.unsafeMetadata?.role;
-  const rawFullName = user?.unsafeMetadata?.fullName;
-  const rawManagerName = user?.unsafeMetadata?.managerName;
+  const rawFirstName = user?.unsafeMetadata?.firstName;
+  const rawLastName = user?.unsafeMetadata?.lastName;
   const rawPhone = user?.unsafeMetadata?.phone;
-  const rawSchool = user?.unsafeMetadata?.school;
-  const rawAddress = user?.unsafeMetadata?.address;
-  const rawAimag = user?.unsafeMetadata?.aimag;
   const rawGrade = user?.unsafeMetadata?.grade;
   const rawClassName = user?.unsafeMetadata?.className;
   const rawInviteCode = user?.unsafeMetadata?.inviteCode;
-  const rawSubject = user?.unsafeMetadata?.subject;
   const role = isUserRole(rawRole) ? rawRole : "student";
-  const fullName =
-    typeof rawFullName === "string" && rawFullName.trim()
-      ? rawFullName
+  const firstName =
+    typeof rawFirstName === "string" && rawFirstName.trim()
+      ? rawFirstName
       : displayName;
+
+  const lastName =
+    typeof rawLastName === "string" && rawLastName.trim()
+      ? rawLastName :
+      displayName
   const phone = typeof rawPhone === "string" ? rawPhone : "";
-  const school = typeof rawSchool === "string" ? rawSchool : "";
-  const managerName = typeof rawManagerName === "string" ? rawManagerName : "";
-  const address = typeof rawAddress === "string" ? rawAddress : "";
-  const aimag = typeof rawAimag === "string" ? rawAimag : "";
   const grade = typeof rawGrade === "string" ? rawGrade : "";
   const className = typeof rawClassName === "string" ? rawClassName : "";
   const inviteCode = typeof rawInviteCode === "string" ? rawInviteCode : "";
-  const subject = typeof rawSubject === "string" ? rawSubject : "";
   const roleLabel = getRoleLabel(role);
   const roleDescription =
-    role === "school"
-      ? "Your school manager account is ready for approving teachers and managing school-level settings."
-      : role === "teacher"
+    role === "teacher"
       ? "Your teacher account is ready for managing learners, creating assessments, and reviewing outcomes."
       : "Your student account is ready for joining classes, taking exams, and following your progress.";
 
@@ -125,16 +118,12 @@ export default async function DashboardPage() {
             </div>
             <CloudflareStudentSync
               email={email}
-              fullName={fullName}
+              firstName={firstName}
+              lastName={lastName}
               phone={phone}
-              school={school}
               grade={grade}
               className={className}
               inviteCode={inviteCode}
-              subject={subject}
-              managerName={managerName}
-              address={address}
-              aimag={aimag}
               role={role}
             />
             <Button
@@ -151,7 +140,6 @@ export default async function DashboardPage() {
           </aside>
         </div>
 
-        {role === "school" ? <SchoolTeacherApprovals /> : null}
       </section>
     </main>
   );

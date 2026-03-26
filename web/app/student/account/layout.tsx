@@ -17,30 +17,25 @@ export default async function StudentLayout({
     "Student";
   const email = user?.primaryEmailAddress?.emailAddress ?? "";
   const rawRole = user?.unsafeMetadata?.role;
-  const rawFullName = user?.unsafeMetadata?.fullName;
+  const rawFirstName = user?.unsafeMetadata?.firstName;
+  const rawLastName = user?.unsafeMetadata?.lastName;
   const rawPhone = user?.unsafeMetadata?.phone;
-  const rawSchool = user?.unsafeMetadata?.school;
   const rawGrade = user?.unsafeMetadata?.grade;
   const rawClassName = user?.unsafeMetadata?.className;
   const rawInviteCode = user?.unsafeMetadata?.inviteCode;
   const role = isUserRole(rawRole) ? rawRole : "student";
-  const fullName =
-    typeof rawFullName === "string" && rawFullName.trim()
-      ? rawFullName
-      : displayName;
+  const firstName =
+    typeof rawFirstName === "string" && rawFirstName.trim()
+      ? rawFirstName
+      : user?.firstName ?? displayName;
+  const lastName =
+    typeof rawLastName === "string" && rawLastName.trim() ? rawLastName : "";
   const phone = typeof rawPhone === "string" ? rawPhone : "";
-  const school = typeof rawSchool === "string" ? rawSchool : "";
   const grade = typeof rawGrade === "string" ? rawGrade : "";
   const className = typeof rawClassName === "string" ? rawClassName : "";
   const inviteCode = typeof rawInviteCode === "string" ? rawInviteCode : "";
   const hasStudentSyncMetadata = Boolean(
-    fullName &&
-      email &&
-      school &&
-      phone &&
-      (grade || className) &&
-      className &&
-      inviteCode,
+    firstName && email && phone && inviteCode,
   );
 
   if (role !== "student") {
@@ -54,16 +49,12 @@ export default async function StudentLayout({
         {hasStudentSyncMetadata ? (
           <CloudflareStudentSync
             email={email}
-            fullName={fullName}
+            firstName={firstName}
+            lastName={lastName}
             phone={phone}
-            school={school}
             grade={grade}
             className={className}
             inviteCode={inviteCode}
-            subject=""
-            managerName=""
-            address=""
-            aimag=""
             role={role}
           />
         ) : null}

@@ -12,10 +12,10 @@ type AnswerType = "Сонголттой" | "Нээлттэй";
 
 type Choice = {
     id: string;
-    questionId: string;
     label: string;
     text: string;
     isCorrect: boolean
+    order: number
 };
 type QuestionItem = {
     question: string;
@@ -52,14 +52,17 @@ const GET_EXAMBYID = gql`
         }
     }
 `
+
 const baseFieldClassName =
     "h-[62px] w-full rounded-[20px] border border-[#E6DEF6] bg-white px-5 text-[18px] text-[#1C1825] shadow-[inset_0_1px_2px_rgba(255,255,255,0.7)] outline-none transition focus:border-[#B59AF8] focus:ring-4 focus:ring-[#B59AF8]/15";
 
 function createChoiceOptions() {
     return ["A", "B", "C", "D"].map((label, index) => ({
         id: `${label}-${crypto.randomUUID()}`,
-        value: `Сонголт ${label}`,
+        label: label,
+        text: `Сонголт ${label}`,
         order: index,
+        isCorrect: Boolean
     }));
 }
 
@@ -67,12 +70,11 @@ function createQuestion(order: number): QuestionItem {
     const options = createChoiceOptions();
 
     return {
-        id: `question-${order}-${crypto.randomUUID()}`,
         question: "",
         questionType: "Зураггүй",
-        answerType: "Сонголттой",
+        type: "Сонголттой",
         score: 1,
-        options: options.map(({ id, value }) => ({ id, value })),
+        choices: options.map(({ id, label, text, isCorrect }) => ({ id, label, text, isCorrect })),
         correctOptionId: options[0]?.id ?? null,
     };
 }

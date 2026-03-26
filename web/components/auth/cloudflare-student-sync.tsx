@@ -10,31 +10,23 @@ import type { UserRole } from "@/lib/auth-role";
 
 type CloudflareStudentSyncProps = {
   email: string;
-  fullName: string;
+  firstName: string;
+  lastName: string;
   phone: string;
-  school: string;
-  managerName: string;
-  address: string;
-  aimag: string;
   grade: string;
   className: string;
   inviteCode: string;
-  subject: string;
   role: UserRole;
 };
 
 export function CloudflareStudentSync({
   email,
-  fullName,
+  firstName,
+  lastName,
   phone,
-  school,
-  managerName,
-  address,
-  aimag,
   grade,
   className,
   inviteCode,
-  subject,
   role,
 }: CloudflareStudentSyncProps) {
   const { getToken, isLoaded, isSignedIn } = useAuth();
@@ -67,29 +59,8 @@ export function CloudflareStudentSync({
           throw new Error("Missing Clerk session token.");
         }
 
-        if (role === "school") {
-          if (!email || !school || !managerName) {
-            throw new Error("School sync needs manager name, email, and school.");
-          }
-
-          if (!managerName || !address || !aimag) {
-            throw new Error("School sync needs manager name, address, and aimag.");
-          }
-
-          await syncRoleProfileToCloudflare({
-            token,
-            apiUrl,
-            role,
-            input: {
-              schoolName: school,
-              email,
-              managerName,
-              address,
-              aimag,
-            },
-          });
-        } else if (role === "student") {
-          if (!email || !fullName) {
+        if (role === "student") {
+          if (!email || !firstName || !lastName) {
             throw new Error("Student sync needs name and email.");
           }
 
@@ -102,31 +73,29 @@ export function CloudflareStudentSync({
             apiUrl,
             role,
             input: {
-              fullName,
+              firstName,
+              lastName,
               email,
               phone,
               inviteCode,
             },
           });
         } else {
-          if (!email || !fullName || !school) {
-            throw new Error("Teacher sync needs name, email, and school.");
+          if (!email || !firstName || !lastName) {
+            throw new Error("Teacher sync needs name, email.");
           }
 
-          if (!subject) {
-            throw new Error("Teacher sync needs subject.");
-          }
+       
 
           await syncRoleProfileToCloudflare({
             token,
             apiUrl,
             role,
             input: {
-              fullName,
+              firstName,
+              lastName,
               email,
               phone,
-              school,
-              subject,
             },
           });
         }
@@ -176,19 +145,15 @@ export function CloudflareStudentSync({
   }, [
     className,
     email,
-    fullName,
+    firstName,
+    lastName,
     getToken,
     grade,
-    managerName,
-    address,
-    aimag,
     inviteCode,
     isLoaded,
     isSignedIn,
     phone,
     role,
-    school,
-    subject,
     retryTick,
   ]);
 

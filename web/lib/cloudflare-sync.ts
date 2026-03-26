@@ -1,27 +1,20 @@
 type SyncStudentInput = {
-  fullName: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone: string;
   inviteCode: string;
 };
 
 type SyncTeacherInput = {
-  fullName: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone: string;
-  school: string;
-  subject: string;
 };
 
-type SyncSchoolInput = {
-  schoolName: string;
-  email: string;
-  managerName: string;
-  address: string;
-  aimag: string;
-};
 
-type SyncRole = "school" | "student" | "teacher";
+type SyncRole = "student" | "teacher";
 
 type GraphQLError = {
   message?: string;
@@ -30,9 +23,6 @@ type GraphQLError = {
 type SyncResponse = {
   errors?: GraphQLError[];
   data?: {
-    upsertSchoolProfile?: {
-      id: string;
-    } | null;
     upsertStudent?: {
       id: string;
     } | null;
@@ -45,14 +35,6 @@ type SyncResponse = {
 const upsertStudentMutation = `
   mutation SyncStudentProfile($input: upsertStudentInput!) {
     upsertStudent(input: $input) {
-      id
-    }
-  }
-`;
-
-const upsertSchoolMutation = `
-  mutation SyncSchoolProfile($input: upsertSchoolInput!) {
-    upsertSchoolProfile(input: $input) {
       id
     }
   }
@@ -96,14 +78,12 @@ export async function syncRoleProfileToCloudflare({
   token: string;
   apiUrl: string;
   role: SyncRole;
-  input: SyncSchoolInput | SyncStudentInput | SyncTeacherInput;
+  input: SyncStudentInput | SyncTeacherInput;
 }) {
   const query =
-    role === "school"
-      ? upsertSchoolMutation
-      : role === "teacher"
-        ? upsertTeacherMutation
-        : upsertStudentMutation;
+    role === "teacher"
+      ? upsertTeacherMutation
+      : upsertStudentMutation;
   const response = await fetch(apiUrl, {
     method: "POST",
     headers: {
@@ -130,11 +110,9 @@ export async function syncRoleProfileToCloudflare({
   }
 
   const recordId =
-    role === "school"
-      ? payload.data?.upsertSchoolProfile?.id
-      : role === "teacher"
-        ? payload.data?.upsertTeacher?.id
-        : payload.data?.upsertStudent?.id;
+    role === "teacher"
+      ? payload.data?.upsertTeacher?.id
+      : payload.data?.upsertStudent?.id;
 
   if (!recordId) {
     throw new Error("Cloudflare sync did not return a profile record.");

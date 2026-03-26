@@ -3,11 +3,10 @@ import gql from "graphql-tag";
 export const teacherTypeDefs = gql`
     type Teacher {
         id: ID!
-        fullName: String!
+        firstName: String!
+        lastName: String!
         email: String!
         phone: String!
-        school: String!
-        subject: String!
         exams: [Exam]!
     }
 
@@ -17,11 +16,10 @@ export const teacherTypeDefs = gql`
     }
 
     input upsertTeacherInput{
-        fullName: String!
+        firstName: String!
+        lastName: String!
         email: String!
         phone: String!
-        school: String!
-        subject: String!
     }
 
     type Mutation {

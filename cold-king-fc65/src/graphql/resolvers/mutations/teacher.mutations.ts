@@ -8,11 +8,10 @@ export const teacherMutation = {
 			_: unknown,
 			args: {
 				input: {
-					fullName: string;
+					firstName: string;
+					lastName: string;
 					email: string;
 					phone: string;
-					school: string;
-					subject: string;
 				};
 			},
 			context: GraphQLContext,
@@ -23,11 +22,10 @@ export const teacherMutation = {
 
 			const userId = context.auth.userId;
 			const values = {
-				fullName: args.input.fullName,
+				firstName: args.input.firstName,
+				lastName: args.input.lastName,
 				email: args.input.email,
 				phone: args.input.phone,
-				school: args.input.school,
-				subject: args.input.subject,
 			};
 
 			const existing = await context.db

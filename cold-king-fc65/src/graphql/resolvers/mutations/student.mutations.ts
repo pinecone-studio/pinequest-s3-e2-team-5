@@ -12,14 +12,15 @@ export const studentMutation = {
 	Mutation: {
 		upsertStudent: async (
 			_: unknown,
-				args: {
-					input: {
-						fullName: string;
-						email: string;
-						phone: string;
-						inviteCode: string;
-					};
-				},
+			args: {
+				input: {
+					firstName: string;
+					lastName: string;
+					email: string;
+					phone: string;
+					inviteCode: string;
+				};
+			},
 			context: GraphQLContext
 		) => {
 			if (!context.auth.userId || !context.auth.isAuthenticated) {
@@ -39,10 +40,10 @@ export const studentMutation = {
 			}
 
 			const values = {
-				fullName: args.input.fullName,
+				firstName: args.input.firstName,
+				lastName: args.input.lastName,
 				email: args.input.email,
 				phone: args.input.phone,
-				school: classroom.schoolName,
 				grade: getGradeFromClassName(classroom.className),
 				className: classroom.className,
 				inviteCode: classroom.classCode,

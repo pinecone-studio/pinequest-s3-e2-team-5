@@ -3,10 +3,10 @@ import gql from "graphql-tag";
 export const studentTypeDefs = gql`
     type Student {
         id: ID!
-        fullName: String!
+        firstName: String!
+        lastName: String!
         email: String!
         phone: String!
-        school: String!
         grade: String!
         className: String!
         inviteCode: String!
@@ -21,7 +21,8 @@ export const studentTypeDefs = gql`
     }
 
     input upsertStudentInput{
-        fullName: String!
+        firstName: String!
+        lastName: String!
         email: String!
         phone: String!
         inviteCode: String!
