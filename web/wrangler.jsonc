@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "main": ".open-next/worker.js",
+  "main": "./worker/index.ts",
   "name": "pinequest-s3-e2-team-5-web",
   "compatibility_date": "2026-03-23",
   "compatibility_flags": [
@@ -8,8 +8,12 @@
     "global_fetch_strictly_public"
   ],
   "assets": {
-    "directory": ".open-next/assets",
+    "directory": "dist/client",
+    "not_found_handling": "none",
     "binding": "ASSETS"
+  },
+  "images": {
+    "binding": "IMAGES"
   },
   "env": {
     "preview": {}

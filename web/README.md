@@ -26,7 +26,7 @@ Visit:
 
 ## Deployment
 
-CD is configured through GitHub Actions in [.github/workflows/cd.yml](../.github/workflows/cd.yml) and deploys the app to Cloudflare Workers via `@opennextjs/cloudflare`.
+CD is configured through GitHub Actions in [.github/workflows/cd.yml](../.github/workflows/cd.yml) and deploys the app to Cloudflare Workers with `vinext` and `wrangler`.
 
 - Pull requests that change `web/**` deploy a preview worker environment.
 - Pushes to `main` that change `web/**` deploy production.
@@ -54,7 +54,7 @@ Set these variables in the Cloudflare dashboard for:
 
 Notes:
 
-- The workflow uses `--keep-vars`, so dashboard-managed Cloudflare variables are preserved during deploys.
+- The deploy command uses `wrangler deploy --keep-vars`, so dashboard-managed Cloudflare variables are preserved during deploys.
 - Because this repo contains both `web/` and `service/`, the workflow runs from `web/` explicitly.
 
 To obtain the Cloudflare GitHub secrets:
@@ -65,5 +65,6 @@ To obtain the Cloudflare GitHub secrets:
 
 Local helper commands:
 
-- `npm run preview` builds the app and runs it locally in the Workers runtime.
-- `npm run deploy` builds the app and deploys production using the current Cloudflare credentials.
+- `npx vinext build` builds the app for the Workers runtime.
+- `npm run preview` runs the Worker locally with `wrangler dev`.
+- `npm run deploy` deploys production using the current Cloudflare credentials.
