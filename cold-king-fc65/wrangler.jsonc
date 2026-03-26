@@ -32,7 +32,11 @@
 			"database_id": "59cad733-b262-4a98-9716-76b134c94c02",
 			"remote": true
 		}
-	]
+	],
+	"vars": {
+		"NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_bW92ZWQtY3JhbmUtMjIuY2xlcmsuYWNjb3VudHMuZGV2JA",
+		// "FRONTEND_ORIGIN": "https://pinequest-s3-e2-team-5-web-preview.ebmsteam10.workers.dev/"
+	}
 	/**
 	 * Smart Placement
 	 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
