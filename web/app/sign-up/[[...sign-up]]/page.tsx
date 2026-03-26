@@ -1,12 +1,18 @@
 "use client";
 
-import { useAuth, useSignUp } from "@clerk/nextjs";
+import { useAuth, useSignUp, useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
-import { getRoleLabel, roleOptions, type UserRole } from "@/lib/auth-role";
+import {
+  getRoleHomePath,
+  getRoleLabel,
+  isUserRole,
+  roleOptions,
+  type UserRole,
+} from "@/lib/auth-role";
 
 function getErrorMessages(errors: unknown) {
   if (!Array.isArray(errors)) {
@@ -39,12 +45,6 @@ function getErrorMessages(errors: unknown) {
 const inputClassName =
   "h-11 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground shadow-none outline-none transition-colors placeholder:text-muted-foreground focus:border-foreground/25 focus:ring-2 focus:ring-ring/30";
 
-function getGradeFromClassName(value: string) {
-  const trimmed = value.trim();
-  const match = trimmed.match(/^(\d{1,2})/);
-  return match ? match[1] : trimmed;
-}
-
 const mongoliaAimags = [
   "Arkhangai",
   "Bayan-Olgii",
@@ -72,6 +72,7 @@ const mongoliaAimags = [
 export default function SignUpPage() {
   const { signUp, errors, fetchStatus } = useSignUp();
   const { isSignedIn } = useAuth();
+  const { user, isLoaded: isUserLoaded } = useUser();
   const router = useRouter();
   const [role, setRole] = useState<UserRole>("student");
   const [fullName, setFullName] = useState("");
@@ -84,17 +85,24 @@ export default function SignUpPage() {
   const [aimag, setAimag] = useState<(typeof mongoliaAimags)[number]>(
     mongoliaAimags[0],
   );
-  const [className, setClassName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [subject, setSubject] = useState("");
   const [code, setCode] = useState("");
   const [pendingVerification, setPendingVerification] = useState(false);
 
   useEffect(() => {
-    if (isSignedIn) {
-      router.replace(role === "student" ? "/student" : "/dashboard");
+    if (!isSignedIn || !isUserLoaded) {
+      return;
     }
-  }, [isSignedIn, role, router]);
+
+    const metadataRole = user?.unsafeMetadata?.role;
+    if (isUserRole(metadataRole)) {
+      router.replace(getRoleHomePath(metadataRole));
+      return;
+    }
+
+    router.replace(getRoleHomePath(role));
+  }, [isSignedIn, isUserLoaded, role, router, user]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -104,11 +112,9 @@ export default function SignUpPage() {
       fullName: role === "school" ? undefined : fullName.trim(),
       managerName: role === "school" ? managerName.trim() : undefined,
       phone: role === "school" ? undefined : normalizedPhone || "",
-      school: school.trim(),
+      school: role === "student" ? undefined : school.trim(),
       address: role === "school" ? address.trim() : undefined,
       aimag: role === "school" ? aimag : undefined,
-      grade: role === "student" ? getGradeFromClassName(className) : undefined,
-      className: role === "student" ? className.trim().toUpperCase() : undefined,
       inviteCode: role === "student" ? inviteCode.trim().toUpperCase() : undefined,
       subject: role === "teacher" ? subject.trim() : undefined,
     };
@@ -147,12 +153,7 @@ export default function SignUpPage() {
             return;
           }
 
-          if (role === "student") {
-            router.push("/student");
-            return;
-          }
-
-          const url = decorateUrl("/dashboard");
+          const url = decorateUrl(getRoleHomePath(role));
           if (url.startsWith("http")) {
             window.location.href = url;
           } else {
@@ -341,24 +342,26 @@ export default function SignUpPage() {
             />
           </div>
 
-          <div className="space-y-2">
-            <label
-              htmlFor="school"
-              className="text-sm font-medium tracking-tight text-foreground"
-            >
-              {role === "school" ? "School name" : "School"}
-            </label>
-            <input
-              id="school"
-              type="text"
-              autoComplete="organization"
-              className={inputClassName}
-              placeholder="School name"
-              value={school}
-              onChange={(event) => setSchool(event.target.value)}
-              required
-            />
-          </div>
+          {role !== "student" ? (
+            <div className="space-y-2">
+              <label
+                htmlFor="school"
+                className="text-sm font-medium tracking-tight text-foreground"
+              >
+                {role === "school" ? "School name" : "School"}
+              </label>
+              <input
+                id="school"
+                type="text"
+                autoComplete="organization"
+                className={inputClassName}
+                placeholder="School name"
+                value={school}
+                onChange={(event) => setSchool(event.target.value)}
+                required
+              />
+            </div>
+          ) : null}
 
           {role === "school" ? (
             <>
@@ -406,24 +409,6 @@ export default function SignUpPage() {
             </>
           ) : role === "student" ? (
             <>
-              <div className="space-y-2">
-                <label
-                  htmlFor="className"
-                  className="text-sm font-medium tracking-tight text-foreground"
-                >
-                  Class / Grade
-                </label>
-                <input
-                  id="className"
-                  type="text"
-                  className={inputClassName}
-                  placeholder="10A"
-                  value={className}
-                  onChange={(event) => setClassName(event.target.value)}
-                  required
-                />
-              </div>
-
               <div className="space-y-2">
                 <label
                   htmlFor="phone"

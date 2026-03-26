@@ -10,6 +10,8 @@ export const studentTypeDefs = gql`
         grade: String!
         className: String!
         inviteCode: String!
+        classroomId: String!
+        teacherId: String!
         exams: [Exam]!
     }
 
@@ -22,9 +24,6 @@ export const studentTypeDefs = gql`
         fullName: String!
         email: String!
         phone: String!
-        school: String!
-        grade: String!
-        className: String!
         inviteCode: String!
     }
 

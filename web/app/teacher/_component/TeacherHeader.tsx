@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutGrid, FileText, Users } from "lucide-react";
+import { UserButton } from "@clerk/nextjs";
 
 const navItems = [
   {
@@ -17,8 +18,8 @@ const navItems = [
     icon: FileText,
   },
   {
-    label: "Сурагчид",
-    href: "/teacher/students",
+    label: "Сургууль",
+    href: "/teacher",
     icon: Users,
   },
 ];
@@ -76,6 +77,13 @@ export function TeacherHeader() {
             </p>
             <p className="text-[15px] font-semibold text-[#111111]">C.Анужин</p>
           </div>
+          <UserButton
+            appearance={{
+              elements: {
+                userButtonAvatarBox: "h-11 w-11",
+              },
+            }}
+          />
         </div>
       </div>
     </header>

@@ -2,9 +2,6 @@ type SyncStudentInput = {
   fullName: string;
   email: string;
   phone: string;
-  school: string;
-  grade: string;
-  className: string;
   inviteCode: string;
 };
 
@@ -70,14 +67,21 @@ const upsertTeacherMutation = `
 `;
 
 export function getCloudflareGraphqlUrl() {
-  const configuredUrl = process.env.NEXT_PUBLIC_CLOUDFLARE_GRAPHQL_URL;
+  const configuredUrl = process.env.NEXT_PUBLIC_CLOUDFLARE_GRAPHQL_URL?.trim();
 
   if (configuredUrl) {
     return configuredUrl;
   }
 
-  if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-    return "http://127.0.0.1:8787/graphql";
+  if (typeof window !== "undefined") {
+    const hostname = window.location.hostname;
+    if (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "::1"
+    ) {
+      return "http://127.0.0.1:8787/graphql";
+    }
   }
 
   return null;

@@ -1,7 +1,9 @@
 import { currentUser } from "@clerk/nextjs/server";
+import { UserButton } from "@clerk/nextjs";
 import { ArrowRight, Fingerprint, Mail, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { CloudflareStudentSync } from "@/components/auth/cloudflare-student-sync";
+import { SchoolTeacherApprovals } from "@/components/school/school-teacher-approvals";
 import { Button } from "@/components/ui/button";
 import { getRoleLabel, isUserRole } from "@/lib/auth-role";
 
@@ -118,6 +120,9 @@ export default async function DashboardPage() {
             <p className="mt-2 break-all text-sm leading-7 text-background/80">
               {email}
             </p>
+            <div className="mt-3">
+              <UserButton />
+            </div>
             <CloudflareStudentSync
               email={email}
               fullName={fullName}
@@ -145,6 +150,8 @@ export default async function DashboardPage() {
             </Button>
           </aside>
         </div>
+
+        {role === "school" ? <SchoolTeacherApprovals /> : null}
       </section>
     </main>
   );

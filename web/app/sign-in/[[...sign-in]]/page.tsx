@@ -48,7 +48,7 @@ export default function SignInPage() {
 
   useEffect(() => {
     if (isSignedIn) {
-      router.replace("/dashboard");
+      router.replace("/auth/after-sign-in");
     }
   }, [isSignedIn, router]);
 
@@ -72,7 +72,7 @@ export default function SignInPage() {
             return;
           }
 
-          const url = decorateUrl("/dashboard");
+          const url = decorateUrl("/auth/after-sign-in");
           if (url.startsWith("http")) {
             window.location.href = url;
           } else {

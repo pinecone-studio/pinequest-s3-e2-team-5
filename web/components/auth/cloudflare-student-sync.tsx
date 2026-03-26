@@ -39,10 +39,12 @@ export function CloudflareStudentSync({
 }: CloudflareStudentSyncProps) {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const [status, setStatus] = useState("");
-  const hasAttemptedRef = useRef(false);
+  const [retryTick, setRetryTick] = useState(0);
+  const retryCountRef = useRef(0);
+  const hasSyncedRef = useRef(false);
 
   useEffect(() => {
-    if (hasAttemptedRef.current || !isLoaded || !isSignedIn) {
+    if (hasSyncedRef.current || !isLoaded || !isSignedIn) {
       return;
     }
 
@@ -52,11 +54,13 @@ export function CloudflareStudentSync({
       return;
     }
 
-    hasAttemptedRef.current = true;
+    let cancelled = false;
 
     void (async () => {
       try {
-        setStatus("Syncing profile to Cloudflare...");
+        if (!cancelled) {
+          setStatus("Syncing profile to Cloudflare...");
+        }
         const token = await getToken();
 
         if (!token) {
@@ -85,12 +89,12 @@ export function CloudflareStudentSync({
             },
           });
         } else if (role === "student") {
-          if (!email || !fullName || !school) {
-            throw new Error("Student sync needs name, email, and school.");
+          if (!email || !fullName) {
+            throw new Error("Student sync needs name and email.");
           }
 
-          if (!phone || !className || !inviteCode) {
-            throw new Error("Student sync needs phone, class, and invite code.");
+          if (!phone || !inviteCode) {
+            throw new Error("Student sync needs phone and class code.");
           }
 
           await syncRoleProfileToCloudflare({
@@ -101,9 +105,6 @@ export function CloudflareStudentSync({
               fullName,
               email,
               phone,
-              school,
-              grade: grade || className,
-              className,
               inviteCode,
             },
           });
@@ -130,13 +131,48 @@ export function CloudflareStudentSync({
           });
         }
 
-        setStatus(`Cloudflare ${role} profile synced.`);
+        hasSyncedRef.current = true;
+        retryCountRef.current = 0;
+        if (!cancelled) {
+          setStatus(`Cloudflare ${role} profile synced.`);
+        }
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Cloudflare sync failed.";
-        setStatus(message);
+        if (!cancelled) {
+          setStatus(message);
+        }
+
+        if (hasSyncedRef.current) {
+          return;
+        }
+
+        const isRetryableError =
+          message.includes("Missing Clerk session token") ||
+          message.includes("Sync failed with status") ||
+          message.includes("Failed to fetch") ||
+          message.includes("NetworkError");
+
+        if (!isRetryableError) {
+          return;
+        }
+
+        if (retryCountRef.current >= 4) {
+          return;
+        }
+
+        retryCountRef.current += 1;
+        setTimeout(() => {
+          if (!cancelled && !hasSyncedRef.current) {
+            setRetryTick((value) => value + 1);
+          }
+        }, 1200);
       }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [
     className,
     email,
@@ -153,6 +189,7 @@ export function CloudflareStudentSync({
     role,
     school,
     subject,
+    retryTick,
   ]);
 
   if (!status) {

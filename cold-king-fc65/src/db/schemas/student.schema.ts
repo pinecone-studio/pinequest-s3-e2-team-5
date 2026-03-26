@@ -9,4 +9,6 @@ export const students = sqliteTable("students", {
 	grade: text().notNull(),
 	className: text().notNull(),
 	inviteCode: text().notNull(),
+	classroomId: text().notNull(),
+	teacherId: text().notNull(),
 });

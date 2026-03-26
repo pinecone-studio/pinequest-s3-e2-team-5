@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { TeacherSchoolRequests } from "@/components/teacher/teacher-school-requests";
 
 export default function TeacherPage() {
-  redirect("/teacher/dashboard");
+  return <TeacherSchoolRequests />;
 }

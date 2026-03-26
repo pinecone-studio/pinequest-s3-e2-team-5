@@ -30,3 +30,15 @@ export function getRoleLabel(role: UserRole) {
 
   return role === "teacher" ? "Teacher" : "Student";
 }
+
+export function getRoleHomePath(role: UserRole) {
+  if (role === "student") {
+    return "/student";
+  }
+
+  if (role === "teacher") {
+    return "/teacher";
+  }
+
+  return "/dashboard";
+}
