@@ -12,6 +12,7 @@ app.use("/graphql", (c, next) =>
 		origin: getCorsOrigins(c.env),
 		allowHeaders: ["Content-Type", "Authorization"],
 		allowMethods: ["GET", "POST", "OPTIONS"],
+		credentials: true
 	})(c, next),
 );
 
