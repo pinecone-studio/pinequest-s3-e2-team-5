@@ -3,7 +3,10 @@
   "main": ".open-next/worker.js",
   "name": "pinequest-s3-e2-team-5-web",
   "compatibility_date": "2026-03-23",
-  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "compatibility_flags": [
+    "nodejs_compat",
+    "global_fetch_strictly_public"
+  ],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
@@ -11,8 +14,15 @@
   "env": {
     "preview": {}
   },
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true
+    }
+  },
   "vars": {
     "NEXT_PUBLIC_GRAPHQL_URL": "https://cold-king-fc65.ebmsteam10.workers.dev/graphql",
+    "CLERK_SECRET_KEY": "sk_test_cSgZSSRpRAwe963ApyN1x0pQaQuLA5zEZBbpzRyeYi",
     "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_bW92ZWQtY3JhbmUtMjIuY2xlcmsuYWNjb3VudHMuZGV2JA"
   }
 }
