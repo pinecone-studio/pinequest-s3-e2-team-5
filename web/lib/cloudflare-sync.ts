@@ -50,7 +50,7 @@ const upsertTeacherMutation = `
 
 export function getCloudflareGraphqlUrl() {
   const configuredUrl =
-    process.env.NEXT_PUBLIC_GRAPHQL_URL?.trim();
+    "https://cold-king-fc65.ebmsteam10.workers.dev/graphql";
 
   if (configuredUrl) {
     return configuredUrl;

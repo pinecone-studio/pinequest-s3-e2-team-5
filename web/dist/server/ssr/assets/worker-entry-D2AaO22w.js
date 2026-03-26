@@ -13283,7 +13283,7 @@ function makeClient(token) {
 	return new ApolloClient({
 		cache: new InMemoryCache(),
 		link: new HttpLink({
-			uri: "http://localhost:8787/graphql",
+			uri: "https://cold-king-fc65.ebmsteam10.workers.dev/graphql",
 			credentials: "include",
 			headers: token ? { Authorization: `Bearer ${token}` } : void 0
 		})
@@ -40211,7 +40211,7 @@ var upsertTeacherMutation = `
   }
 `;
 function getCloudflareGraphqlUrl() {
-	const configuredUrl = "http://localhost:8787/graphql"?.trim();
+	const configuredUrl = "https://cold-king-fc65.ebmsteam10.workers.dev/graphql";
 	if (configuredUrl) return configuredUrl;
 	if (typeof window !== "undefined") {
 		const hostname = window.location.hostname;
