@@ -123,7 +123,7 @@ jobs:
         run: npx vinext build --env preview
 
       - name: Deploy preview web worker
-        run: npx vinext deploy --env preview -- --keep-vars
+        run: npx vinext deploy --env preview
 
   deploy-api-preview:
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
