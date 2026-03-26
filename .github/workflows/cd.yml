@@ -23,7 +23,7 @@ permissions:
   contents: read
 
 env:
-  NODE_VERSION: 20.19.0
+  NODE_VERSION: 22
   CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
   CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
 
@@ -123,7 +123,7 @@ jobs:
         run: npx vinext build --env preview
 
       - name: Deploy preview web worker
-        run: npx vinext deploy --env preview -- --keep-vars
+        run: npx vinext deploy --env preview
 
   deploy-api-preview:
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
