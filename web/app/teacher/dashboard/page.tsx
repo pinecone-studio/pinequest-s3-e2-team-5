@@ -1,9 +1,14 @@
 "use client";
 
-import { CircleHelp, Clock3 } from "lucide-react";
+import { Clock3, FileText, PencilLine, Users } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { examCards, subjectTabs, type SubjectKey } from "../_data/dashboard";
+import {
+  examCards,
+  getSubjectCardPalette,
+  subjectTabs,
+  type SubjectKey,
+} from "../_data/dashboard";
 
 export default function TeacherDashboardPage() {
   const [activeTab, setActiveTab] = useState<SubjectKey>("all");
@@ -43,32 +48,53 @@ export default function TeacherDashboardPage() {
       </div>
 
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-        {filteredCards.map((card) => (
-          <Link
-            key={card.id}
-            href={`/teacher/dashboard/${card.id}`}
-            className="group block min-h-[188px] rounded-[20px] border border-[#EEE8F8] bg-[#FBF7FF] px-6 py-5 shadow-[0_2px_8px_rgba(30,25,60,0.05)] transition hover:-translate-y-0.5 hover:border-[#DFD0FF] hover:shadow-[0_10px_22px_rgba(30,25,60,0.08)]"
-          >
-            <h2 className="text-[22px] font-semibold text-[#111111]">
-              {card.title}
-            </h2>
-            <p className="mt-2 text-[17px] text-[#232323]">{card.grade}</p>
-            <p className="mt-5 text-[15px] font-medium text-[#8C8A94]">
-              {card.date}
-            </p>
+        {filteredCards.map((card) => {
+          const palette = getSubjectCardPalette(card.subject);
+          const SubjectIcon = card.subject === "social" ? FileText : Users;
 
-            <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 text-[15px] font-semibold text-[#111111]">
-              <div className="flex items-center gap-2">
-                <Clock3 className="h-4.5 w-4.5" />
-                <span>{card.duration} мин</span>
+          return (
+            <Link
+              key={card.id}
+              href={`/teacher/dashboard/${card.id}`}
+              className="group block rounded-2xl border px-5 py-5 transition hover:-translate-y-0.5 hover:shadow-md"
+              style={{
+                backgroundColor: palette.cardBackground,
+                borderColor: palette.borderColor,
+              }}
+            >
+              <div
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
+                style={{ backgroundColor: palette.iconBackground }}
+              >
+                <SubjectIcon className="h-5 w-5 text-[#111111]" strokeWidth={2} />
               </div>
-              <div className="flex items-center gap-2">
-                <CircleHelp className="h-4.5 w-4.5" />
-                <span>{card.taskCount} даалгавар</span>
+
+              <div className="mt-4">
+                <h2 className="text-[18px] font-semibold text-[#111111]">
+                  {card.title}
+                  <span className="font-normal"> /{card.topic}/</span>
+                </h2>
+                <p className="text-sm text-[#6B6B6B]">{card.grade}</p>
               </div>
-            </div>
-          </Link>
-        ))}
+
+              <div className="mt-5 flex gap-2 text-xs">
+                <span className="flex items-center gap-1 rounded-full bg-white/85 px-3 py-1 shadow-sm">
+                  <Clock3 className="h-3.5 w-3.5" />
+                  {card.duration} мин
+                </span>
+                <span className="flex items-center gap-1 rounded-full bg-white/85 px-3 py-1 shadow-sm">
+                  <PencilLine className="h-3.5 w-3.5" />
+                  {card.taskCount} даалгавар
+                </span>
+              </div>
+
+              <p className="mt-4 text-sm text-[#111111]">
+                Эхлэх хугацаа-/{card.startTime}/
+              </p>
+              <p className="mt-3 text-xs text-[#6D6778]">{card.date}</p>
+            </Link>
+          );
+        })}
       </div>
     </section>
   );

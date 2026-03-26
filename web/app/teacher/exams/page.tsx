@@ -3,7 +3,12 @@
 import { CircleHelp, Clock3, FileText, Users } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { examCards, subjectTabs, type SubjectKey } from "../_data/dashboard";
+import {
+  examCards,
+  getSubjectCardPalette,
+  subjectTabs,
+  type SubjectKey,
+} from "../_data/dashboard";
 
 // shadcn dialog
 import {
@@ -152,43 +157,55 @@ export default function TeacherDashboardPage() {
 
       {/* Cards */}
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-        {filteredCards.map((card) => (
-          <Link
-            key={card.id}
-            href={`/teacher/dashboard/${card.id}`}
-            className="group block rounded-2xl border border-[#E6E1F5] bg-[#F7F3FF] px-5 py-5 transition hover:-translate-y-0.5 hover:shadow-md hover:border-[#D6C8FF]"
-          >
-            <div className="flex items-start justify-between">
-              <div className="rounded-xl bg-[#EEE6FF] p-2">
-                {card.type === "test" ? (
-                  <FileText className="h-5 w-5 text-[#7C5CFF]" />
-                ) : (
-                  <Users className="h-5 w-5 text-[#5B8DEF]" />
-                )}
+        {filteredCards.map((card) => {
+          const palette = getSubjectCardPalette(card.subject);
+          const SubjectIcon = card.subject === "social" ? FileText : Users;
+
+          return (
+            <Link
+              key={card.id}
+              href={`/teacher/dashboard/${card.id}`}
+              className="group block rounded-2xl border px-5 py-5 transition hover:-translate-y-0.5 hover:shadow-md"
+              style={{
+                backgroundColor: palette.cardBackground,
+                borderColor: palette.borderColor,
+              }}
+            >
+              <div className="flex items-start justify-between">
+                <div
+                  className="rounded-xl p-2"
+                  style={{ backgroundColor: palette.iconBackground }}
+                >
+                  <SubjectIcon className="h-5 w-5 text-[#111111]" />
+                </div>
+
+                <StatusBadge status={card.status} />
               </div>
 
-              <StatusBadge status={card.status} />
-            </div>
+              <div className="mt-4">
+                <h2 className="text-[18px] font-semibold text-[#111]">
+                  {card.title}
+                  <span className="font-normal"> /{card.topic}/</span>
+                </h2>
+                <p className="text-sm text-[#6B6B6B]">{card.grade}</p>
+              </div>
 
-            <div className="mt-4">
-              <h2 className="text-[18px] font-semibold text-[#111]">
-                {card.title}
-              </h2>
-              <p className="text-sm text-[#6B6B6B]">{card.grade}</p>
-            </div>
+              <div className="mt-5 flex gap-2 text-xs">
+                <span className="flex items-center gap-1 rounded-full bg-white/85 px-3 py-1 shadow-sm">
+                  <Clock3 className="h-3.5 w-3.5" /> {card.duration} мин
+                </span>
+                <span className="flex items-center gap-1 rounded-full bg-white/85 px-3 py-1 shadow-sm">
+                  <CircleHelp className="h-3.5 w-3.5" /> {card.taskCount} даалгавар
+                </span>
+              </div>
 
-            <div className="mt-5 flex gap-2 text-xs">
-              <span className="flex items-center gap-1 rounded-full bg-white px-3 py-1 shadow-sm">
-                <Clock3 className="h-3.5 w-3.5" /> {card.duration} мин
-              </span>
-              <span className="flex items-center gap-1 rounded-full bg-white px-3 py-1 shadow-sm">
-                <CircleHelp className="h-3.5 w-3.5" /> {card.taskCount} даалгавар
-              </span>
-            </div>
-
-            <p className="mt-4 text-xs text-[#9A98A3]">{card.date}</p>
-          </Link>
-        ))}
+              <p className="mt-4 text-sm text-[#111111]">
+                Эхлэх хугацаа-/{card.startTime}/
+              </p>
+              <p className="mt-3 text-xs text-[#6D6778]">{card.date}</p>
+            </Link>
+          );
+        })}
       </div>
     </section>
   );
