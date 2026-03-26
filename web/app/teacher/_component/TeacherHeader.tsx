@@ -56,7 +56,7 @@ export function TeacherHeader() {
     .join("");
 
   return (
-    <header className="w-full border-b border-[#E7E8F0] bg-white">
+    <header className="sticky top-0 z-40 w-full border-b border-[#E7E8F0] bg-white/95 backdrop-blur-sm">
       <div className="mx-auto flex w-full max-w-[1360px] items-center justify-between px-6 py-5 lg:px-8">
         <Link href="/teacher/dashboard" className="flex items-center gap-2.5">
           <Image
