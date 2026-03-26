@@ -1,16 +1,22 @@
-"use client"
+import { notFound } from "next/navigation";
+import { TeacherExamDetail } from "../../_component/TeacherExamDetail";
+import { examCards } from "../../_data/dashboard";
 
-import { useParams } from "next/navigation"
+type TeacherExamViewPageProps = {
+  params: Promise<{
+    examId: string;
+  }>;
+};
 
-export default function TeacherExamViewPage() {
+export default async function TeacherExamViewPage({
+  params,
+}: TeacherExamViewPageProps) {
+  const { examId } = await params;
+  const exam = examCards.find((item) => item.id === examId);
 
-    const params = useParams()
-    const examId = params.examId
-    return (
-        <div>
-            <div>
-                {examId}
-            </div>
-        </div>
-    )
+  if (!exam) {
+    notFound();
+  }
+
+  return <TeacherExamDetail exam={exam} />;
 }

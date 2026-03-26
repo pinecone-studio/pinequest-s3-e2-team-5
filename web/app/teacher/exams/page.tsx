@@ -1,14 +1,12 @@
 "use client";
 
-import { CircleHelp, Clock3, FileText, Users } from "lucide-react";
-import Link from "next/link";
+import { Plus } from "lucide-react";
+import { gql } from "@apollo/client";
+import { useMutation } from "@apollo/client/react";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import {
-  examCards,
-  getSubjectCardPalette,
-  subjectTabs,
-  type SubjectKey,
-} from "../_data/dashboard";
+import { TeacherExamCard } from "../_component/TeacherExamCard";
+import { examCards, subjectTabs, type SubjectKey } from "../_data/dashboard";
 
 // shadcn dialog
 import {
@@ -19,36 +17,49 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+<<<<<<< Updated upstream
 import { gql } from "@apollo/client";
 import { useMutation } from "@apollo/client/react";
 import { useRouter } from "next/navigation";
+=======
+>>>>>>> Stashed changes
 
 interface ExamData {
   createExam: {
-    id: string
-    title: string
-  }
+    id: string;
+    title: string;
+  };
 }
 
 const CREATE_EXAM = gql`
-  mutation CreateExam($input: createExamInput!){
-      createExam(input: $input){
-          id
-          title
-      }
+  mutation CreateExam($input: createExamInput!) {
+    createExam(input: $input) {
+      id
+      title
+    }
   }
+<<<<<<< Updated upstream
 `
 
 export default function TeacherDashboardPage() {
+=======
+`;
+
+export default function TeacherExamsPage() {
+>>>>>>> Stashed changes
   const [activeTab, setActiveTab] = useState<SubjectKey>("all");
 
-  const router = useRouter()
+  const router = useRouter();
 
   const filteredCards = useMemo(() => {
-    if (activeTab === "all") return examCards;
+    if (activeTab === "all") {
+      return examCards;
+    }
+
     return examCards.filter((exam) => exam.subject === activeTab);
   }, [activeTab]);
 
+<<<<<<< Updated upstream
   const [title, setTitle] = useState("")
   const [subject, setSubject] = useState("")
   const [description, setDescription] = useState("")
@@ -60,9 +71,16 @@ export default function TeacherDashboardPage() {
     // loading 
   }] = useMutation<ExamData>(CREATE_EXAM)
 
+=======
+  const [title, setTitle] = useState("");
+  const [subject, setSubject] = useState("");
+  const [description, setDescription] = useState("");
+  const [duration, setDuration] = useState(60);
+  const [grade, setGrade] = useState("");
+  const [createExam] = useMutation<ExamData>(CREATE_EXAM);
+>>>>>>> Stashed changes
 
   const handleCreateExam = async () => {
-
     const res = await createExam({
       variables: {
         input: {
@@ -70,37 +88,39 @@ export default function TeacherDashboardPage() {
           subject,
           description,
           duration,
-          grade
-        }
-      }
-    })
+          grade,
+        },
+      },
+    });
 
-    const examId = res.data?.createExam.id
+    const examId = res.data?.createExam.id;
 
-    console.log(error)
-
-    router.push(`/teacher/exams/${examId}/edit`)
-
-  }
+    if (examId) {
+      router.push(`/teacher/exams/${examId}/edit`);
+    }
+  };
 
   return (
-    <section className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <section className="space-y-12">
+      <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-[#1B1A1F]">Шалгалтууд</h1>
-          <p className="text-sm text-[#8C8A94]">Хичээлийн шалгалтууд</p>
+          <h1 className="text-[38px] font-semibold tracking-tight text-[#17131F]">
+            Шалгалтууд
+          </h1>
+          <p className="mt-1 text-[16px] font-medium text-[#787482]">
+            Хичээлийн шалгалтууд
+          </p>
         </div>
 
-        {/* Dialog Trigger */}
         <Dialog>
           <DialogTrigger asChild>
-            <button className="flex items-center gap-2 rounded-full bg-[#9A7BFF] px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#8A6AF0]">
-              + Шинэ шалгалт
+            <button className="inline-flex h-14 items-center gap-3 rounded-[22px] bg-[#9E81F0] px-8 text-[18px] font-semibold text-white shadow-[inset_0_-5px_0_rgba(103,79,184,0.38),0_12px_22px_rgba(158,129,240,0.28)] transition hover:translate-y-[-1px] hover:opacity-95">
+              <Plus className="h-6 w-6" />
+              Шинэ шалгалт
             </button>
           </DialogTrigger>
 
-          <DialogContent className="sm:max-w-lg rounded-2xl">
+          <DialogContent className="rounded-2xl sm:max-w-lg">
             <DialogHeader>
               <DialogTitle className="text-lg font-semibold">
                 Үндсэн мэдээлэл
@@ -149,9 +169,7 @@ export default function TeacherDashboardPage() {
                   value={grade}
                   onChange={(e) => setGrade(e.target.value)}
                 />
-
               </div>
-
 
               {/* Хугацаа */}
               <div>
@@ -175,7 +193,6 @@ export default function TeacherDashboardPage() {
         </Dialog>
       </div>
 
-      {/* Tabs */}
       <div className="border-b border-[#E4E7F0]">
         <div className="flex flex-wrap items-end gap-8 text-[18px] font-semibold lg:gap-10">
           {subjectTabs.map((tab) => {
@@ -186,10 +203,11 @@ export default function TeacherDashboardPage() {
                 key={tab.key}
                 type="button"
                 onClick={() => setActiveTab(tab.key)}
-                className={`border-b-2 pb-3 transition-colors ${isActive
-                  ? "border-[#9A7BFF] text-[#9A7BFF]"
-                  : "border-transparent text-[#25232A]"
-                  }`}
+                className={`border-b-2 pb-3 transition-colors ${
+                  isActive
+                    ? "border-[#9A7BFF] text-[#9A7BFF]"
+                    : "border-transparent text-[#25232A]"
+                }`}
               >
                 {tab.label}
               </button>
@@ -198,56 +216,15 @@ export default function TeacherDashboardPage() {
         </div>
       </div>
 
-      {/* Cards */}
-      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-        {filteredCards.map((card) => {
-          const palette = getSubjectCardPalette(card.subject);
-          const SubjectIcon = card.subject === "social" ? FileText : Users;
-
-          return (
-            <Link
-              key={card.id}
-              href={`/teacher/dashboard/${card.id}`}
-              className="group block rounded-2xl border px-5 py-5 transition hover:-translate-y-0.5 hover:shadow-md"
-              style={{
-                backgroundColor: palette.cardBackground,
-                borderColor: palette.borderColor,
-              }}
-            >
-              <div className="flex items-start justify-between">
-                <div
-                  className="rounded-xl p-2"
-                  style={{ backgroundColor: palette.iconBackground }}
-                >
-                  <SubjectIcon className="h-5 w-5 text-[#111111]" />
-                </div>
-
-              </div>
-
-              <div className="mt-4">
-                <h2 className="text-[18px] font-semibold text-[#111]">
-                  {card.title}
-                  <span className="font-normal"> /{card.topic}/</span>
-                </h2>
-                <p className="text-sm text-[#6B6B6B]">{card.grade}</p>
-              </div>
-
-              <div className="mt-5 flex gap-2 text-xs">
-                <span className="flex items-center gap-1 rounded-full bg-white/85 px-3 py-1 shadow-sm">
-                  <Clock3 className="h-3.5 w-3.5" /> {card.duration} мин
-                </span>
-                <span className="flex items-center gap-1 rounded-full bg-white/85 px-3 py-1 shadow-sm">
-                  <CircleHelp className="h-3.5 w-3.5" /> {card.taskCount} даалгавар
-                </span>
-              </div>
-
-              <p className="mt-4 text-sm text-[#111111]">
-                Эхлэх хугацаа-/{card.startTime}/
-              </p>
-              <p className="mt-3 text-xs text-[#6D6778]">{card.date}</p>
-            </Link>
-          );
-        })}
+      <div className="grid gap-7 md:grid-cols-2 xl:grid-cols-4">
+        {filteredCards.map((card) => (
+          <TeacherExamCard
+            key={card.id}
+            card={card}
+            href={`/teacher/exams/${card.id}`}
+            showActionButton
+          />
+        ))}
       </div>
     </section>
   );
