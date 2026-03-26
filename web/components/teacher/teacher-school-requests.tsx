@@ -21,11 +21,11 @@ type ClassroomItem = {
   createdAt: number;
 };
 
-type myClassroomData = {
+interface myClassroomData {
   classroomsByTeacher: ClassroomItem[]
 }
 
-const getMyClassrooms = gql`
+export const getMyClassrooms = gql`
   query{
     classroomsByTeacher{
       id
@@ -38,7 +38,7 @@ const getMyClassrooms = gql`
 
 
 
-const createClassroomMutation = gql`
+export const createClassroomMutation = gql`
   mutation CreateClassroom($input: createClassroomInput!) {
     createClassroom(input: $input) {
       id
@@ -141,11 +141,6 @@ export function TeacherSchoolRequests() {
       }
 
       setShowClassCode(true)
-      useEffect(() => {
-        console.log(res.error)
-
-      }, [res])
-
       setClassName("");
       await loadClassroomData();
     } catch (error) {

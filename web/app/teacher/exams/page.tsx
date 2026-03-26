@@ -19,6 +19,10 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { gql } from "@apollo/client";
+import { useMutation, useQuery } from "@apollo/client/react";
+import { useRouter } from "next/navigation";
+import { getMyClassrooms } from "@/components/teacher/teacher-school-requests";
 
 function StatusBadge({ status }: { status: string }) {
   if (status === "published") {
@@ -44,13 +48,75 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+interface ExamData {
+  createExam: {
+    id: string
+    title: string
+  }
+}
+
+const CREATE_EXAM = gql`
+  mutation CreateExam($input: createExamInput!){
+      createExam(input: $input){
+          id
+          title
+      }
+  }
+`
+type ClassroomItem = {
+  id: string;
+  className: string;
+  classCode: string;
+  createdAt: number;
+};
+
+type myClassroomData = {
+  classroomsByTeacher: ClassroomItem[]
+}
+
 export default function TeacherDashboardPage() {
   const [activeTab, setActiveTab] = useState<SubjectKey>("all");
+
+  const router = useRouter()
 
   const filteredCards = useMemo(() => {
     if (activeTab === "all") return examCards;
     return examCards.filter((exam) => exam.subject === activeTab);
   }, [activeTab]);
+
+  const [title, setTitle] = useState("")
+  const [subject, setSubject] = useState("")
+  const [description, setDescription] = useState("")
+
+  const [openStatus, setOpenStatus] = useState(false)
+
+  const [duration, setDuration] = useState(60)
+  const [grade, setGrade] = useState("")
+
+  const [createExam, { error, loading }] = useMutation<ExamData>(CREATE_EXAM)
+
+
+  const handleCreateExam = async () => {
+
+    const res = await createExam({
+      variables: {
+        input: {
+          title,
+          subject,
+          description,
+          duration,
+          grade
+        }
+      }
+    })
+
+    const examId = res.data?.createExam.id
+
+    console.log(error)
+
+    router.push(`/teacher/exams/${examId}/edit`)
+
+  }
 
   return (
     <section className="space-y-8">
@@ -81,9 +147,11 @@ export default function TeacherDashboardPage() {
               {/* Хичээл */}
               <div>
                 <label className="text-sm font-medium">Хичээл</label>
-                <select className="mt-1 w-full rounded-lg border p-3 text-sm">
-                  <option>Хичээл сонгох</option>
-                </select>
+                <input className="mt-1 w-full rounded-lg border p-3 text-sm"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  placeholder="Хичээл сонгох"
+                />
               </div>
 
               {/* Сэдэв */}
@@ -92,38 +160,49 @@ export default function TeacherDashboardPage() {
                 <input
                   placeholder="Жишээ: Алгебр Тест-1"
                   className="mt-1 w-full rounded-lg border p-3 text-sm"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
                 />
               </div>
 
+              {/* Description */}
+              <div>
+                <label className="text-sm font-medium">Тодорхойлолт</label>
+                <input
+                  placeholder="Тодорхойлолт"
+                  className="mt-1 w-full rounded-lg border p-3 text-sm"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
+              </div>
               {/* Анги */}
               <div>
                 <label className="text-sm font-medium">Анги</label>
-                <select className="mt-1 w-full rounded-lg border p-3 text-sm">
-                  <option>Анги сонгох</option>
-                </select>
+                <input
+                  className="mt-1 w-full rounded-lg border p-3 text-sm"
+                  placeholder="Анги сонгох"
+                  value={grade}
+                  onChange={(e) => setGrade(e.target.value)}
+                />
+
               </div>
 
-              {/* Бүлэг */}
-              <div>
-                <label className="text-sm font-medium">Бүлэг</label>
-                <select className="mt-1 w-full rounded-lg border p-3 text-sm">
-                  <option>Бүлэг сонгох</option>
-                </select>
-              </div>
 
               {/* Хугацаа */}
               <div>
                 <label className="text-sm font-medium">Хугацаа(минут)</label>
                 <input
-                  defaultValue={60}
                   className="mt-1 w-full rounded-lg border p-3 text-sm"
+                  value={duration}
+                  onChange={(e) => setDuration(Number(e.target.value))}
                 />
               </div>
             </div>
 
             <DialogFooter className="mt-4">
               <button className="px-4 py-2 text-sm">Буцах</button>
-              <button className="rounded-full bg-[#9A7BFF] px-5 py-2 text-sm font-semibold text-white">
+              <button className="rounded-full bg-[#9A7BFF] px-5 py-2 text-sm font-semibold text-white"
+                onClick={handleCreateExam}>
                 Үргэлжлүүлэх
               </button>
             </DialogFooter>
@@ -142,11 +221,10 @@ export default function TeacherDashboardPage() {
                 key={tab.key}
                 type="button"
                 onClick={() => setActiveTab(tab.key)}
-                className={`border-b-2 pb-3 transition-colors ${
-                  isActive
-                    ? "border-[#9A7BFF] text-[#9A7BFF]"
-                    : "border-transparent text-[#25232A]"
-                }`}
+                className={`border-b-2 pb-3 transition-colors ${isActive
+                  ? "border-[#9A7BFF] text-[#9A7BFF]"
+                  : "border-transparent text-[#25232A]"
+                  }`}
               >
                 {tab.label}
               </button>

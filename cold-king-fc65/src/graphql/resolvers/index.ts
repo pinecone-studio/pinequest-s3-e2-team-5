@@ -1,5 +1,6 @@
 import { classroomMutation } from "./mutations/classroom.mutations";
 import { examMutation } from "./mutations/exam.mutations";
+import { questionMutation } from "./mutations/questionAndChoices.mutations";
 import { studentMutation } from "./mutations/student.mutations";
 import { teacherMutation } from "./mutations/teacher.mutations";
 import { classRoomQuery } from "./queries/classroom.queries";
@@ -11,5 +12,6 @@ export const resolvers = [
 	studentMutation,
 	teacherMutation,
 	classroomMutation,
-	classRoomQuery
+	classRoomQuery,
+	questionMutation
 ];

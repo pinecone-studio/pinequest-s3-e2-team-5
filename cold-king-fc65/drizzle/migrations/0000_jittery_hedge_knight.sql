@@ -8,8 +8,6 @@ CREATE TABLE `choices` (
 --> statement-breakpoint
 CREATE TABLE `classrooms` (
 	`id` text PRIMARY KEY NOT NULL,
-	`schoolId` text NOT NULL,
-	`schoolName` text NOT NULL,
 	`teacherId` text NOT NULL,
 	`className` text NOT NULL,
 	`classCode` text NOT NULL,
@@ -38,25 +36,15 @@ CREATE TABLE `questions` (
 	`videoUrl` text,
 	`topic` text,
 	`difficulty` text,
-	`createdAt` integer,
 	FOREIGN KEY (`examId`) REFERENCES `exams`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
-CREATE TABLE `schools` (
-	`id` text PRIMARY KEY NOT NULL,
-	`schoolName` text NOT NULL,
-	`email` text NOT NULL,
-	`managerName` text NOT NULL,
-	`address` text NOT NULL,
-	`aimag` text NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE `students` (
 	`id` text PRIMARY KEY NOT NULL,
-	`fullName` text NOT NULL,
+	`firstName` text NOT NULL,
+	`lastName` text NOT NULL,
 	`email` text NOT NULL,
 	`phone` text NOT NULL,
-	`school` text NOT NULL,
 	`grade` text NOT NULL,
 	`className` text NOT NULL,
 	`inviteCode` text NOT NULL,
@@ -64,25 +52,10 @@ CREATE TABLE `students` (
 	`teacherId` text NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE `teacher_requests` (
-	`id` text PRIMARY KEY NOT NULL,
-	`teacherId` text NOT NULL,
-	`teacherName` text NOT NULL,
-	`teacherEmail` text NOT NULL,
-	`teacherPhone` text NOT NULL,
-	`subject` text NOT NULL,
-	`schoolId` text NOT NULL,
-	`schoolName` text NOT NULL,
-	`status` text DEFAULT 'PENDING' NOT NULL,
-	`createdAt` integer NOT NULL,
-	`approvedAt` integer
-);
---> statement-breakpoint
 CREATE TABLE `teachers` (
 	`id` text PRIMARY KEY NOT NULL,
-	`fullName` text NOT NULL,
+	`firstName` text NOT NULL,
+	`lastName` text NOT NULL,
 	`email` text NOT NULL,
-	`phone` text NOT NULL,
-	`school` text NOT NULL,
-	`subject` text NOT NULL
+	`phone` text NOT NULL
 );

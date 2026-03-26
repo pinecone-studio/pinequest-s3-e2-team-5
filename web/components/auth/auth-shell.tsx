@@ -15,7 +15,9 @@ export function AuthShell({
 }: AuthShellProps) {
   return (
     <main className="relative flex flex-1 overflow-hidden">
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,_rgba(17,24,39,0.12),_transparent_36%),radial-gradient(circle_at_bottom_right,_rgba(120,113,108,0.18),_transparent_30%)]" />
+      <div 
+      className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,_rgba(17,24,39,0.12),_transparent_36%),radial-gradient(circle_at_bottom_right,_rgba(120,113,108,0.18),_transparent_30%)]" 
+      />
       <section className="mx-auto grid w-full max-w-6xl gap-10 px-6 py-12 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,420px)] lg:py-20">
         <div className="flex flex-col justify-center gap-6">
           <div className="inline-flex w-fit items-center rounded-full border border-border/80 bg-background/85 px-4 py-2 text-xs font-medium tracking-[0.22em] text-muted-foreground uppercase shadow-sm backdrop-blur">
