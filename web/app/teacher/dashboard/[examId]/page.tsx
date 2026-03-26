@@ -1,13 +1,10 @@
 "use client";
 
-import { ArrowLeft, ChevronDown, EllipsisVertical, Search } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronRight, Search } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import {
-  examCards,
-  studentResultsByExam,
-} from "../../_data/dashboard";
+import { examCards, studentResultsByExam } from "../../_data/dashboard";
 
 export default function TeacherExamAnalysisPage() {
   const params = useParams<{ examId: string }>();
@@ -94,19 +91,20 @@ export default function TeacherExamAnalysisPage() {
 
         <div className="space-y-4">
           {filteredStudents.map((student, index) => (
-            <div
+            <Link
               key={student.id}
-              className="grid grid-cols-[56px_minmax(240px,1fr)_150px_150px_160px_40px] items-center rounded-[14px] border border-[#F1F0F8] bg-[#F8F8FF] px-8 py-6 text-[16px] text-[#1A1A1A]"
+              href={`/teacher/dashboard/${exam.id}/students/${student.id}`}
+              className="group grid grid-cols-[56px_minmax(240px,1fr)_150px_150px_160px_40px] items-center rounded-[14px] border border-[#F1F0F8] bg-[#F8F8FF] px-8 py-6 text-[16px] text-[#1A1A1A] transition hover:-translate-y-0.5 hover:border-[#DED2FF] hover:bg-white hover:shadow-[0_12px_24px_rgba(41,28,79,0.05)]"
             >
               <span>{index + 1}</span>
               <span className="font-medium">{student.name}</span>
               <span>{student.section}</span>
               <span>{student.score}</span>
               <span>{student.submittedAt}</span>
-              <button type="button" className="flex justify-center text-[#99A0B6]">
-                <EllipsisVertical className="h-5 w-5" />
-              </button>
-            </div>
+              <span className="flex justify-center text-[#99A0B6] transition group-hover:text-[#8B6FF7]">
+                <ChevronRight className="h-5 w-5" />
+              </span>
+            </Link>
           ))}
         </div>
       </div>
