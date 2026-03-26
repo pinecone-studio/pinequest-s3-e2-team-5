@@ -18,6 +18,7 @@ export type StudentResult = {
   section: string;
   score: string;
   submittedAt: string;
+  durationMinutes: number;
 };
 
 export type SubjectCardPalette = {
@@ -34,24 +35,24 @@ export const subjectTabs: { key: SubjectKey; label: string }[] = [
 
 const subjectCardPaletteSequence: SubjectCardPalette[] = [
   {
-    cardBackground: "#DCD9FF",
-    borderColor: "#C8C2FF",
-    iconBackground: "#CDC7FF",
+    cardBackground: "#DCD9FFB3",
+    borderColor: "#C8C2FFB3",
+    iconBackground: "#CDC7FFB3",
   },
   {
-    cardBackground: "#D4EBFF",
-    borderColor: "#B9DEFF",
-    iconBackground: "#BFE0FF",
+    cardBackground: "#D4EBFFB3",
+    borderColor: "#B9DEFFB3",
+    iconBackground: "#BFE0FFB3",
   },
   {
-    cardBackground: "#F8DBFD",
-    borderColor: "#F1C2FB",
-    iconBackground: "#F2C8FA",
+    cardBackground: "#F8DBFDB3",
+    borderColor: "#F1C2FBB3",
+    iconBackground: "#F2C8FAB3",
   },
   {
-    cardBackground: "#E7F699",
-    borderColor: "#D4E66A",
-    iconBackground: "#DCEE78",
+    cardBackground: "#E7F699B3",
+    borderColor: "#D4E66AB3",
+    iconBackground: "#DCEE78B3",
   },
 ];
 
@@ -150,31 +151,31 @@ export const examCards: ExamCard[] = [
 
 export const studentResultsByExam: Record<string, StudentResult[]> = {
   "soc-10-a": [
-    { id: 1, name: "Самбуудорж Ануужин", section: "10-1", score: "23/30", submittedAt: "2/8/2025" },
-    { id: 2, name: "Ц.Номуунаа", section: "10-1", score: "23/30", submittedAt: "2/8/2025" },
-    { id: 3, name: "Б.Тэмүүлэн", section: "10-2", score: "21/30", submittedAt: "2/8/2025" },
-    { id: 4, name: "Г.Мишээл", section: "10-2", score: "26/30", submittedAt: "2/8/2025" },
-    { id: 5, name: "Э.Сондор", section: "10-3", score: "20/30", submittedAt: "2/8/2025" },
-    { id: 6, name: "М.Марал", section: "10-1", score: "28/30", submittedAt: "2/8/2025" },
-    { id: 7, name: "Ж.Номин", section: "10-3", score: "24/30", submittedAt: "2/8/2025" },
+    { id: 1, name: "Самбуудорж Ануужин", section: "10-1", score: "23/30", submittedAt: "2/8/2025", durationMinutes: 40 },
+    { id: 2, name: "Ц.Номуунаа", section: "10-1", score: "23/30", submittedAt: "2/8/2025", durationMinutes: 58 },
+    { id: 3, name: "Б.Тэмүүлэн", section: "10-2", score: "21/30", submittedAt: "2/8/2025", durationMinutes: 55 },
+    { id: 4, name: "Г.Мишээл", section: "10-2", score: "26/30", submittedAt: "2/8/2025", durationMinutes: 47 },
+    { id: 5, name: "Э.Сондор", section: "10-3", score: "20/30", submittedAt: "2/8/2025", durationMinutes: 59 },
+    { id: 6, name: "М.Марал", section: "10-1", score: "28/30", submittedAt: "2/8/2025", durationMinutes: 42 },
+    { id: 7, name: "Ж.Номин", section: "10-3", score: "24/30", submittedAt: "2/8/2025", durationMinutes: 51 },
   ],
   "soc-10-b": [
-    { id: 1, name: "Д.Анударь", section: "9-1", score: "25/30", submittedAt: "2/9/2025" },
-    { id: 2, name: "Н.Төгөлдөр", section: "9-1", score: "19/30", submittedAt: "2/9/2025" },
-    { id: 3, name: "О.Ивээл", section: "9-2", score: "27/30", submittedAt: "2/9/2025" },
+    { id: 1, name: "Д.Анударь", section: "9-1", score: "25/30", submittedAt: "2/9/2025", durationMinutes: 44 },
+    { id: 2, name: "Н.Төгөлдөр", section: "9-1", score: "19/30", submittedAt: "2/9/2025", durationMinutes: 57 },
+    { id: 3, name: "О.Ивээл", section: "9-2", score: "27/30", submittedAt: "2/9/2025", durationMinutes: 46 },
   ],
   "soc-10-c": [
-    { id: 1, name: "А.Саруул", section: "11-1", score: "24/30", submittedAt: "2/10/2025" },
-    { id: 2, name: "Ч.Амин", section: "11-2", score: "22/30", submittedAt: "2/10/2025" },
+    { id: 1, name: "А.Саруул", section: "11-1", score: "24/30", submittedAt: "2/10/2025", durationMinutes: 43 },
+    { id: 2, name: "Ч.Амин", section: "11-2", score: "22/30", submittedAt: "2/10/2025", durationMinutes: 56 },
   ],
   "soc-10-d": [
-    { id: 1, name: "П.Мөнхжин", section: "12-1", score: "18/30", submittedAt: "2/11/2025" },
-    { id: 2, name: "С.Мөнгөнзул", section: "12-2", score: "29/30", submittedAt: "2/11/2025" },
+    { id: 1, name: "П.Мөнхжин", section: "12-1", score: "18/30", submittedAt: "2/11/2025", durationMinutes: 60 },
+    { id: 2, name: "С.Мөнгөнзул", section: "12-2", score: "29/30", submittedAt: "2/11/2025", durationMinutes: 45 },
   ],
   "civ-9-a": [
-    { id: 1, name: "Ц.Эрхэс", section: "9-3", score: "20/24", submittedAt: "3/1/2025" },
+    { id: 1, name: "Ц.Эрхэс", section: "9-3", score: "20/24", submittedAt: "3/1/2025", durationMinutes: 39 },
   ],
   "civ-11-a": [
-    { id: 1, name: "Э.Наран", section: "11-3", score: "25/28", submittedAt: "3/3/2025" },
+    { id: 1, name: "Э.Наран", section: "11-3", score: "25/28", submittedAt: "3/3/2025", durationMinutes: 48 },
   ],
 };

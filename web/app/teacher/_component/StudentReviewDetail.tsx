@@ -14,6 +14,7 @@ type ReviewQuestion = {
   scoreLabel: string;
   type: "text" | "choice";
   answerText?: string;
+  submittedText?: string;
   options?: {
     id: string;
     label: string;
@@ -24,7 +25,7 @@ type ReviewQuestion = {
 };
 
 const reviewPalette = [
-  { order: 1, status: "correct" },
+  { order: 1, status: "wrong" },
   { order: 2, status: "wrong" },
   { order: 3, status: "correct" },
   { order: 4, status: "correct" },
@@ -108,8 +109,9 @@ const baseReviewQuestions: ReviewQuestion[] = [
     id: "review-q1",
     order: 1,
     prompt: "Нийгэм гэж юу вэ?",
-    scoreLabel: "1/1 оноо",
+    scoreLabel: "0/1 оноо",
     type: "text",
+    submittedText: "Мэдэхгүй",
     answerText:
       "Нийгэм гэдэг нь хүмүүс хоорондоо хамтран амьдарч, харилцаж, дүрэм журам, үнэт зүйл, байгууллага, соёлын хүрээнд зохион байгуулалттай оршиж буй хамтын амьдралын тогтолцоо юм.",
   },
@@ -174,11 +176,11 @@ const reviewQuestions: ReviewQuestion[] = [
 
 function getPaletteClasses(status: ReviewPaletteStatus) {
   if (status === "correct") {
-    return "border-[#9CD89F] bg-[#EDFAEE] text-[#68A56C]";
+    return "border-[#7FCF84] bg-[#F2FBF2] text-[#47A34D]";
   }
 
   if (status === "wrong") {
-    return "border-[#F0A6A0] bg-[#FFF1F0] text-[#D86A62]";
+    return "border-[#EE8F88] bg-[#FFF5F4] text-[#DB5B52]";
   }
 
   return "border-[#D9D1F2] bg-white text-[#7E66DC]";
@@ -202,23 +204,23 @@ function getReviewOptionState(
 function getReviewOptionClasses(state: "neutral" | "correct" | "wrong") {
   if (state === "correct") {
     return {
-      row: "border-[#CDEBCE] bg-[#E8F7E9]",
-      radio: "border-[#76B779]",
+      row: "border-[#CFEED1] bg-[#E3F6E5]",
+      radio: "border-[#62BC69]",
       dot: "bg-[#76B779]",
     };
   }
 
   if (state === "wrong") {
     return {
-      row: "border-[#F0C2BD] bg-[#FBEAEA]",
+      row: "border-[#F3D0CC] bg-[#F8E4E3]",
       radio: "border-[#D66F68]",
       dot: "bg-[#D66F68]",
     };
   }
 
   return {
-    row: "border-[#EAE6F5] bg-white",
-    radio: "border-[#C8C3D8]",
+    row: "border-[#E8E2F1] bg-white",
+    radio: "border-[#BBB5C7]",
     dot: "",
   };
 }
@@ -255,20 +257,48 @@ function buildSummaryRows(exam: ExamCard, student: StudentResult) {
   const { earned, total } = parseScore(student.score);
   const percentage = total > 0 ? Math.round((earned / total) * 100) : 0;
   const missed = Math.max(total - earned, 0);
-  const estimatedMinutes = Math.min(
-    Math.round(exam.duration * 0.45) + student.id * 2,
-    exam.duration,
-  );
+  const [hourRaw, minuteRaw] = exam.startTime.split(":");
+  const startHour = Number.parseInt(hourRaw, 10);
+  const startMinute = Number.parseInt(minuteRaw, 10);
+  const normalizedHour = Number.isFinite(startHour) ? startHour : 0;
+  const normalizedMinute = Number.isFinite(startMinute) ? startMinute : 0;
+  const startTotalMinutes = normalizedHour * 60 + normalizedMinute;
+  const endTotalMinutes = startTotalMinutes + student.durationMinutes;
+
+  const formatClock = (totalMinutes: number) => {
+    const hours24 = Math.floor(totalMinutes / 60) % 24;
+    const minutes = totalMinutes % 60;
+    const meridiem = hours24 >= 12 ? "pm" : "am";
+    const hours12 = hours24 % 12 || 12;
+
+    return `${hours12}:${String(minutes).padStart(2, "0")}:00 ${meridiem}`;
+  };
 
   return [
-    { label: "Анги", value: student.section },
-    { label: "Оноо", value: student.score },
-    { label: "Хувь", value: `${percentage}%` },
-    { label: "Алдсан", value: String(missed) },
-    { label: "Нийт даалгавар", value: String(total) },
-    { label: "Хугацаа", value: `${estimatedMinutes}мин` },
-    { label: "Өгсөн", value: student.submittedAt },
+    [
+      { label: "Эхэлсэн", value: formatClock(startTotalMinutes) },
+      { label: "Дууссан", value: formatClock(endTotalMinutes) },
+    ],
+    [
+      { label: "Нийт даалгал", value: String(total) },
+      { label: "Алдсан", value: String(missed) },
+    ],
+    [
+      { label: "Оноо", value: student.score },
+      { label: "Хувь", value: `${percentage}%` },
+    ],
   ];
+}
+
+function formatStudentSection(section: string) {
+  const [grade, groupRaw] = section.split("-");
+  const groupNumber = Number.parseInt(groupRaw, 10);
+
+  if (!grade || !Number.isFinite(groupNumber) || groupNumber <= 0) {
+    return section;
+  }
+
+  return `${grade}${String.fromCharCode(64 + groupNumber)}`;
 }
 
 type StudentReviewDetailProps = {
@@ -282,6 +312,7 @@ export function StudentReviewDetail({
 }: StudentReviewDetailProps) {
   const [focusedQuestion, setFocusedQuestion] = useState(1);
   const summaryRows = buildSummaryRows(exam, student);
+  const displaySection = formatStudentSection(student.section);
 
   const handleFocusQuestion = (order: number) => {
     setFocusedQuestion(order);
@@ -292,123 +323,147 @@ export function StudentReviewDetail({
 
   return (
     <section className="space-y-6">
-      <div>
-        <Link
-          href={`/teacher/dashboard/${exam.id}`}
-          className="inline-flex items-center gap-3 text-[18px] font-medium text-[#36313F] transition hover:text-[#7E66DC]"
-        >
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F3F0FA]">
-            <ChevronLeft className="h-5 w-5" />
-          </span>
-          Буцах
-        </Link>
-
-        <p className="mt-5 text-[14px] font-medium text-[#8F8A99]">
-          {exam.title} · {exam.grade}
-        </p>
-        <h1 className="mt-2 text-[30px] font-semibold tracking-tight text-[#17131F]">
-          {student.name}-ийн дэлгэрэнгүй
-        </h1>
-      </div>
-
-      <div className="grid gap-5 lg:grid-cols-[212px_minmax(0,1fr)]">
-        <aside className="space-y-5">
-          <div className="rounded-[18px] border border-[#E6E1F2] bg-white p-4 shadow-[0_4px_12px_rgba(53,31,107,0.03)]">
-            <h2 className="text-[16px] font-semibold text-[#25222D]">
-              {formatStudentDisplayName(student.name)}
-            </h2>
-
-            <div className="mt-4 space-y-2.5">
-              {summaryRows.map((row) => (
-                <div
-                  key={row.label}
-                  className="flex items-center justify-between gap-3 text-[14px]"
-                >
-                  <span className="font-semibold text-[#3A3643]">
-                    {row.label}
-                  </span>
-                  <span className="text-right text-[#54505E]">{row.value}</span>
-                </div>
-              ))}
+      <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <aside className="self-start lg:sticky lg:top-28">
+          <div className="space-y-4">
+            <div>
+              <Link
+                href={`/teacher/dashboard/${exam.id}`}
+                className="inline-flex items-center gap-3 text-[18px] font-medium text-[#36313F] transition hover:text-[#7E66DC]"
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F3F0FA]">
+                  <ChevronLeft className="h-5 w-5" />
+                </span>
+                Буцах
+              </Link>
             </div>
-          </div>
 
-          <div className="rounded-[18px] border border-[#E6E1F2] bg-white p-3 shadow-[0_4px_12px_rgba(53,31,107,0.03)]">
-            <p className="mb-4 text-[14px] font-semibold text-[#2A2733]">
-              Асуулт
-            </p>
+            <div className="rounded-[18px] border border-[#E8E2F1] bg-white p-4 shadow-[0_4px_12px_rgba(53,31,107,0.04)]">
+              <div className="flex items-center justify-between rounded-[14px] bg-[#F2F0FF] px-4 py-2.5">
+                <h2 className="text-[17px] font-semibold text-[#25222D]">
+                  {formatStudentDisplayName(student.name)}
+                </h2>
+                <span className="text-[17px] font-medium text-[#25222D]">
+                  {displaySection}
+                </span>
+              </div>
 
-            <div className="mx-auto grid w-fit grid-cols-5 gap-2.5">
-              {reviewPalette.map((item) => (
-                <button
-                  key={item.order}
-                  type="button"
-                  onClick={() => handleFocusQuestion(item.order)}
-                  className={[
-                    "flex h-7 w-7 cursor-pointer items-center justify-center rounded-[10px] border text-[12px] font-medium transition",
-                    focusedQuestion === item.order
-                      ? "border-[#7E66DC] ring-2 ring-[#7E66DC]/15"
-                      : "",
-                    getPaletteClasses(item.status),
-                  ].join(" ")}
-                >
-                  {item.order}
-                </button>
-              ))}
+              <div className="mt-4 space-y-3">
+                {summaryRows.map((group, index) => (
+                  <div key={`summary-group-${index}`}>
+                    <div className="space-y-2.5">
+                      {group.map((row) => (
+                        <div
+                          key={row.label}
+                          className="flex items-center justify-between gap-3 text-[14px]"
+                        >
+                          <span className="font-semibold text-[#23202A]">
+                            {row.label}
+                          </span>
+                          <span className="text-right text-[14px] text-[#23202A]">
+                            {row.value}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {index < summaryRows.length - 1 ? (
+                      <div className="mt-3 h-px bg-[#EAE5F2]" />
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-[18px] border border-[#E8E2F1] bg-white p-4 shadow-[0_4px_12px_rgba(53,31,107,0.04)]">
+              <p className="mb-4 text-[17px] font-semibold text-[#23202A]">
+                Асуулт
+              </p>
+
+              <div className="grid grid-cols-5 gap-3">
+                {reviewPalette.map((item) => (
+                  <button
+                    key={item.order}
+                    type="button"
+                    onClick={() => handleFocusQuestion(item.order)}
+                    className={[
+                      "flex h-10 w-10 cursor-pointer items-center justify-center rounded-[10px] border text-[14px] font-medium transition",
+                      focusedQuestion === item.order
+                        ? "border-[#7E66DC] ring-2 ring-[#7E66DC]/15"
+                        : "",
+                      getPaletteClasses(item.status),
+                    ].join(" ")}
+                  >
+                    {item.order}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </aside>
 
-        <div className="space-y-5">
+        <div className="space-y-4">
           {reviewQuestions.map((question) => (
             <article
               key={question.id}
               id={`review-question-${question.order}`}
-              className="scroll-mt-24 rounded-[16px] border border-[#E8E4F3] bg-white p-4 shadow-[0_4px_12px_rgba(53,31,107,0.03)]"
+              className="scroll-mt-24 rounded-[18px] border border-[#E8E2F1] bg-white p-5 shadow-[0_4px_12px_rgba(53,31,107,0.04)]"
             >
               <div className="flex items-start justify-between gap-4">
-                <h2 className="text-[16px] font-semibold text-[#27242F]">
+                <h2 className="text-[18px] font-semibold text-[#1F1B27]">
                   {question.order}. {question.prompt}
                 </h2>
-                <span className="shrink-0 text-[14px] font-medium text-[#5E5A68]">
+                <span className="shrink-0 pt-0.5 text-[15px] font-medium text-[#2C2933]">
                   {question.scoreLabel}
                 </span>
               </div>
 
               {question.type === "text" ? (
-                <div className="mt-4 rounded-[12px] border border-[#E9E4F6] bg-white px-4 py-3 text-[15px] leading-7 text-[#4F4A5C]">
-                  {question.answerText}
+                <div className="mt-5 space-y-5">
+                  <div className="rounded-[14px] bg-[#F8E4E3] px-4 py-3.5 text-[15px] text-[#27242F]">
+                    {question.submittedText ?? "Мэдэхгүй"}
+                  </div>
+
+                  <div className="overflow-hidden rounded-[14px] bg-[#F4F4F4]">
+                    <div className="flex">
+                      <div className="w-1.5 bg-[#75C278]" />
+                      <div className="px-4 py-3.5 text-[15px] leading-8 text-[#27242F]">
+                        {question.answerText}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ) : (
-                <div className="mt-4 space-y-3">
+                <div className="mt-5 space-y-3.5">
                   {question.options?.map((option) => {
                     const state = getReviewOptionState(question, option.id);
                     const optionClasses = getReviewOptionClasses(state);
 
                     return (
-                      <div
-                        key={option.id}
-                        className={[
-                          "flex w-full items-center gap-3 rounded-[12px] border px-4 py-3 text-left",
-                          optionClasses.row,
-                        ].join(" ")}
-                      >
+                      <div key={option.id} className="flex items-center gap-3.5">
                         <span
                           className={[
-                            "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border",
+                            "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border bg-white",
                             optionClasses.radio,
                           ].join(" ")}
                         >
                           {state !== "neutral" ? (
                             <span
-                              className={`h-2.5 w-2.5 rounded-full ${optionClasses.dot}`}
+                              className={`h-4 w-4 rounded-full ${optionClasses.dot}`}
                             />
                           ) : null}
                         </span>
 
-                        <span className="text-[15px] font-medium text-[#383540]">
-                          {option.label} {option.text}
-                        </span>
+                        <div
+                          className={[
+                            "flex-1 rounded-[14px] border px-4 py-3.5 text-left",
+                            optionClasses.row,
+                          ].join(" ")}
+                        >
+                          <span className="text-[15px] font-medium text-[#27242F]">
+                            {option.label} {option.text}
+                          </span>
+                        </div>
                       </div>
                     );
                   })}
