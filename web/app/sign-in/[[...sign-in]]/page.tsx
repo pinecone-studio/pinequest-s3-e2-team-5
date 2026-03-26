@@ -72,7 +72,9 @@ export default function SignInPage() {
             return;
           }
 
-          const url = decorateUrl("/dashboard");
+          const rawRole = session?.user?.unsafeMetadata?.role;
+          const targetUrl = rawRole === "student" ? "/student/account" : "/dashboard";
+          const url = decorateUrl(targetUrl);
           if (url.startsWith("http")) {
             window.location.href = url;
           } else {

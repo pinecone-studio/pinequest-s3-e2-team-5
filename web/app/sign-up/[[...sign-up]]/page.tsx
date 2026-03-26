@@ -92,7 +92,7 @@ export default function SignUpPage() {
 
   useEffect(() => {
     if (isSignedIn) {
-      router.replace(role === "student" ? "/student" : "/dashboard");
+      router.replace(role === "student" ? "/student/account" : "/dashboard");
     }
   }, [isSignedIn, role, router]);
 
@@ -148,7 +148,7 @@ export default function SignUpPage() {
           }
 
           if (role === "student") {
-            router.push("/student");
+            router.push("/student/account");
             return;
           }
 
