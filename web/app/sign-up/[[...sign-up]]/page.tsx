@@ -91,14 +91,8 @@ export default function SignUpPage() {
   const [pendingVerification, setPendingVerification] = useState(false);
 
   useEffect(() => {
-    if (!isSignedIn || !isUserLoaded) {
-      return;
-    }
-
-    const metadataRole = user?.unsafeMetadata?.role;
-    if (isUserRole(metadataRole)) {
-      router.replace(getRoleHomePath(metadataRole));
-      return;
+    if (isSignedIn) {
+      router.replace(role === "student" ? "/student/account" : "/dashboard");
     }
 
     router.replace(getRoleHomePath(role));
@@ -153,7 +147,12 @@ export default function SignUpPage() {
             return;
           }
 
-          const url = decorateUrl(getRoleHomePath(role));
+          if (role === "student") {
+            router.push("/student/account");
+            return;
+          }
+
+          const url = decorateUrl("/dashboard");
           if (url.startsWith("http")) {
             window.location.href = url;
           } else {

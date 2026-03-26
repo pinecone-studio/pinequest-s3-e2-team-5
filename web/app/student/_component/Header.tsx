@@ -1,9 +1,10 @@
 "use client";
 
+import { useClerk, useUser } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileText, BarChart2 } from "lucide-react";
+import { FileText, BarChart2, LogOut } from "lucide-react";
 
 const navItems = [
   {
@@ -40,6 +41,22 @@ function isNavItemActive(
 
 export default function Header() {
   const pathname = usePathname();
+  const { signOut } = useClerk();
+  const { user } = useUser();
+  const rawFullName = user?.unsafeMetadata?.fullName;
+  const displayName =
+    typeof rawFullName === "string" && rawFullName.trim()
+      ? rawFullName
+      : [user?.lastName, user?.firstName].filter(Boolean).join(" ") ||
+        user?.firstName ||
+        user?.username ||
+        "Сурагч";
+  const initials = displayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[#5B8DEF]/30 bg-white/95 backdrop-blur-sm">
@@ -86,14 +103,24 @@ export default function Header() {
 
         {/* User */}
         <div className="ml-4 flex items-center gap-3 border-l border-[#D8DAE3] pl-5">
+          <button
+            type="button"
+            onClick={() => void signOut({ redirectUrl: "/student" })}
+            className="inline-flex h-10 items-center gap-2 rounded-full border border-[#D8DAE3] px-4 text-[13px] font-medium text-[#51475A] transition hover:border-[#8B7FE8] hover:bg-[#F7F3FF] hover:text-[#6A54D8]"
+          >
+            <LogOut size={14} />
+            Log out
+          </button>
           <div className="h-10 w-10 overflow-hidden rounded-full border-2 border-[#5B8DEF]/20 bg-gradient-to-br from-[#F4A261] to-[#E76F51]">
             <div className="flex h-full w-full items-center justify-center text-[13px] font-bold text-white">
-              СА
+              {initials || "СУ"}
             </div>
           </div>
           <div className="text-right">
             <p className="text-[11px] text-[#51475A]">Өдрийн мэнд</p>
-            <p className="text-[14px] font-semibold text-gray-800">С.Анужин</p>
+            <p className="text-[14px] font-semibold text-gray-800">
+              {displayName}
+            </p>
           </div>
         </div>
       </div>
