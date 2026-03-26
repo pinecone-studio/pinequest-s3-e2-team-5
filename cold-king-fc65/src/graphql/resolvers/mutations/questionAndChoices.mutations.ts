@@ -38,7 +38,7 @@ export const questionMutation = {
                 examId: args.input.examId,
                 indexOnExam: args.input.indexOnExam,
                 difficulty: args.input.difficulty || null,
-                createdAt: new Date()
+                createdAt: Date.now()
             });
 
             // 2️⃣ Insert choices after question exists

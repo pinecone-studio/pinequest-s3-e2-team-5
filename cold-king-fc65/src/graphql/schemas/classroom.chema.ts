@@ -2,16 +2,19 @@ import gql from "graphql-tag";
 
 
 export const classroomTypeDefs = gql`
+
+    scalar DateTime
+
     type Classroom {
         id: ID!
         teacherId: String!
         className: String!
         classCode: String!
-        createdAt: Int!
+        createdAt: DateTime!
     }
 
     type Query{
-        classroomsByTeacher(teacherId: String!): [Classroom]!
+        classroomsByTeacher: [Classroom]!
     }
 
     input createClassroomInput{

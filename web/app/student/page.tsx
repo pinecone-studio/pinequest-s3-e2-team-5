@@ -365,6 +365,7 @@ export default function StudentPage() {
       return;
     }
 
+
     const sendCodeResult = await signUp.verifications.sendEmailCode();
     if (!sendCodeResult.error) {
       setPendingVerification(true);

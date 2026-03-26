@@ -9,6 +9,8 @@ enum QuestionType {
     open,
     short
 }
+    scalar DateTime
+
     type Question{
         id: ID!
         type: QuestionType!
@@ -21,7 +23,7 @@ enum QuestionType {
 
         topic: String
         difficulty: String
-        createdAt: Int
+        createdAt: DateTime
     }
 
     type Query {

@@ -19,11 +19,26 @@ export const classroomMutation = {
 
             const userId = context.auth.userId;
 
+            const generateClassCode = () => {
+                const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+                let code = "";
+
+                for (let i = 0; i < 6; i++) {
+                    code += chars[Math.floor(Math.random() * chars.length)];
+                }
+
+                return code;
+            };
+
+            const classCode = generateClassCode()
+
             return context.db.insert(classrooms).values({
+                id: crypto.randomUUID(),
                 teacherId: userId,
                 className: args.input.className,
-                createdAt: new Date()
-            })
+                classCode,
+                createdAt: Date.now()
+            }).returning().get()
         }
     }
 }
