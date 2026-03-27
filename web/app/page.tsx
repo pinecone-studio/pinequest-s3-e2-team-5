@@ -114,15 +114,8 @@ export default function Home() {
 
       <section className="mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-[1.15fr_0.85fr]">
         <div className="flex items-center justify-center">
-          <div className="relative flex w-full max-w-[540px] items-center justify-center">
-            <Image
-              src="/studentHome.png"
-              alt="Learning MS welcome illustration"
-              width={413}
-              height={428}
-              priority
-              className="h-auto w-full max-w-[360px] drop-shadow-[0_24px_40px_rgba(138,125,221,0.18)] lg:max-w-[430px]"
-            />
+          <div className="relative flex min-h-[380px] items-center justify-center overflow-hidden rounded-[42px] px-4 py-8 lg:min-h-[720px] lg:px-8">
+            <StudentIllustration />
           </div>
         </div>
 

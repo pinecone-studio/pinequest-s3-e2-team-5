@@ -20,6 +20,8 @@ import {
 } from "../_data/completed-exams";
 import ExamCard from "../_component/ExamCard";
 
+const completedExamsUpdatedEvent = "pinequest-completed-exams-updated";
+
 type Exam = {
   id: string;
   subject: string;
@@ -297,11 +299,13 @@ export default function ShalgaltuudPage() {
         completedExamStorageKey,
         JSON.stringify(next),
       );
+      window.dispatchEvent(new Event(completedExamsUpdatedEvent));
     } catch {
       window.localStorage.setItem(
         completedExamStorageKey,
         JSON.stringify([completedExam]),
       );
+      window.dispatchEvent(new Event(completedExamsUpdatedEvent));
     }
   };
 

@@ -185,6 +185,58 @@ const summaryRows = [
   { label: "Нийт дасгал", value: "28" },
 ] as const;
 
+const completedExamsUpdatedEvent = "pinequest-completed-exams-updated";
+
+let cachedCompletedExamsSnapshot = defaultCompletedExams;
+let cachedCompletedExamsRaw = "";
+
+function getCompletedExamsSnapshot() {
+  try {
+    const stored = window.localStorage.getItem(completedExamStorageKey) ?? "";
+
+    if (stored === cachedCompletedExamsRaw) {
+      return cachedCompletedExamsSnapshot;
+    }
+
+    cachedCompletedExamsRaw = stored;
+
+    if (!stored) {
+      cachedCompletedExamsSnapshot = defaultCompletedExams;
+      return cachedCompletedExamsSnapshot;
+    }
+
+    const parsed = JSON.parse(stored) as CompletedExamRecord[];
+    cachedCompletedExamsSnapshot = mergeCompletedExams([
+      ...parsed,
+      ...defaultCompletedExams,
+    ]);
+
+    return cachedCompletedExamsSnapshot;
+  } catch {
+    cachedCompletedExamsRaw = "";
+    cachedCompletedExamsSnapshot = defaultCompletedExams;
+    return cachedCompletedExamsSnapshot;
+  }
+}
+
+function subscribeToCompletedExams(onStoreChange: () => void) {
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key !== null && event.key !== completedExamStorageKey) {
+      return;
+    }
+
+    onStoreChange();
+  };
+
+  window.addEventListener("storage", handleStorage);
+  window.addEventListener(completedExamsUpdatedEvent, onStoreChange);
+
+  return () => {
+    window.removeEventListener("storage", handleStorage);
+    window.removeEventListener(completedExamsUpdatedEvent, onStoreChange);
+  };
+}
+
 function getPaletteClasses(status: ReviewPaletteStatus) {
   if (status === "correct") {
     return "border-[#9CD89F] bg-[#EDFAEE] text-[#68A56C]";
@@ -242,20 +294,8 @@ export default function UrDunPage() {
   const [focusedQuestion, setFocusedQuestion] = useState(1);
 
   const completedExams = useSyncExternalStore(
-    () => () => {},
-    () => {
-      try {
-        const stored = window.localStorage.getItem(completedExamStorageKey);
-        if (!stored) {
-          return defaultCompletedExams;
-        }
-
-        const parsed = JSON.parse(stored) as CompletedExamRecord[];
-        return mergeCompletedExams([...parsed, ...defaultCompletedExams]);
-      } catch {
-        return defaultCompletedExams;
-      }
-    },
+    subscribeToCompletedExams,
+    getCompletedExamsSnapshot,
     () => defaultCompletedExams,
   );
 
