@@ -50,7 +50,7 @@
 }
 
 :root {
-  --app-font-sans: "Avenir Next", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --app-font-sans: var(--font-inter), "Segoe UI", ui-sans-serif, system-ui, sans-serif;
   --app-font-mono: "SFMono-Regular", ui-monospace, "Cascadia Code", "Segoe UI Mono", monospace;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);

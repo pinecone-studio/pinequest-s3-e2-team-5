@@ -1,196 +1,153 @@
-import { Show } from "@clerk/nextjs";
-import {
-  ArrowRight,
-  LockKeyhole,
-  ShieldCheck,
-  UserRoundCheck,
-} from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
-import { BarChart, DoughnutChart, type ChartData } from "@/components/charts";
-import { MathBlock, MathInline } from "@/components/math";
 import { Button } from "@/components/ui/button";
-
-const features = [
-  {
-    icon: ShieldCheck,
-    title: "Protected routes",
-    description:
-      "Clerk runs in middleware.ts and keeps the /dashboard experience behind an authenticated session.",
-  },
-  {
-    icon: LockKeyhole,
-    title: "Custom auth pages",
-    description:
-      "Dedicated /sign-in and /sign-up routes are ready for Clerk's prebuilt components.",
-  },
-  {
-    icon: UserRoundCheck,
-    title: "Role-aware accounts",
-    description:
-      "Users choose whether they are a student or teacher during sign-up, and the app can tailor the dashboard afterward.",
-  },
-] as const;
-
-const blockEquation = String.raw`\int_0^1 x^2\,dx = \frac{1}{3}`;
-
-const inlineEquation = String.raw`e^{i\pi} + 1 = 0`;
-
-const activityChartData: ChartData<"bar"> = {
-  labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-  datasets: [
-    {
-      label: "Solved quizzes",
-      data: [18, 24, 20, 31, 27, 36],
-      backgroundColor: [
-        "#111827",
-        "#1f2937",
-        "#334155",
-        "#0f766e",
-        "#0f766e",
-        "#f59e0b",
-      ],
-      borderRadius: 999,
-      borderSkipped: false,
-      maxBarThickness: 26,
-    },
-  ],
-};
-
-const progressChartData: ChartData<"doughnut"> = {
-  labels: ["Completed", "In review", "Needs retry"],
-  datasets: [
-    {
-      data: [62, 23, 15],
-      backgroundColor: ["#111827", "#0f766e", "#f59e0b"],
-      borderWidth: 0,
-      hoverOffset: 6,
-    },
-  ],
-};
+function StudentIllustration() {
+  return (
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        maxWidth: "720px",
+        aspectRatio: "679 / 642.86",
+        margin: "0 auto",
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          inset: "-6%",
+          borderRadius: "80px",
+          background: "linear-gradient(180deg, #E9D0F7 0%, #B8CBF7 100%)",
+          opacity: 0.45,
+          filter: "blur(90px)",
+          pointerEvents: "none",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          inset: "3%",
+          borderRadius: "60px",
+          background: "linear-gradient(180deg, #E9D0F7 0%, #B8CBF7 100%)",
+          opacity: 0.72,
+          filter: "blur(30px)",
+          pointerEvents: "none",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          inset: "6%",
+          borderRadius: "48px",
+          background: "linear-gradient(180deg, #EDE0FA 0%, #C5D4F8 100%)",
+          pointerEvents: "none",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          inset: "6%",
+          borderRadius: "48px",
+          background:
+            "radial-gradient(circle at 50% 0%, rgba(255,255,255,0.55) 0%, transparent 62%)",
+          pointerEvents: "none",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          inset: "6%",
+          borderRadius: "48px",
+          border: "transparent",
+          pointerEvents: "none",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          bottom: "6%",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "70%",
+          height: "60px",
+          borderRadius: "9999px",
+          background: "rgba(214, 204, 255, 0.5)",
+          filter: "blur(32px)",
+          pointerEvents: "none",
+        }}
+      />
+      <Image
+        src="/studentHome.png"
+        alt="Auth illustration"
+        width={560}
+        height={560}
+        style={{
+          position: "relative",
+          zIndex: 10,
+          width: "78%",
+          height: "auto",
+          maxWidth: "none",
+          left: "50%",
+          top: "50%",
+          transform: "translate(-50%, -50%)",
+          display: "block",
+        }}
+      />
+    </div>
+  );
+}
 
 export default function Home() {
   return (
-    <main className="relative flex flex-1 overflow-hidden">
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,_rgba(17,24,39,0.12),_transparent_38%),radial-gradient(circle_at_bottom_right,_rgba(120,113,108,0.16),_transparent_30%)]" />
-      <section className="mx-auto grid w-full max-w-6xl gap-16 px-6 py-16 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,420px)] lg:py-24">
-        <div className="flex flex-col justify-center gap-8">
-          <div className="inline-flex w-fit items-center rounded-full border border-border/80 bg-background/80 px-4 py-2 text-xs font-medium tracking-[0.22em] text-muted-foreground uppercase shadow-sm backdrop-blur">
-            Next.js 16 + Clerk
-          </div>
-          <div className="space-y-6">
-            <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-              Authentication is now first-class in PineQuest.
-            </h1>
-            <p className="max-w-2xl text-lg leading-8 text-muted-foreground">
-              Clerk is connected to the app router with dedicated sign-in and
-              sign-up pages, a protected dashboard route, and role separation
-              for student and teacher accounts.
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Show when="signed-out">
-              <Button asChild size="lg" className="min-w-40">
-                <Link href="/sign-up">Create account</Link>
-              </Button>
-              <Button asChild size="lg" variant="outline" className="min-w-40">
-                <Link href="/sign-in">Open sign in</Link>
-              </Button>
-            </Show>
-            <Show when="signed-in">
-              <Button asChild size="lg" className="min-w-40">
-                <Link href="/dashboard" prefetch={false}>
-                  Open dashboard
-                </Link>
-              </Button>
-            </Show>
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-white px-6 py-12">
+      <div className="absolute inset-0 -z-30 bg-white" />
+      <div className="absolute inset-0 -z-20 flex items-center justify-center">
+        <div
+          className="h-[62vh] w-[72vw] max-w-[1020px] rounded-[72px] opacity-55"
+          style={{
+            background:
+              "linear-gradient(211.38deg, #E9D0F7 18.64%, #B8CBF7 83.45%)",
+          }}
+        />
+      </div>
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0)_18%,rgba(255,255,255,0.84)_72%,#ffffff_100%)]" />
+
+      <section className="mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-[1.15fr_0.85fr]">
+        <div className="flex items-center justify-center">
+          <div className="relative flex w-full max-w-[540px] items-center justify-center">
+            <Image
+              src="/studentHome.png"
+              alt="Learning MS welcome illustration"
+              width={413}
+              height={428}
+              priority
+              className="h-auto w-full max-w-[360px] drop-shadow-[0_24px_40px_rgba(138,125,221,0.18)] lg:max-w-[430px]"
+            />
           </div>
         </div>
 
-        <div className="grid gap-4 self-center">
-          {features.map((feature) => {
-            const Icon = feature.icon;
+        <div className="mx-auto flex w-full max-w-[430px] flex-col items-start text-left">
+          <h1 className="text-4xl font-semibold tracking-tight text-[#15111d] sm:text-5xl">
+            Тавтай морил
+          </h1>
+          <p className="mt-5 max-w-[400px] text-lg leading-8 font-medium text-[#25202f]">
+            Өөрийн эрхээр нэвтэрч хичээл, даалгавар, шалгалтаа хялбараар
+            удирдаарай.
+          </p>
 
-            return (
-              <article
-                key={feature.title}
-                className="rounded-3xl border border-border/70 bg-card/85 p-6 shadow-sm backdrop-blur"
-              >
-                <div className="mb-5 flex size-12 items-center justify-center rounded-2xl bg-muted text-foreground">
-                  <Icon className="size-5" />
-                </div>
-                <h2 className="text-xl font-semibold tracking-tight">
-                  {feature.title}
-                </h2>
-                <p className="mt-3 text-sm leading-7 text-muted-foreground">
-                  {feature.description}
-                </p>
-              </article>
-            );
-          })}
-
-          <article className="overflow-hidden rounded-3xl border border-border/70 bg-card/85 p-6 shadow-sm backdrop-blur">
-            <p className="text-sm font-medium tracking-[0.22em] text-muted-foreground uppercase">
-              KaTeX ready
-            </p>
-            <h2 className="mt-3 text-xl font-semibold tracking-tight">
-              Formula rendering is available in the app shell.
-            </h2>
-            <MathBlock
-              math={blockEquation}
-              className="mt-4 overflow-x-auto rounded-2xl bg-muted/70 px-4 py-5 text-foreground"
-            />
-            <p className="mt-4 text-sm leading-7 text-muted-foreground">
-              Inline math also works:
-              <MathInline
-                math={inlineEquation}
-                className="ml-2 text-foreground"
-              />
-            </p>
-          </article>
-
-          <article className="overflow-hidden rounded-3xl border border-border/70 bg-card/85 p-6 shadow-sm backdrop-blur">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-medium tracking-[0.22em] text-muted-foreground uppercase">
-                  Chart.js ready
-                </p>
-                <h2 className="mt-3 text-xl font-semibold tracking-tight">
-                  Charts now plug into the app with a single import.
-                </h2>
-                <p className="mt-3 text-sm leading-7 text-muted-foreground">
-                  The registration boilerplate lives in one wrapper, so pages
-                  can render charts directly with <code>BarChart</code> or <code>DoughnutChart</code>.
-                </p>
-              </div>
-              <div className="hidden rounded-full border border-border/70 px-3 py-1 text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase sm:block">
-                Demo data
-              </div>
-            </div>
-            <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(220px,280px)]">
-              <div className="rounded-2xl bg-muted/60 p-4">
-                <BarChart data={activityChartData} className="h-64" />
-              </div>
-              <div className="rounded-2xl bg-muted/60 p-4">
-                <DoughnutChart data={progressChartData} className="h-64" />
-              </div>
-            </div>
-          </article>
-
-          <div className="rounded-3xl border border-border/70 bg-foreground p-6 text-background shadow-lg">
-            <p className="text-sm font-medium tracking-[0.22em] text-background/70 uppercase">
-              Ready to test
-            </p>
-            <p className="mt-3 text-2xl font-semibold tracking-tight">
-              Create a Clerk user and land straight in the protected dashboard.
-            </p>
-            <Link
-              href="/dashboard"
-              prefetch={false}
-              className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-background/90 transition hover:text-background"
+          <div className="mt-10 flex w-full flex-col gap-4 sm:flex-row">
+            <Button
+              asChild
+              className="h-11 min-w-[150px] rounded-full border-0 bg-[#9c7cf7] px-8 text-[15px] font-medium text-white shadow-[inset_0_-2px_0_rgba(118,85,216,0.45)] transition hover:bg-[#8f6df5]"
             >
-              Try the protected route
-              <ArrowRight className="size-4" />
-            </Link>
+              <Link href="/sign-up">Бүртгүүлэх</Link>
+            </Button>
+            <Button
+              asChild
+              className="h-11 min-w-[150px] rounded-full border-0 bg-[#9c7cf7] px-8 text-[15px] font-medium text-white shadow-[inset_0_-2px_0_rgba(118,85,216,0.45)] transition hover:bg-[#8f6df5]"
+            >
+              <Link href="/sign-in">Нэвтрэх</Link>
+            </Button>
           </div>
         </div>
       </section>

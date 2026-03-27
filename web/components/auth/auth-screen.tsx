@@ -158,8 +158,8 @@ function SelectField({
         value={value}
         onChange={onChange}
       >
-        <option value="student">Student</option>
-        <option value="teacher">Teacher</option>
+        <option value="student">Сурагч</option>
+        <option value="teacher">Багш</option>
       </select>
     </div>
   );
@@ -276,7 +276,7 @@ function StudentIllustration() {
           position: "absolute",
           inset: "6%",
           borderRadius: "48px",
-          border: "1.5px solid rgba(255,255,255,0.6)",
+          border: "transparent",
           pointerEvents: "none",
         }}
       />
@@ -317,8 +317,11 @@ function StudentIllustration() {
 
 export function AuthScreen({ mode }: AuthScreenProps) {
   const router = useRouter();
-  const { signIn, fetchStatus: signInFetchStatus, errors: signInErrors } =
-    useSignIn();
+  const {
+    signIn,
+    fetchStatus: signInFetchStatus,
+    errors: signInErrors,
+  } = useSignIn();
   const { signUp, errors, fetchStatus } = useSignUp();
   const { isSignedIn } = useAuth();
   const { user } = useUser();
@@ -392,14 +395,13 @@ export function AuthScreen({ mode }: AuthScreenProps) {
     if (!formValues.firstName || !formValues.lastName) {
       setFeedback({
         tone: "error",
-        message: "no name!"
-      })
+        message: "no name!",
+      });
     }
 
     const firstName = formValues.firstName.trim();
     const lastName = formValues.lastName.trim();
     const normalizedPhone = formValues.phone.trim();
-
 
     if (!normalizedPhone) {
       setFeedback({
@@ -420,19 +422,19 @@ export function AuthScreen({ mode }: AuthScreenProps) {
     const unsafeMetadata =
       formValues.role === "student"
         ? {
-          role: "student" as const,
-          firstName,
-          lastName,
-          phone: normalizedPhone,
-          inviteCode: formValues.classCode.trim().toUpperCase(),
-          classCode: formValues.classCode.trim().toUpperCase(),
-        }
+            role: "student" as const,
+            firstName,
+            lastName,
+            phone: normalizedPhone,
+            inviteCode: formValues.classCode.trim().toUpperCase(),
+            classCode: formValues.classCode.trim().toUpperCase(),
+          }
         : {
-          role: "teacher" as const,
-          firstName,
-          lastName,
-          phone: normalizedPhone,
-        };
+            role: "teacher" as const,
+            firstName,
+            lastName,
+            phone: normalizedPhone,
+          };
 
     const { error } = await signUp.password({
       emailAddress: formValues.email.trim(),
@@ -582,10 +584,11 @@ export function AuthScreen({ mode }: AuthScreenProps) {
 
           {feedback ? (
             <div
-              className={`mt-6 rounded-[18px] border px-4 py-3 text-[14px] ${feedback.tone === "success"
-                ? "border-[#D6F4DD] bg-[#F4FFF6] text-[#1E6E36]"
-                : "border-[#FFD8D8] bg-[#FFF7F7] text-[#B63B3B]"
-                }`}
+              className={`mt-6 rounded-[18px] border px-4 py-3 text-[14px] ${
+                feedback.tone === "success"
+                  ? "border-[#D6F4DD] bg-[#F4FFF6] text-[#1E6E36]"
+                  : "border-[#FFD8D8] bg-[#FFF7F7] text-[#B63B3B]"
+              }`}
             >
               {feedback.message}
             </div>
@@ -688,9 +691,7 @@ export function AuthScreen({ mode }: AuthScreenProps) {
               />
 
               {isTeacherRole ? (
-                <>
-
-                </>
+                <></>
               ) : (
                 <FormField
                   id="classCode"
@@ -720,9 +721,7 @@ export function AuthScreen({ mode }: AuthScreenProps) {
                 value={formValues.confirmPassword}
                 visible={showConfirmPassword}
                 onChange={handleInputChange}
-                onToggle={() =>
-                  setShowConfirmPassword((previous) => !previous)
-                }
+                onToggle={() => setShowConfirmPassword((previous) => !previous)}
               />
 
               <div

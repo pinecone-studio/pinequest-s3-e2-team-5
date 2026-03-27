@@ -1,12 +1,12 @@
 export const roleOptions = [
   {
     value: "student",
-    label: "Student",
+    label: "Сурагч",
     description: "Join classes, take exams, and track your learning progress.",
   },
   {
     value: "teacher",
-    label: "Teacher",
+    label: "Багш",
     description: "Create assessments, review results, and manage learners.",
   },
 ] as const;
@@ -18,8 +18,7 @@ export function isUserRole(value: unknown): value is UserRole {
 }
 
 export function getRoleLabel(role: UserRole) {
-
-  return role === "teacher" ? "Teacher" : "Student";
+  return role === "teacher" ? "Багш" : "Сурагч";
 }
 
 export function getRoleHomePath(role: UserRole) {
