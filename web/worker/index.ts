@@ -18,6 +18,7 @@ interface Env {
       };
     };
   };
+  [key: string]: unknown;
 }
 
 interface ExecutionContext {
@@ -33,6 +34,14 @@ interface ExecutionContext {
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    // Expose wrangler vars to process.env for SDKs that read at request time.
+    for (const [key, value] of Object.entries(env)) {
+      if (typeof value === "string") {
+        (globalThis as Record<string, unknown>).process ??= { env: {} } as NodeJS.Process;
+        (process.env as Record<string, string>)[key] = value;
+      }
+    }
+
     const url = new URL(request.url);
 
     // Image optimization via Cloudflare Images binding.
