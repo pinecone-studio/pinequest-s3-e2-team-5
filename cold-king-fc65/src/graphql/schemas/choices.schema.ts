@@ -8,6 +8,8 @@ export const choiceTypeDefs = gql`
         questionId: String!
         text: String!
         label: String!
+        imageUrl: String
+        videoUrl: String
         isCorrect: Boolean!
     }
 
@@ -19,6 +21,8 @@ export const choiceTypeDefs = gql`
         id: String!
         text: String!
         label: String!
+        imageUrl: String
+        videoUrl: String
         isCorrect: Boolean!
     }
 `

@@ -1,5 +1,6 @@
 import { classrooms } from "../../../db/schemas/classroom.schema"
 import { GraphQLContext } from "../../../server"
+import { assertAuthenticated } from "../../errors";
 
 
 export const classroomMutation = {
@@ -12,12 +13,7 @@ export const classroomMutation = {
             },
             context: GraphQLContext
         ) => {
-
-            if (!context.auth.userId || !context.auth.isAuthenticated) {
-                throw new Error("Unauthorized");
-            }
-
-            const userId = context.auth.userId;
+            const userId = assertAuthenticated(context);
 
             const generateClassCode = () => {
                 const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";

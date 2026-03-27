@@ -3,16 +3,28 @@
 import { gql } from "@apollo/client";
 import { useMutation, useQuery } from "@apollo/client/react";
 import {
+  AlignLeft,
   ChevronDown,
   ChevronLeft,
   CircleDot,
+  FileText,
+  Image as ImageIcon,
   PencilLine,
   Plus,
+  Sigma,
   Trash2,
+  Video,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { getApolloErrorMessage } from "@/lib/apollo-error";
 
 type QuestionType = "mcq" | "open" | "short";
 
@@ -21,6 +33,12 @@ type ChoiceDraft = {
   label: string;
   text: string;
   isCorrect: boolean;
+  imageUrl: string;
+  videoUrl: string;
+  imageFileName: string;
+  videoFileName: string;
+  showImageInput: boolean;
+  showVideoInput: boolean;
 };
 
 type QuestionDraft = {
@@ -31,6 +49,10 @@ type QuestionDraft = {
   difficulty: string;
   imageUrl: string;
   videoUrl: string;
+  imageFileName: string;
+  videoFileName: string;
+  showImageInput: boolean;
+  showVideoInput: boolean;
   points: number;
   choices: ChoiceDraft[];
 };
@@ -49,6 +71,17 @@ type ExamByIdData = {
 type CreateQuestionWithChoicesData = {
   createQuestionWithChoices: {
     id: string;
+  };
+};
+
+type UpdateExamData = {
+  updateExam: {
+    id: string;
+    title: string;
+    subject: string;
+    description: string | null;
+    duration: number;
+    grade: string;
   };
 };
 
@@ -73,14 +106,55 @@ const CREATE_QUESTION_WITH_CHOICES = gql`
   }
 `;
 
+const UPDATE_EXAM = gql`
+  mutation UpdateExam($input: updateExamInput!) {
+    updateExam(input: $input) {
+      id
+      title
+      subject
+      description
+      duration
+      grade
+    }
+  }
+`;
+
 const typeOptions: { value: QuestionType; label: string }[] = [
   { value: "mcq", label: "Сонголт" },
-  { value: "open", label: "Нээлттэй" },
-  { value: "short", label: "Богино" },
+  { value: "open", label: "Бичих" },
 ];
+
+const subjectOptions = [
+  { value: "social", label: "Нийгэм" },
+  { value: "civics", label: "Иргэний боловсрол" },
+  { value: "math", label: "Математик" },
+  { value: "english", label: "Англи хэл" },
+  { value: "chemistry", label: "Хими" },
+  { value: "physics", label: "Физик" },
+] as const;
+
+const gradeOptions = [
+  "9-р анги",
+  "10-р анги",
+  "11-р анги",
+  "12-р анги",
+] as const;
+
+const durationOptions = [30, 45, 60, 90, 120] as const;
+
+const insertMenuOptions = [
+  { key: "formula", label: "Томьёо", icon: Sigma },
+  { key: "image", label: "Зураг", icon: ImageIcon },
+  { key: "video", label: "Бичлэг", icon: Video },
+  { key: "pdf", label: "PDF", icon: FileText },
+] as const;
+type InsertMenuKey = (typeof insertMenuOptions)[number]["key"];
+type MediaInsertKey = Extract<InsertMenuKey, "image" | "video">;
 
 const fieldClassName =
   "h-[56px] w-full rounded-[18px] border border-[#E8E2F1] bg-white px-4 text-[18px] text-[#1A1623] outline-none transition placeholder:text-[#8E8A94] focus:border-[#B59AF8] focus:ring-4 focus:ring-[#B59AF8]/15";
+const examDialogFieldClassName =
+  "h-[56px] w-full rounded-[16px] border border-[#E9E0F7] bg-white px-4 text-[16px] text-[#1A1623] outline-none transition placeholder:text-[#8E8A94] focus:border-[#B69AF8] focus:ring-4 focus:ring-[#B69AF8]/15";
 
 function createChoice(label: string): ChoiceDraft {
   return {
@@ -88,6 +162,27 @@ function createChoice(label: string): ChoiceDraft {
     label,
     text: "",
     isCorrect: label === "A",
+    imageUrl: "",
+    videoUrl: "",
+    imageFileName: "",
+    videoFileName: "",
+    showImageInput: false,
+    showVideoInput: false,
+  };
+}
+
+function createBlankChoice(): ChoiceDraft {
+  return {
+    id: crypto.randomUUID(),
+    label: "",
+    text: "",
+    isCorrect: false,
+    imageUrl: "",
+    videoUrl: "",
+    imageFileName: "",
+    videoFileName: "",
+    showImageInput: false,
+    showVideoInput: false,
   };
 }
 
@@ -100,9 +195,31 @@ function createQuestionDraft(): QuestionDraft {
     difficulty: "",
     imageUrl: "",
     videoUrl: "",
+    imageFileName: "",
+    videoFileName: "",
+    showImageInput: false,
+    showVideoInput: false,
     points: 1,
     choices: ["A", "B"].map(createChoice),
   };
+}
+
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+
+      reject(new Error("Файлыг уншиж чадсангүй."));
+    };
+
+    reader.onerror = () => reject(new Error("Файлыг уншихад алдаа гарлаа."));
+    reader.readAsDataURL(file);
+  });
 }
 
 function normalizeQuestionChoices(choices: ChoiceDraft[]) {
@@ -124,6 +241,14 @@ function getSubjectLabel(subject: string) {
   return subject;
 }
 
+function getQuestionTypeLabel(type: QuestionType) {
+  if (type === "mcq") {
+    return "Сонголт";
+  }
+
+  return "Бичих";
+}
+
 export default function TeacherExamEditPage() {
   const params = useParams<{ examId: string }>();
   const examId = Array.isArray(params.examId) ? params.examId[0] : params.examId;
@@ -134,6 +259,30 @@ export default function TeacherExamEditPage() {
   ]);
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
+  const [isExamDialogOpen, setIsExamDialogOpen] = useState(false);
+  const [examMeta, setExamMeta] = useState<ExamByIdData["examById"] | null>(null);
+  const [editSubject, setEditSubject] = useState("");
+  const [editTitle, setEditTitle] = useState("");
+  const [editGrade, setEditGrade] = useState("");
+  const [editDuration, setEditDuration] = useState(60);
+  const [editUploadedFileName, setEditUploadedFileName] = useState("");
+  const [editExamError, setEditExamError] = useState("");
+  const [savedQuestionIds, setSavedQuestionIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [dirtyQuestionIds, setDirtyQuestionIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [isInsertMenuOpen, setIsInsertMenuOpen] = useState(false);
+  const [choiceInsertMenuTargetId, setChoiceInsertMenuTargetId] = useState<
+    string | null
+  >(null);
+  const [isTypeMenuOpen, setIsTypeMenuOpen] = useState(false);
+  const insertMenuRef = useRef<HTMLDivElement | null>(null);
+  const choiceInsertMenuRef = useRef<HTMLDivElement | null>(null);
+  const typeMenuRef = useRef<HTMLDivElement | null>(null);
+  const choiceInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const choiceIdToFocusRef = useRef<string | null>(null);
 
   const { data: examData, loading: examLoading, error: examError } =
     useQuery<ExamByIdData>(GET_EXAM_BY_ID, {
@@ -141,8 +290,10 @@ export default function TeacherExamEditPage() {
       skip: !examId,
     });
 
-  const [createQuestionWithChoices, { loading: saveLoading }] =
+  const [createQuestionWithChoices, { loading: saveQuestionLoading }] =
     useMutation<CreateQuestionWithChoicesData>(CREATE_QUESTION_WITH_CHOICES);
+  const [updateExam, { loading: updateExamLoading }] =
+    useMutation<UpdateExamData>(UPDATE_EXAM);
 
   const activeQuestion = useMemo(() => {
     const fallback = questions[0] ?? null;
@@ -167,6 +318,42 @@ export default function TeacherExamEditPage() {
     return questions.reduce((sum, question) => sum + question.points, 0);
   }, [questions]);
 
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target;
+
+      if (
+        insertMenuRef.current &&
+        target instanceof Node &&
+        !insertMenuRef.current.contains(target)
+      ) {
+        setIsInsertMenuOpen(false);
+      }
+
+      if (
+        choiceInsertMenuRef.current &&
+        target instanceof Node &&
+        !choiceInsertMenuRef.current.contains(target)
+      ) {
+        setChoiceInsertMenuTargetId(null);
+      }
+
+      if (
+        typeMenuRef.current &&
+        target instanceof Node &&
+        !typeMenuRef.current.contains(target)
+      ) {
+        setIsTypeMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+    };
+  }, []);
+
   const updateActiveQuestion = (
     updater: (question: QuestionDraft) => QuestionDraft,
   ) => {
@@ -179,6 +366,39 @@ export default function TeacherExamEditPage() {
         question.id === activeQuestion.id ? updater(question) : question,
       ),
     );
+
+    if (savedQuestionIds.has(activeQuestion.id)) {
+      setDirtyQuestionIds((current) => {
+        const next = new Set(current);
+        next.add(activeQuestion.id);
+        return next;
+      });
+    }
+  };
+
+  const updateQuestionById = (
+    questionId: string,
+    updater: (question: QuestionDraft) => QuestionDraft,
+  ) => {
+    setQuestions((current) =>
+      current.map((question) =>
+        question.id === questionId ? updater(question) : question,
+      ),
+    );
+
+    if (savedQuestionIds.has(questionId)) {
+      setDirtyQuestionIds((current) => {
+        const next = new Set(current);
+        next.add(questionId);
+        return next;
+      });
+    }
+  };
+
+  const closeMenus = () => {
+    setIsInsertMenuOpen(false);
+    setChoiceInsertMenuTargetId(null);
+    setIsTypeMenuOpen(false);
   };
 
   const addQuestion = () => {
@@ -186,10 +406,86 @@ export default function TeacherExamEditPage() {
     setQuestions((current) => [...current, nextQuestion]);
     setActiveQuestionId(nextQuestion.id);
     setStatusMessage("");
+    closeMenus();
+  };
+
+  const openExamEditDialog = () => {
+    const source = examMeta ?? examData?.examById;
+
+    if (!source) {
+      return;
+    }
+
+    setEditSubject(source.subject);
+    setEditTitle(source.title);
+    setEditGrade(source.grade);
+    setEditDuration(source.duration);
+    setEditUploadedFileName(
+      source.description?.startsWith("Файл: ")
+        ? source.description.replace("Файл: ", "")
+        : "",
+    );
+    setEditExamError("");
+    setIsExamDialogOpen(true);
+  };
+
+  const handleUpdateExam = async () => {
+    if (!examId) {
+      setEditExamError("Шалгалтын ID олдсонгүй.");
+      return;
+    }
+
+    if (!editSubject || !editTitle.trim() || !editGrade || editDuration <= 0) {
+      setEditExamError("Хичээл, сэдэв, анги, хугацааг бүрэн бөглөнө үү.");
+      return;
+    }
+
+    try {
+      setEditExamError("");
+
+      const res = await updateExam({
+        variables: {
+          input: {
+            examId,
+            title: editTitle.trim(),
+            subject: editSubject,
+            description: editUploadedFileName
+              ? `Файл: ${editUploadedFileName}`
+              : "",
+            duration: editDuration,
+            grade: editGrade,
+          },
+        },
+      });
+
+      if (res.data?.updateExam) {
+        setExamMeta(res.data.updateExam);
+        setIsExamDialogOpen(false);
+        return;
+      }
+
+      setEditExamError("Шалгалтын мэдээлэл шинэчлэгдсэнгүй.");
+    } catch (error) {
+      setEditExamError(
+        getApolloErrorMessage(error, "Шалгалтын мэдээлэл шинэчлэхэд алдаа гарлаа."),
+      );
+    }
   };
 
   const deleteActiveQuestion = () => {
-    if (!activeQuestion || questions.length === 1) {
+    if (!activeQuestion) {
+      return;
+    }
+
+    if (questions.length === 1) {
+      const freshQuestion = createQuestionDraft();
+
+      setQuestions([freshQuestion]);
+      setActiveQuestionId(freshQuestion.id);
+      setStatusMessage("");
+      setSavedQuestionIds(new Set());
+      setDirtyQuestionIds(new Set());
+      closeMenus();
       return;
     }
 
@@ -202,16 +498,207 @@ export default function TeacherExamEditPage() {
     setQuestions(nextQuestions);
     setActiveQuestionId(nextActive?.id ?? null);
     setStatusMessage("");
+    setSavedQuestionIds((current) => {
+      const next = new Set(current);
+      next.delete(activeQuestion.id);
+      return next;
+    });
+    setDirtyQuestionIds((current) => {
+      const next = new Set(current);
+      next.delete(activeQuestion.id);
+      return next;
+    });
+    closeMenus();
   };
 
-  const addChoice = () => {
+  const addChoice = (afterChoiceId?: string) => {
+    const nextChoice = createBlankChoice();
+
+    updateActiveQuestion((question) => {
+      const nextChoices = [...normalizeQuestionChoices(question.choices)];
+
+      if (afterChoiceId) {
+        const insertIndex = nextChoices.findIndex(
+          (choice) => choice.id === afterChoiceId,
+        );
+
+        if (insertIndex >= 0) {
+          nextChoices.splice(insertIndex + 1, 0, nextChoice);
+        } else {
+          nextChoices.push(nextChoice);
+        }
+      } else {
+        nextChoices.push(nextChoice);
+      }
+
+      return {
+        ...question,
+        choices: normalizeQuestionChoices(nextChoices),
+      };
+    });
+
+    choiceIdToFocusRef.current = nextChoice.id;
+    setChoiceInsertMenuTargetId(null);
+  };
+
+  const showQuestionMediaInput = (key: InsertMenuKey) => {
+    if (key === "formula") {
+      setStatusMessage("Mathlive суулгасны дараа томьёоны keyboard холбоно.");
+      setIsInsertMenuOpen(false);
+      return;
+    }
+
+    if (key === "pdf") {
+      setStatusMessage("PDF хэсгийг дараагийн алхамд холбоно.");
+      setIsInsertMenuOpen(false);
+      return;
+    }
+
     updateActiveQuestion((question) => ({
       ...question,
-      choices: [
-        ...normalizeQuestionChoices(question.choices),
-        createChoice(String.fromCharCode(65 + question.choices.length)),
-      ],
+      showImageInput: key === "image" ? true : question.showImageInput,
+      showVideoInput: key === "video" ? true : question.showVideoInput,
     }));
+    setIsInsertMenuOpen(false);
+  };
+
+  const hideQuestionMediaInput = (key: MediaInsertKey) => {
+    updateActiveQuestion((question) => ({
+      ...question,
+      imageUrl: key === "image" ? "" : question.imageUrl,
+      videoUrl: key === "video" ? "" : question.videoUrl,
+      imageFileName: key === "image" ? "" : question.imageFileName,
+      videoFileName: key === "video" ? "" : question.videoFileName,
+      showImageInput: key === "image" ? false : question.showImageInput,
+      showVideoInput: key === "video" ? false : question.showVideoInput,
+    }));
+  };
+
+  const showChoiceMediaInput = (choiceId: string, key: InsertMenuKey) => {
+    if (key === "formula") {
+      setStatusMessage("Mathlive суулгасны дараа томьёоны keyboard холбоно.");
+      setChoiceInsertMenuTargetId(null);
+      return;
+    }
+
+    if (key === "pdf") {
+      setStatusMessage("PDF хэсгийг дараагийн алхамд холбоно.");
+      setChoiceInsertMenuTargetId(null);
+      return;
+    }
+
+    updateActiveQuestion((question) => ({
+      ...question,
+      choices: normalizeQuestionChoices(
+        question.choices.map((choice) =>
+          choice.id === choiceId
+            ? {
+                ...choice,
+                showImageInput:
+                  key === "image" ? true : choice.showImageInput,
+                showVideoInput:
+                  key === "video" ? true : choice.showVideoInput,
+              }
+            : choice,
+        ),
+      ),
+    }));
+    setChoiceInsertMenuTargetId(null);
+  };
+
+  const hideChoiceMediaInput = (choiceId: string, key: MediaInsertKey) => {
+    updateActiveQuestion((question) => ({
+      ...question,
+      choices: normalizeQuestionChoices(
+        question.choices.map((choice) =>
+          choice.id === choiceId
+            ? {
+                ...choice,
+                imageUrl: key === "image" ? "" : choice.imageUrl,
+                videoUrl: key === "video" ? "" : choice.videoUrl,
+                imageFileName: key === "image" ? "" : choice.imageFileName,
+                videoFileName: key === "video" ? "" : choice.videoFileName,
+                showImageInput:
+                  key === "image" ? false : choice.showImageInput,
+                showVideoInput:
+                  key === "video" ? false : choice.showVideoInput,
+              }
+            : choice,
+        ),
+      ),
+    }));
+  };
+
+  const handleQuestionAttachmentSelect = async (
+    questionId: string,
+    key: MediaInsertKey,
+    file?: File,
+  ) => {
+    if (!file) {
+      return;
+    }
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+
+      updateQuestionById(questionId, (question) => ({
+        ...question,
+        imageUrl: key === "image" ? dataUrl : question.imageUrl,
+        videoUrl: key === "video" ? dataUrl : question.videoUrl,
+        imageFileName: key === "image" ? file.name : question.imageFileName,
+        videoFileName: key === "video" ? file.name : question.videoFileName,
+        showImageInput: key === "image" ? true : question.showImageInput,
+        showVideoInput: key === "video" ? true : question.showVideoInput,
+      }));
+      setStatusMessage("");
+    } catch (error) {
+      setStatusMessage(
+        getApolloErrorMessage(error, "Файл уншихад алдаа гарлаа."),
+      );
+    }
+  };
+
+  const handleChoiceAttachmentSelect = async (
+    questionId: string,
+    choiceId: string,
+    key: MediaInsertKey,
+    file?: File,
+  ) => {
+    if (!file) {
+      return;
+    }
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+
+      updateQuestionById(questionId, (question) => ({
+        ...question,
+        choices: normalizeQuestionChoices(
+          question.choices.map((choice) =>
+            choice.id === choiceId
+              ? {
+                  ...choice,
+                  imageUrl: key === "image" ? dataUrl : choice.imageUrl,
+                  videoUrl: key === "video" ? dataUrl : choice.videoUrl,
+                  imageFileName:
+                    key === "image" ? file.name : choice.imageFileName,
+                  videoFileName:
+                    key === "video" ? file.name : choice.videoFileName,
+                  showImageInput:
+                    key === "image" ? true : choice.showImageInput,
+                  showVideoInput:
+                    key === "video" ? true : choice.showVideoInput,
+                }
+              : choice,
+          ),
+        ),
+      }));
+      setStatusMessage("");
+    } catch (error) {
+      setStatusMessage(
+        getApolloErrorMessage(error, "Файл уншихад алдаа гарлаа."),
+      );
+    }
   };
 
   const removeChoice = (choiceId: string) => {
@@ -243,60 +730,98 @@ export default function TeacherExamEditPage() {
       return;
     }
 
-    for (const [index, question] of questions.entries()) {
-      if (!question.question.trim()) {
-        setStatusMessage(`${index + 1}-р асуулт хоосон байна.`);
-        return;
+    if (!activeQuestion) {
+      setStatusMessage("Хадгалах асуулт сонгогдоогүй байна.");
+      return;
+    }
+
+    const moveToNextQuestion = () => {
+      const nextQuestion = questions[activeQuestionIndex + 1];
+
+      if (nextQuestion) {
+        setActiveQuestionId(nextQuestion.id);
+      } else {
+        const freshQuestion = createQuestionDraft();
+        setQuestions((current) => [...current, freshQuestion]);
+        setActiveQuestionId(freshQuestion.id);
       }
 
-      if (
-        question.type === "mcq" &&
-        (!question.choices.length ||
-          question.choices.some((choice) => !choice.text.trim()) ||
-          !question.choices.some((choice) => choice.isCorrect))
-      ) {
+      closeMenus();
+    };
+
+    if (!activeQuestion.question.trim()) {
+      setStatusMessage(`${activeQuestionIndex + 1}-р асуулт хоосон байна.`);
+      return;
+    }
+
+    if (
+      activeQuestion.type === "mcq" &&
+      (!activeQuestion.choices.length ||
+        activeQuestion.choices.some((choice) => !choice.text.trim()) ||
+        !activeQuestion.choices.some((choice) => choice.isCorrect))
+    ) {
+      setStatusMessage(
+        `${activeQuestionIndex + 1}-р асуултын хариултуудыг бөглөж, зөв хариултыг сонгоно уу.`,
+      );
+      return;
+    }
+
+    if (savedQuestionIds.has(activeQuestion.id)) {
+      if (dirtyQuestionIds.has(activeQuestion.id)) {
         setStatusMessage(
-          `${index + 1}-р асуултын хариултуудыг бөглөж, зөв хариултыг сонгоно уу.`,
+          "Хадгалсан асуултыг дахин засварлан хадгалах backend боломж одоогоор алга.",
         );
         return;
       }
+
+      moveToNextQuestion();
+      return;
     }
 
     try {
-      setStatusMessage("Асуултууд хадгалж байна...");
+      setStatusMessage("Асуулт хадгалж байна...");
 
-      for (const [index, question] of questions.entries()) {
-        await createQuestionWithChoices({
-          variables: {
-            input: {
-              examId,
-              indexOnExam: index + 1,
-              question: question.question.trim(),
-              type: question.type,
-              topic: question.topic?.trim() || null,
-              difficulty: question.difficulty?.trim() || null,
-              imageUrl: question.imageUrl?.trim() || null,
-              videoUrl: question.videoUrl?.trim() || null,
-              choices:
-                question.type === "mcq"
-                  ? normalizeQuestionChoices(question.choices).map((choice) => ({
-                      id: choice.id,
-                      label: choice.label,
-                      text: choice.text.trim(),
-                      isCorrect: choice.isCorrect,
-                    }))
-                  : [],
-            },
+      await createQuestionWithChoices({
+        variables: {
+          input: {
+            examId,
+            indexOnExam: activeQuestionIndex + 1,
+            question: activeQuestion.question.trim(),
+            type: activeQuestion.type,
+            topic: activeQuestion.topic?.trim() || null,
+            difficulty: activeQuestion.difficulty?.trim() || null,
+            imageUrl: activeQuestion.imageUrl?.trim() || null,
+            videoUrl: activeQuestion.videoUrl?.trim() || null,
+            choices:
+              activeQuestion.type === "mcq"
+                ? normalizeQuestionChoices(activeQuestion.choices).map((choice) => ({
+                    id: choice.id,
+                    label: choice.label,
+                    text: choice.text.trim(),
+                    isCorrect: choice.isCorrect,
+                    imageUrl: choice.imageUrl?.trim() || null,
+                    videoUrl: choice.videoUrl?.trim() || null,
+                  }))
+                : [],
           },
-        });
-      }
+        },
+      });
 
-      setStatusMessage("Асуултууд хадгалагдлаа.");
+      setSavedQuestionIds((current) => {
+        const next = new Set(current);
+        next.add(activeQuestion.id);
+        return next;
+      });
+      setDirtyQuestionIds((current) => {
+        const next = new Set(current);
+        next.delete(activeQuestion.id);
+        return next;
+      });
+      setStatusMessage("Асуулт хадгалагдлаа. Дараагийн асуулт руу шилжив.");
+      moveToNextQuestion();
     } catch (error) {
       setStatusMessage(
-        error instanceof Error
-          ? error.message
-          : "Асуултууд хадгалахад алдаа гарлаа.",
+        getApolloErrorMessage(error, "Асуултууд хадгалахад алдаа гарлаа."),
       );
     }
   };
@@ -308,13 +833,153 @@ export default function TeacherExamEditPage() {
   if (examError || !examData?.examById) {
     return (
       <main className="p-8 text-sm text-red-600">
-        {examError?.message ?? "Шалгалт ачаалж чадсангүй."}
+        {getApolloErrorMessage(examError, "Шалгалт ачаалж чадсангүй.")}
       </main>
     );
   }
 
+  const resolvedExamMeta = examMeta ?? examData.examById;
+
   return (
     <section className="space-y-6">
+      <Dialog open={isExamDialogOpen} onOpenChange={setIsExamDialogOpen}>
+        <DialogContent
+          showCloseButton={false}
+          className="max-w-[calc(100%-2rem)] rounded-[24px] border border-[#E8E2F1] bg-white px-6 py-6 shadow-[0_20px_70px_rgba(28,18,54,0.18)] sm:max-w-[580px]"
+        >
+          <DialogHeader className="gap-0">
+            <DialogTitle className="text-[28px] font-semibold tracking-tight text-[#111111]">
+              Үндсэн мэдээлэл
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="mt-3 space-y-5">
+            <div className="space-y-2.5">
+              <label className="block text-[16px] font-medium text-[#111111]">
+                Хичээл
+              </label>
+              <div className="relative">
+                <select
+                  value={editSubject}
+                  onChange={(event) => setEditSubject(event.target.value)}
+                  className={`${examDialogFieldClassName} appearance-none pr-14 ${
+                    editSubject ? "" : "text-[#8E8A94]"
+                  }`}
+                >
+                  <option value="" disabled>
+                    Хичээл сонгох
+                  </option>
+                  {subjectOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8E8A94]" />
+              </div>
+            </div>
+
+            <div className="space-y-2.5">
+              <label className="block text-[16px] font-medium text-[#111111]">
+                Сэдвийн нэр
+              </label>
+              <input
+                value={editTitle}
+                onChange={(event) => setEditTitle(event.target.value)}
+                placeholder="Жишээ: Алгебр Тест-1"
+                className={examDialogFieldClassName}
+              />
+            </div>
+
+            <div className="space-y-2.5">
+              <label className="block text-[16px] font-medium text-[#111111]">
+                Анги
+              </label>
+              <div className="relative">
+                <select
+                  value={editGrade}
+                  onChange={(event) => setEditGrade(event.target.value)}
+                  className={`${examDialogFieldClassName} appearance-none pr-14 ${
+                    editGrade ? "" : "text-[#8E8A94]"
+                  }`}
+                >
+                  <option value="" disabled>
+                    Анги сонгох
+                  </option>
+                  {gradeOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8E8A94]" />
+              </div>
+            </div>
+
+            <div className="space-y-2.5">
+              <label className="block text-[16px] font-medium text-[#111111]">
+                Файл
+              </label>
+              <label className="flex h-[56px] w-full cursor-pointer items-center gap-3 rounded-[16px] border border-[#E9E0F7] bg-white px-4 text-[16px] text-[#6E6A74] transition hover:border-[#D6C9F6]">
+                <FileText className="h-5 w-5 text-[#6E6A74]" />
+                <span>{editUploadedFileName || "Файл оруулах"}</span>
+                <input
+                  type="file"
+                  className="hidden"
+                  onChange={(event) =>
+                    setEditUploadedFileName(
+                      event.target.files?.[0]?.name ?? "",
+                    )
+                  }
+                />
+              </label>
+            </div>
+
+            <div className="space-y-2.5">
+              <label className="block text-[16px] font-medium text-[#111111]">
+                Хугацаа(минут)
+              </label>
+              <div className="relative">
+                <select
+                  value={String(editDuration)}
+                  onChange={(event) => setEditDuration(Number(event.target.value))}
+                  className={`${examDialogFieldClassName} appearance-none pr-14`}
+                >
+                  {durationOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8E8A94]" />
+              </div>
+            </div>
+          </div>
+
+          {editExamError ? (
+            <p className="mt-4 text-[14px] text-[#D25B56]">{editExamError}</p>
+          ) : null}
+
+          <div className="-mx-6 -mb-6 mt-8 flex items-center justify-end gap-6 border-t border-[#ECE6F3] px-6 py-5">
+            <button
+              type="button"
+              onClick={() => setIsExamDialogOpen(false)}
+              className="text-[18px] font-medium text-[#111111] transition hover:text-[#7E66DC]"
+            >
+              Буцах
+            </button>
+            <button
+              type="button"
+              onClick={handleUpdateExam}
+              disabled={updateExamLoading}
+              className="inline-flex h-12 items-center justify-center rounded-[20px] bg-[#9E81F0] px-8 text-[18px] font-semibold text-white shadow-[inset_0_-5px_0_rgba(103,79,184,0.32),0_12px_22px_rgba(158,129,240,0.24)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-55"
+            >
+              {updateExamLoading ? "Хадгалж байна..." : "Үргэлжлүүлэх"}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div>
         <Link
           href="/teacher/exams"
@@ -338,19 +1003,19 @@ export default function TeacherExamEditPage() {
                       Хичээл
                     </span>
                     <span className="text-right text-[15px]">
-                      {getSubjectLabel(examData.examById.subject)}
+                      {getSubjectLabel(resolvedExamMeta.subject)}
                     </span>
                   </div>
                   <div className="flex items-end justify-between gap-4 text-[15px] text-[#23202A]">
                     <span className="font-medium">Сэдэв</span>
                     <span className="text-right text-[15px]">
-                      {examData.examById.title}
+                      {resolvedExamMeta.title}
                     </span>
                   </div>
                   <div className="flex items-end justify-between gap-4 text-[15px] text-[#23202A]">
                     <span className="font-medium">Анги</span>
                     <span className="text-right text-[15px]">
-                      {examData.examById.grade}
+                      {resolvedExamMeta.grade}
                     </span>
                   </div>
                 </div>
@@ -361,7 +1026,7 @@ export default function TeacherExamEditPage() {
                   <div className="flex items-end justify-between gap-4 text-[15px] text-[#23202A]">
                     <span className="font-medium">Хугацаа</span>
                     <span className="text-right text-[15px]">
-                      {examData.examById.duration}
+                      {resolvedExamMeta.duration}
                     </span>
                   </div>
                 </div>
@@ -385,6 +1050,7 @@ export default function TeacherExamEditPage() {
               <div className="mt-5 flex items-center gap-5 text-[#7F7A89]">
                 <button
                   type="button"
+                  onClick={openExamEditDialog}
                   className="transition hover:text-[#7E66DC]"
                   aria-label="Шалгалтын мэдээлэл засах"
                 >
@@ -412,7 +1078,10 @@ export default function TeacherExamEditPage() {
                     <button
                       key={question.id}
                       type="button"
-                      onClick={() => setActiveQuestionId(question.id)}
+                      onClick={() => {
+                        setActiveQuestionId(question.id);
+                        closeMenus();
+                      }}
                       className={`flex h-11 w-11 items-center justify-center rounded-[10px] border text-[15px] font-medium transition ${
                         isActive
                           ? "border-[#9077F7] bg-[#F0EEFF] text-[#6F5DE2]"
@@ -446,36 +1115,86 @@ export default function TeacherExamEditPage() {
                 </h1>
 
                 <div className="flex items-center gap-4 text-[#6F687D]">
-                  {activeQuestion.type === "mcq" ? (
+                  <div className="relative" ref={insertMenuRef}>
                     <button
                       type="button"
-                      onClick={addChoice}
+                      onClick={() => {
+                        setIsInsertMenuOpen((open) => !open);
+                        setChoiceInsertMenuTargetId(null);
+                        setIsTypeMenuOpen(false);
+                      }}
                       className="transition hover:text-[#7E66DC]"
-                      aria-label="Хариулт нэмэх"
+                      aria-label="Контент нэмэх"
                     >
                       <Plus className="h-6 w-6" />
                     </button>
-                  ) : null}
 
-                  <div className="relative min-w-[190px]">
-                    <CircleDot className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#6F687D]" />
-                    <select
-                      value={activeQuestion.type}
-                      onChange={(event) =>
-                        updateActiveQuestion((question) => ({
-                          ...question,
-                          type: event.target.value as QuestionType,
-                        }))
-                      }
-                      className="h-[54px] w-full appearance-none rounded-[16px] border border-[#E8E2F1] bg-white pl-11 pr-10 text-[18px] text-[#1A1623] outline-none transition focus:border-[#B59AF8] focus:ring-4 focus:ring-[#B59AF8]/15"
+                    {isInsertMenuOpen ? (
+                      <div className="absolute left-0 top-10 z-20 w-[230px] overflow-hidden rounded-[18px] border border-[#E8E2F1] bg-white shadow-[0_14px_32px_rgba(35,23,73,0.12)]">
+                        {insertMenuOptions.map((option) => {
+                          const Icon = option.icon;
+
+                          return (
+                            <button
+                              key={option.key}
+                              type="button"
+                              onClick={() => showQuestionMediaInput(option.key)}
+                              className={`flex w-full items-center gap-4 px-5 py-4 text-left text-[18px] text-[#111111] transition hover:bg-[#F8F6FF] ${
+                                option.key === "pdf"
+                                  ? "border-t border-[#EAE4F4]"
+                                  : ""
+                              }`}
+                            >
+                              <Icon className="h-6 w-6 text-[#6F687D]" />
+                              <span>{option.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="relative min-w-[190px]" ref={typeMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsTypeMenuOpen((open) => !open);
+                        setIsInsertMenuOpen(false);
+                        setChoiceInsertMenuTargetId(null);
+                      }}
+                      className="inline-flex h-[54px] w-full items-center gap-3 rounded-[16px] border border-[#E8E2F1] bg-white px-4 text-[18px] text-[#1A1623] outline-none transition hover:border-[#D6CFF3]"
                     >
-                      {typeOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#6F687D]" />
+                      <CircleDot className="h-5 w-5 text-[#6F687D]" />
+                      <span>{getQuestionTypeLabel(activeQuestion.type)}</span>
+                      <ChevronDown className="ml-auto h-5 w-5 text-[#6F687D]" />
+                    </button>
+
+                    {isTypeMenuOpen ? (
+                      <div className="absolute left-0 top-[62px] z-20 w-[230px] overflow-hidden rounded-[18px] border border-[#E8E2F1] bg-white shadow-[0_14px_32px_rgba(35,23,73,0.12)]">
+                        {typeOptions.map((option) => {
+                          const Icon =
+                            option.value === "mcq" ? CircleDot : AlignLeft;
+
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => {
+                                updateActiveQuestion((question) => ({
+                                  ...question,
+                                  type: option.value,
+                                }));
+                                closeMenus();
+                              }}
+                              className="flex w-full items-center gap-4 px-5 py-4 text-left text-[18px] text-[#111111] transition hover:bg-[#F8F6FF]"
+                            >
+                              <Icon className="h-6 w-6 text-[#6F687D]" />
+                              <span>{option.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -492,86 +1211,393 @@ export default function TeacherExamEditPage() {
                 className="w-full border-0 border-b border-[#E8E2F1] bg-transparent px-0 pb-4 text-[18px] text-[#1A1623] outline-none placeholder:text-[#8E8A94]"
               />
 
-              {activeQuestion.type === "mcq" ? (
+              {activeQuestion.showImageInput || activeQuestion.showVideoInput ? (
                 <div className="space-y-4">
-                  {normalizeQuestionChoices(activeQuestion.choices).map(
-                    (choice, index) => (
-                      <div key={choice.id} className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            updateActiveQuestion((question) => ({
-                              ...question,
-                              choices: normalizeQuestionChoices(
-                                question.choices.map((item) => ({
-                                  ...item,
-                                  isCorrect: item.id === choice.id,
-                                })),
-                              ),
-                            }))
-                          }
-                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-white transition ${
-                            choice.isCorrect
-                              ? "border-[#8F76F6]"
-                              : "border-[#BAB4C5] hover:border-[#8F76F6]"
-                          }`}
-                          aria-label={`${choice.label} зөв хариулт болгох`}
-                        >
-                          {choice.isCorrect ? (
-                            <span className="h-4 w-4 rounded-full bg-[#8F76F6]" />
+                  {activeQuestion.showImageInput ? (
+                    <div className="rounded-[20px] border border-[#E8E2F1] bg-[#FBFAFE] p-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <ImageIcon className="h-5 w-5 text-[#6F687D]" />
+                          <p className="text-[17px] font-semibold text-[#1A1623]">
+                            Асуултын зураг
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {activeQuestion.imageFileName ? (
+                            <span className="max-w-[260px] truncate text-[13px] text-[#8E8A94]">
+                              {activeQuestion.imageFileName}
+                            </span>
                           ) : null}
-                        </button>
-
-                        <input
-                          value={choice.text}
-                          onChange={(event) =>
-                            updateActiveQuestion((question) => ({
-                              ...question,
-                              choices: normalizeQuestionChoices(
-                                question.choices.map((item) =>
-                                  item.id === choice.id
-                                    ? { ...item, text: event.target.value }
-                                    : item,
-                                ),
-                              ),
-                            }))
-                          }
-                          placeholder={
-                            index === 1
-                              ? "Хариулт нэмэх"
-                              : `${choice.label} Хариулт`
-                          }
-                          className="h-[56px] flex-1 rounded-[16px] border border-[#E8E2F1] bg-white px-4 text-[18px] text-[#1A1623] outline-none transition placeholder:text-[#8E8A94] focus:border-[#B59AF8] focus:ring-4 focus:ring-[#B59AF8]/15"
-                        />
-
-                        {index === 0 ? (
                           <button
                             type="button"
-                            onClick={addChoice}
-                            className="transition hover:text-[#7E66DC]"
-                            aria-label="Хариулт нэмэх"
+                            onClick={() => hideQuestionMediaInput("image")}
+                            className="transition hover:text-[#DE5A52]"
+                            aria-label="Асуултын зураг устгах"
                           >
-                            <Plus className="h-6 w-6 text-[#6F687D]" />
+                            <Trash2 className="h-5 w-5 text-[#6F687D]" />
                           </button>
-                        ) : (
-                          <span className="w-6" />
-                        )}
+                        </div>
+                      </div>
 
-                        {activeQuestion.choices.length > 2 ? (
+                      <label className="mt-4 flex min-h-[220px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[18px] border border-dashed border-[#D9D0EE] bg-white px-4 py-6 transition hover:border-[#B59AF8]">
+                        {activeQuestion.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={activeQuestion.imageUrl}
+                            alt="Асуултын зураг"
+                            className="max-h-[200px] w-full rounded-[14px] object-contain"
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center gap-2 text-center text-[#8E8A94]">
+                            <ImageIcon className="h-8 w-8" />
+                            <span className="text-[15px] font-medium">
+                              Зураг сонгох
+                            </span>
+                          </div>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(event) => {
+                            void handleQuestionAttachmentSelect(
+                              activeQuestion.id,
+                              "image",
+                              event.target.files?.[0],
+                            );
+                            event.currentTarget.value = "";
+                          }}
+                        />
+                      </label>
+                    </div>
+                  ) : null}
+
+                  {activeQuestion.showVideoInput ? (
+                    <div className="rounded-[20px] border border-[#E8E2F1] bg-[#FBFAFE] p-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <Video className="h-5 w-5 text-[#6F687D]" />
+                          <p className="text-[17px] font-semibold text-[#1A1623]">
+                            Асуултын бичлэг
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {activeQuestion.videoFileName ? (
+                            <span className="max-w-[260px] truncate text-[13px] text-[#8E8A94]">
+                              {activeQuestion.videoFileName}
+                            </span>
+                          ) : null}
+                          <button
+                            type="button"
+                            onClick={() => hideQuestionMediaInput("video")}
+                            className="transition hover:text-[#DE5A52]"
+                            aria-label="Асуултын бичлэг устгах"
+                          >
+                            <Trash2 className="h-5 w-5 text-[#6F687D]" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <label className="mt-4 flex min-h-[220px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[18px] border border-dashed border-[#D9D0EE] bg-white px-4 py-6 transition hover:border-[#B59AF8]">
+                        {activeQuestion.videoUrl ? (
+                          <video
+                            src={activeQuestion.videoUrl}
+                            controls
+                            className="max-h-[200px] w-full rounded-[14px] bg-[#0F0F10]"
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center gap-2 text-center text-[#8E8A94]">
+                            <Video className="h-8 w-8" />
+                            <span className="text-[15px] font-medium">
+                              Бичлэг сонгох
+                            </span>
+                          </div>
+                        )}
+                        <input
+                          type="file"
+                          accept="video/*"
+                          className="hidden"
+                          onChange={(event) => {
+                            void handleQuestionAttachmentSelect(
+                              activeQuestion.id,
+                              "video",
+                              event.target.files?.[0],
+                            );
+                            event.currentTarget.value = "";
+                          }}
+                        />
+                      </label>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {activeQuestion.type === "mcq" ? (
+                <div className="space-y-4">
+                  {normalizeQuestionChoices(activeQuestion.choices).map((choice) => {
+                    const isChoiceMenuOpen = choiceInsertMenuTargetId === choice.id;
+                    const isRemoveDisabled = activeQuestion.choices.length <= 2;
+
+                    return (
+                      <div key={choice.id} className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateActiveQuestion((question) => ({
+                                ...question,
+                                choices: normalizeQuestionChoices(
+                                  question.choices.map((item) => ({
+                                    ...item,
+                                    isCorrect: item.id === choice.id,
+                                  })),
+                                ),
+                              }))
+                            }
+                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-white transition ${
+                              choice.isCorrect
+                                ? "border-[#8F76F6]"
+                                : "border-[#BAB4C5] hover:border-[#8F76F6]"
+                            }`}
+                            aria-label={`${choice.label} зөв хариулт болгох`}
+                          >
+                            {choice.isCorrect ? (
+                              <span className="h-4 w-4 rounded-full bg-[#8F76F6]" />
+                            ) : null}
+                          </button>
+
+                          <input
+                            ref={(node) => {
+                              choiceInputRefs.current[choice.id] = node;
+
+                              if (
+                                node &&
+                                choiceIdToFocusRef.current === choice.id
+                              ) {
+                                node.focus();
+                                choiceIdToFocusRef.current = null;
+                              }
+                            }}
+                            value={choice.text}
+                            onChange={(event) =>
+                              updateActiveQuestion((question) => ({
+                                ...question,
+                                choices: normalizeQuestionChoices(
+                                  question.choices.map((item) =>
+                                    item.id === choice.id
+                                      ? { ...item, text: event.target.value }
+                                      : item,
+                                  ),
+                                ),
+                              }))
+                            }
+                            placeholder={`${choice.label}. Хариулт`}
+                            className="h-[56px] flex-1 rounded-[16px] border border-[#E8E2F1] bg-white px-4 text-[18px] text-[#1A1623] outline-none transition placeholder:text-[#8E8A94] focus:border-[#B59AF8] focus:ring-4 focus:ring-[#B59AF8]/15"
+                          />
+
+                          <div
+                            className="relative"
+                            ref={isChoiceMenuOpen ? choiceInsertMenuRef : null}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setChoiceInsertMenuTargetId((current) =>
+                                  current === choice.id ? null : choice.id,
+                                );
+                                setIsInsertMenuOpen(false);
+                                setIsTypeMenuOpen(false);
+                              }}
+                              className="transition hover:text-[#7E66DC]"
+                              aria-label={`${choice.label} хариултад зураг эсвэл бичлэг нэмэх`}
+                            >
+                              <Plus className="h-6 w-6 text-[#6F687D]" />
+                            </button>
+
+                            {isChoiceMenuOpen ? (
+                              <div className="absolute left-0 top-10 z-20 w-[230px] overflow-hidden rounded-[18px] border border-[#E8E2F1] bg-white shadow-[0_14px_32px_rgba(35,23,73,0.12)]">
+                                {insertMenuOptions.map((option) => {
+                                  const Icon = option.icon;
+
+                                  return (
+                                    <button
+                                      key={`choice-${choice.id}-${option.key}`}
+                                      type="button"
+                                      onClick={() =>
+                                        showChoiceMediaInput(choice.id, option.key)
+                                      }
+                                      className={`flex w-full items-center gap-4 px-5 py-4 text-left text-[18px] text-[#111111] transition hover:bg-[#F8F6FF] ${
+                                        option.key === "pdf"
+                                          ? "border-t border-[#EAE4F4]"
+                                          : ""
+                                      }`}
+                                    >
+                                      <Icon className="h-6 w-6 text-[#6F687D]" />
+                                      <span>{option.label}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            ) : null}
+                          </div>
+
                           <button
                             type="button"
                             onClick={() => removeChoice(choice.id)}
-                            className="transition hover:text-[#DE5A52]"
+                            disabled={isRemoveDisabled}
+                            className={`transition ${
+                              isRemoveDisabled
+                                ? "cursor-not-allowed opacity-45"
+                                : "hover:text-[#DE5A52]"
+                            }`}
                             aria-label={`${choice.label} хариулт устгах`}
                           >
                             <Trash2 className="h-6 w-6 text-[#6F687D]" />
                           </button>
-                        ) : (
-                          <span className="w-6" />
-                        )}
+                        </div>
+
+                        {choice.showImageInput || choice.showVideoInput ? (
+                          <div className="grid gap-3 pl-11 md:grid-cols-2">
+                            {choice.showImageInput ? (
+                              <div className="rounded-[18px] border border-[#E8E2F1] bg-[#FBFAFE] p-3">
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="flex items-center gap-2">
+                                    <ImageIcon className="h-4 w-4 text-[#6F687D]" />
+                                    <span className="text-[15px] font-medium text-[#1A1623]">
+                                      {choice.label}. Зураг
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {choice.imageFileName ? (
+                                      <span className="max-w-[140px] truncate text-[12px] text-[#8E8A94]">
+                                        {choice.imageFileName}
+                                      </span>
+                                    ) : null}
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        hideChoiceMediaInput(choice.id, "image")
+                                      }
+                                      className="transition hover:text-[#DE5A52]"
+                                      aria-label={`${choice.label} хариултын зураг устгах`}
+                                    >
+                                      <Trash2 className="h-4 w-4 text-[#6F687D]" />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <label className="mt-3 flex min-h-[120px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[14px] border border-dashed border-[#D9D0EE] bg-white px-4 py-5 transition hover:border-[#B59AF8]">
+                                  {choice.imageUrl ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img
+                                      src={choice.imageUrl}
+                                      alt={`${choice.label} хариултын зураг`}
+                                      className="max-h-[96px] w-full rounded-[12px] object-contain"
+                                    />
+                                  ) : (
+                                    <div className="flex flex-col items-center gap-2 text-center text-[#8E8A94]">
+                                      <ImageIcon className="h-6 w-6" />
+                                      <span className="text-[13px]">
+                                        Зураг сонгох
+                                      </span>
+                                    </div>
+                                  )}
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(event) => {
+                                      void handleChoiceAttachmentSelect(
+                                        activeQuestion.id,
+                                        choice.id,
+                                        "image",
+                                        event.target.files?.[0],
+                                      );
+                                      event.currentTarget.value = "";
+                                    }}
+                                  />
+                                </label>
+                              </div>
+                            ) : null}
+
+                            {choice.showVideoInput ? (
+                              <div className="rounded-[18px] border border-[#E8E2F1] bg-[#FBFAFE] p-3">
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="flex items-center gap-2">
+                                    <Video className="h-4 w-4 text-[#6F687D]" />
+                                    <span className="text-[15px] font-medium text-[#1A1623]">
+                                      {choice.label}. Бичлэг
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {choice.videoFileName ? (
+                                      <span className="max-w-[140px] truncate text-[12px] text-[#8E8A94]">
+                                        {choice.videoFileName}
+                                      </span>
+                                    ) : null}
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        hideChoiceMediaInput(choice.id, "video")
+                                      }
+                                      className="transition hover:text-[#DE5A52]"
+                                      aria-label={`${choice.label} хариултын бичлэг устгах`}
+                                    >
+                                      <Trash2 className="h-4 w-4 text-[#6F687D]" />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <label className="mt-3 flex min-h-[120px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[14px] border border-dashed border-[#D9D0EE] bg-white px-4 py-5 transition hover:border-[#B59AF8]">
+                                  {choice.videoUrl ? (
+                                    <video
+                                      src={choice.videoUrl}
+                                      controls
+                                      className="max-h-[96px] w-full rounded-[12px] bg-[#0F0F10]"
+                                    />
+                                  ) : (
+                                    <div className="flex flex-col items-center gap-2 text-center text-[#8E8A94]">
+                                      <Video className="h-6 w-6" />
+                                      <span className="text-[13px]">
+                                        Бичлэг сонгох
+                                      </span>
+                                    </div>
+                                  )}
+                                  <input
+                                    type="file"
+                                    accept="video/*"
+                                    className="hidden"
+                                    onChange={(event) => {
+                                      void handleChoiceAttachmentSelect(
+                                        activeQuestion.id,
+                                        choice.id,
+                                        "video",
+                                        event.target.files?.[0],
+                                      );
+                                      event.currentTarget.value = "";
+                                    }}
+                                  />
+                                </label>
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </div>
-                    ),
-                  )}
+                    );
+                  })}
+
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-8 w-8 shrink-0 rounded-full border border-[#BAB4C5] bg-white" />
+                    <button
+                      type="button"
+                      onClick={() => addChoice()}
+                      className="flex h-[56px] flex-1 items-center rounded-[16px] border border-[#E8E2F1] bg-white px-4 text-left text-[18px] text-[#8E8A94] transition hover:border-[#D6CFF3]"
+                    >
+                      Хариулт нэмэх
+                    </button>
+                    <span className="w-6" />
+                    <span className="w-6" />
+                  </div>
 
                   <p className="text-[14px] text-[#6F687D]">
                     Зөв хариултын өмнөх тойргийг сонгоно уу
@@ -618,10 +1644,10 @@ export default function TeacherExamEditPage() {
                 <button
                   type="button"
                   onClick={handleSave}
-                  disabled={saveLoading}
+                  disabled={saveQuestionLoading}
                   className="inline-flex h-14 items-center justify-center rounded-[22px] bg-[#B7A3F7] px-8 text-[18px] font-semibold text-white shadow-[inset_0_-5px_0_rgba(126,102,220,0.28),0_12px_22px_rgba(183,163,247,0.24)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {saveLoading ? "Хадгалж байна..." : "Хадгалах"}
+                  {saveQuestionLoading ? "Хадгалж байна..." : "Хадгалах"}
                 </button>
               </div>
             </div>

@@ -27,8 +27,18 @@ export const examTypeDefs = gql`
         openStatus: Boolean
     }
 
+    input updateExamInput {
+        examId: String!
+        title: String!
+        subject: String!
+        description: String
+        duration: Int!
+        grade: String!
+    }
+
     type Mutation{
         createExam(input: createExamInput!): Exam
+        updateExam(input: updateExamInput!): Exam
     }
 `
 // id: text().primaryKey().notNull(),

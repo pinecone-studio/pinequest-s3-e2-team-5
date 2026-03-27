@@ -6,6 +6,8 @@ type Choice = {
     id: string,
     label: string,
     text: string,
+    imageUrl?: string | null,
+    videoUrl?: string | null,
     isCorrect: boolean
 }
 
@@ -47,6 +49,8 @@ export const questionMutation = {
                     questionId,
                     label: choice.label,
                     text: choice.text,
+                    imageUrl: choice.imageUrl || null,
+                    videoUrl: choice.videoUrl || null,
                     isCorrect: choice.isCorrect
                 }));
 

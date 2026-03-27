@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm"
 import { classrooms } from "../../../db/schemas/classroom.schema"
 import { GraphQLContext } from "../../../server"
+import { assertAuthenticated } from "../../errors";
 
 export const classRoomQuery = {
     Query: {
@@ -9,12 +10,7 @@ export const classRoomQuery = {
             _args: unknown,
             context: GraphQLContext
         ) => {
-
-            const userId = context.auth.userId
-
-            if (!userId) {
-                throw new Error("Unauthorized")
-            }
+            const userId = assertAuthenticated(context);
 
             console.log("CTX:", context)
 

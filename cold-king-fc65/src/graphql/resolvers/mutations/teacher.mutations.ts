@@ -1,6 +1,7 @@
 import { teachers } from "../../../db/schemas/teacher.schema";
 import { eq } from "drizzle-orm";
 import type { GraphQLContext } from "../../../server";
+import { assertAuthenticated } from "../../errors";
 
 export const teacherMutation = {
 	Mutation: {
@@ -16,11 +17,7 @@ export const teacherMutation = {
 			},
 			context: GraphQLContext,
 		) => {
-			if (!context.auth.userId || !context.auth.isAuthenticated) {
-				throw new Error("Unauthorized");
-			}
-
-			const userId = context.auth.userId;
+			const userId = assertAuthenticated(context);
 			const values = {
 				firstName: args.input.firstName,
 				lastName: args.input.lastName,

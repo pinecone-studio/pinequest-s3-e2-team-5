@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { getApolloErrorMessage } from "@/lib/apollo-error";
 
 interface ExamData {
   createExam: {
@@ -107,9 +108,7 @@ export default function TeacherExamsPage() {
       setCreateError("Шинэ шалгалтын ID буцаагдсангүй.");
     } catch (error) {
       setCreateError(
-        error instanceof Error
-          ? error.message
-          : "Шинэ шалгалт үүсгэж чадсангүй.",
+        getApolloErrorMessage(error, "Шинэ шалгалт үүсгэж чадсангүй."),
       );
     }
   };
