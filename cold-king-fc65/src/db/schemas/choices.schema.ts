@@ -9,5 +9,9 @@ export const choices = sqliteTable('choices', {
 
     label: text().notNull(),
 
+    imageUrl: text(),
+
+    videoUrl: text(),
+
     isCorrect: int({ mode: "boolean" }).notNull()
 })

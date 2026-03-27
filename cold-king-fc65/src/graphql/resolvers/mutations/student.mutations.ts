@@ -8,6 +8,7 @@ import {
 	getAccessibleExamForStudent,
 	loadQuestionsWithChoices,
 } from "../student-exam.helpers";
+import { assertAuthenticated, badUserInputError } from "../../errors";
 
 function getGradeFromClassName(className: string) {
 	const match = className.match(/^(\d{1,2})/);
@@ -29,11 +30,7 @@ export const studentMutation = {
 			},
 			context: GraphQLContext
 		) => {
-			if (!context.auth.userId || !context.auth.isAuthenticated) {
-				throw new Error("Unauthorized");
-			}
-
-			const userId = context.auth.userId;
+			const userId = assertAuthenticated(context);
 			const normalizedCode = args.input.inviteCode.trim().toUpperCase();
 			const classroom = await context.db
 				.select()
@@ -42,7 +39,7 @@ export const studentMutation = {
 				.get();
 
 			if (!classroom) {
-				throw new Error("Invalid class code.");
+				throw badUserInputError("Invalid class code.");
 			}
 
 			const values = {

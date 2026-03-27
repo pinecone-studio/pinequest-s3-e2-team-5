@@ -50,11 +50,9 @@ const upsertTeacherMutation = `
 
 export function getCloudflareGraphqlUrl() {
   const configuredUrl =
-    "https://cold-king-fc65.ebmsteam10.workers.dev/graphql";
-
-  if (configuredUrl) {
-    return configuredUrl;
-  }
+    process.env.NEXT_PUBLIC_GRAPHQL_URL ||
+    process.env.NEXT_PUBLIC_CLOUDFLARE_GRAPHQL_URL ||
+    null;
 
   if (typeof window !== "undefined") {
     const hostname = window.location.hostname;
@@ -63,15 +61,15 @@ export function getCloudflareGraphqlUrl() {
       hostname === "127.0.0.1" ||
       hostname === "::1"
     ) {
-      return "http://127.0.0.1:8787/graphql";
+      return configuredUrl || "http://127.0.0.1:8787/graphql";
     }
 
     // In production on Cloudflare, prefer the current origin so the frontend
     // can talk to a co-hosted/proxied GraphQL route without a localhost-only env.
-    return `${window.location.origin}/graphql`;
+    return configuredUrl || `${window.location.origin}/graphql`;
   }
 
-  return null;
+  return configuredUrl;
 }
 
 export async function syncRoleProfileToCloudflare({

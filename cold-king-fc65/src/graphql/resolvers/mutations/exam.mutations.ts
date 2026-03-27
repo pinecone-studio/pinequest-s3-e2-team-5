@@ -20,9 +20,7 @@ export const examMutation = {
             },
             context: GraphQLContext,
         ) => {
-            if (!context.auth.userId || !context.auth.isAuthenticated) {
-                throw new Error("Unauthorized");
-            }
+            const userId = assertAuthenticated(context);
 
             return context.db
                 .insert(exams)
@@ -36,6 +34,7 @@ export const examMutation = {
                     openStatus: args.input.openStatus ?? false,
                     createdBy: context.auth.userId,
                 })
+                .where(eq(exams.id, args.input.examId))
                 .returning()
                 .get();
         },
