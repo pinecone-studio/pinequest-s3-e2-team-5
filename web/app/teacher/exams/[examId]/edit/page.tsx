@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ChevronLeft,
   CircleDot,
+  Clock3,
   FileText,
   Image as ImageIcon,
   PencilLine,
@@ -85,6 +86,23 @@ type UpdateExamData = {
   };
 };
 
+type ClassroomItem = {
+  id: string;
+  className: string;
+  classCode: string;
+};
+
+type ClassroomsByTeacherData = {
+  classroomsByTeacher: ClassroomItem[];
+};
+
+type ScheduledExamDraft = {
+  classroomId: string;
+  classroomName: string;
+  scheduledDate: string;
+  startTime: string;
+};
+
 const GET_EXAM_BY_ID = gql`
   query ExamById($examId: String!) {
     examById(examId: $examId) {
@@ -115,6 +133,16 @@ const UPDATE_EXAM = gql`
       description
       duration
       grade
+    }
+  }
+`;
+
+const GET_CLASSROOMS_BY_TEACHER = gql`
+  query GetClassroomsByTeacher {
+    classroomsByTeacher {
+      id
+      className
+      classCode
     }
   }
 `;
@@ -249,6 +277,32 @@ function getQuestionTypeLabel(type: QuestionType) {
   return "Бичих";
 }
 
+function formatDateInputValue(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function formatTimeInputValue(date = new Date()) {
+  const nextHour = new Date(date);
+  nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
+
+  return [
+    String(nextHour.getHours()).padStart(2, "0"),
+    String(nextHour.getMinutes()).padStart(2, "0"),
+  ].join(":");
+}
+
+function formatScheduleDate(value: string) {
+  return value.replaceAll("-", "/");
+}
+
+function getGradePrefix(grade: string) {
+  return grade.match(/\d+/)?.[0] ?? "";
+}
+
 export default function TeacherExamEditPage() {
   const params = useParams<{ examId: string }>();
   const examId = Array.isArray(params.examId) ? params.examId[0] : params.examId;
@@ -260,6 +314,7 @@ export default function TeacherExamEditPage() {
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [isExamDialogOpen, setIsExamDialogOpen] = useState(false);
+  const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const [examMeta, setExamMeta] = useState<ExamByIdData["examById"] | null>(null);
   const [editSubject, setEditSubject] = useState("");
   const [editTitle, setEditTitle] = useState("");
@@ -267,6 +322,15 @@ export default function TeacherExamEditPage() {
   const [editDuration, setEditDuration] = useState(60);
   const [editUploadedFileName, setEditUploadedFileName] = useState("");
   const [editExamError, setEditExamError] = useState("");
+  const [scheduleClassroomId, setScheduleClassroomId] = useState("");
+  const [scheduleDate, setScheduleDate] = useState(() => formatDateInputValue());
+  const [scheduleStartTime, setScheduleStartTime] = useState(() =>
+    formatTimeInputValue(),
+  );
+  const [scheduleError, setScheduleError] = useState("");
+  const [scheduledExam, setScheduledExam] = useState<ScheduledExamDraft | null>(
+    null,
+  );
   const [savedQuestionIds, setSavedQuestionIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -289,6 +353,11 @@ export default function TeacherExamEditPage() {
       variables: { examId },
       skip: !examId,
     });
+  const {
+    data: classroomsData,
+    loading: classroomsLoading,
+    error: classroomsError,
+  } = useQuery<ClassroomsByTeacherData>(GET_CLASSROOMS_BY_TEACHER);
 
   const [createQuestionWithChoices, { loading: saveQuestionLoading }] =
     useMutation<CreateQuestionWithChoicesData>(CREATE_QUESTION_WITH_CHOICES);
@@ -317,6 +386,40 @@ export default function TeacherExamEditPage() {
   const totalPoints = useMemo(() => {
     return questions.reduce((sum, question) => sum + question.points, 0);
   }, [questions]);
+
+  const classrooms = useMemo(
+    () => classroomsData?.classroomsByTeacher ?? [],
+    [classroomsData?.classroomsByTeacher],
+  );
+  const examGrade = examMeta?.grade ?? examData?.examById.grade ?? "";
+  const preferredClassroomId = useMemo(() => {
+    const gradePrefix = getGradePrefix(examGrade);
+
+    if (!classrooms.length) {
+      return "";
+    }
+
+    if (!gradePrefix) {
+      return classrooms[0]?.id ?? "";
+    }
+
+    return (
+      classrooms.find((classroom) => classroom.className.includes(gradePrefix))
+        ?.id ??
+      classrooms[0]?.id ??
+      ""
+    );
+  }, [classrooms, examGrade]);
+  const effectiveScheduleClassroomId =
+    scheduleClassroomId || preferredClassroomId;
+  const selectedClassroom = useMemo(
+    () =>
+      classrooms.find(
+        (classroom) => classroom.id === effectiveScheduleClassroomId,
+      ) ?? null,
+    [classrooms, effectiveScheduleClassroomId],
+  );
+  const canScheduleExam = savedQuestionIds.size > 0;
 
   useEffect(() => {
     const handlePointerDown = (event: MouseEvent) => {
@@ -429,6 +532,19 @@ export default function TeacherExamEditPage() {
     setIsExamDialogOpen(true);
   };
 
+  const openScheduleDialog = () => {
+    if (!canScheduleExam) {
+      setStatusMessage(
+        "Дор хаяж нэг асуултаа хадгалсны дараа шалгалтын эхлэх мэдээллээ товлоно уу.",
+      );
+      return;
+    }
+
+    setScheduleError("");
+    setStatusMessage("");
+    setIsScheduleDialogOpen(true);
+  };
+
   const handleUpdateExam = async () => {
     if (!examId) {
       setEditExamError("Шалгалтын ID олдсонгүй.");
@@ -472,17 +588,51 @@ export default function TeacherExamEditPage() {
     }
   };
 
+  const handleScheduleExam = () => {
+    if (!effectiveScheduleClassroomId) {
+      setScheduleError("Бүлгээ сонгоно уу.");
+      return;
+    }
+
+    if (!scheduleDate) {
+      setScheduleError("Өдрөө сонгоно уу.");
+      return;
+    }
+
+    if (!scheduleStartTime) {
+      setScheduleError("Эхлэх цагаа сонгоно уу.");
+      return;
+    }
+
+    if (!selectedClassroom) {
+      setScheduleError("Сонгосон бүлэг олдсонгүй.");
+      return;
+    }
+
+    setScheduledExam({
+      classroomId: effectiveScheduleClassroomId,
+      classroomName: selectedClassroom.className,
+      scheduledDate: scheduleDate,
+      startTime: scheduleStartTime,
+    });
+    setScheduleError("");
+    setStatusMessage(
+      `${selectedClassroom.className} бүлэгт ${formatScheduleDate(
+        scheduleDate,
+      )} ${scheduleStartTime}-д шалгалт эхлэхээр тохирууллаа.`,
+    );
+    setIsScheduleDialogOpen(false);
+  };
+
   const deleteActiveQuestion = () => {
     if (!activeQuestion) {
       return;
     }
 
     if (questions.length === 1) {
-      const freshQuestion = createQuestionDraft();
-
-      setQuestions([freshQuestion]);
-      setActiveQuestionId(freshQuestion.id);
-      setStatusMessage("");
+      setQuestions([]);
+      setActiveQuestionId(null);
+      setStatusMessage("Асуулт устгагдлаа. Шинэ асуулт нэмнэ үү.");
       setSavedQuestionIds(new Set());
       setDirtyQuestionIds(new Set());
       closeMenus();
@@ -497,7 +647,7 @@ export default function TeacherExamEditPage() {
 
     setQuestions(nextQuestions);
     setActiveQuestionId(nextActive?.id ?? null);
-    setStatusMessage("");
+    setStatusMessage("Асуулт устгагдлаа.");
     setSavedQuestionIds((current) => {
       const next = new Set(current);
       next.delete(activeQuestion.id);
@@ -980,6 +1130,116 @@ export default function TeacherExamEditPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog
+        open={isScheduleDialogOpen}
+        onOpenChange={(open) => {
+          setIsScheduleDialogOpen(open);
+
+          if (!open) {
+            setScheduleError("");
+          }
+        }}
+      >
+        <DialogContent
+          showCloseButton={false}
+          className="max-w-[calc(100%-2rem)] rounded-[24px] border border-[#E8E2F1] bg-white px-6 py-6 shadow-[0_20px_70px_rgba(28,18,54,0.18)] sm:max-w-[660px]"
+        >
+          <DialogHeader className="gap-0">
+            <DialogTitle className="text-[28px] font-semibold tracking-tight text-[#111111]">
+              Шалгалт авах
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="mt-3 space-y-5">
+            <div className="space-y-2.5">
+              <label className="block text-[16px] font-medium text-[#111111]">
+                Бүлэг
+              </label>
+              <div className="relative">
+                <select
+                  value={effectiveScheduleClassroomId}
+                  onChange={(event) => setScheduleClassroomId(event.target.value)}
+                  disabled={!classrooms.length}
+                  className={`${examDialogFieldClassName} appearance-none pr-14 ${
+                    effectiveScheduleClassroomId ? "" : "text-[#8E8A94]"
+                  } ${!classrooms.length ? "cursor-not-allowed opacity-60" : ""}`}
+                >
+                  <option value="" disabled>
+                    {classroomsLoading
+                      ? "Бүлгүүдийг ачаалж байна..."
+                      : "Бүлэг сонгох"}
+                  </option>
+                  {classrooms.map((classroom) => (
+                    <option key={classroom.id} value={classroom.id}>
+                      {classroom.className} · {classroom.classCode}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8E8A94]" />
+              </div>
+              {classroomsError ? (
+                <p className="text-[13px] text-[#D25B56]">
+                  {getApolloErrorMessage(
+                    classroomsError,
+                    "Бүлгийн мэдээлэл ачаалж чадсангүй.",
+                  )}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2.5">
+              <label className="block text-[16px] font-medium text-[#111111]">
+                Өдөр
+              </label>
+              <input
+                type="date"
+                value={scheduleDate}
+                min={formatDateInputValue()}
+                onChange={(event) => setScheduleDate(event.target.value)}
+                className={examDialogFieldClassName}
+              />
+            </div>
+
+            <div className="space-y-2.5">
+              <label className="block text-[16px] font-medium text-[#111111]">
+                Эхлэх цаг
+              </label>
+              <div className="relative">
+                <input
+                  type="time"
+                  value={scheduleStartTime}
+                  onChange={(event) => setScheduleStartTime(event.target.value)}
+                  className={`${examDialogFieldClassName} pr-12`}
+                />
+                <Clock3 className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8E8A94]" />
+              </div>
+            </div>
+          </div>
+
+          {scheduleError ? (
+            <p className="mt-4 text-[14px] text-[#D25B56]">{scheduleError}</p>
+          ) : null}
+
+          <div className="-mx-6 -mb-6 mt-8 flex items-center justify-end gap-6 border-t border-[#ECE6F3] px-6 py-5">
+            <button
+              type="button"
+              onClick={() => setIsScheduleDialogOpen(false)}
+              className="text-[18px] font-medium text-[#111111] transition hover:text-[#7E66DC]"
+            >
+              Буцах
+            </button>
+            <button
+              type="button"
+              onClick={handleScheduleExam}
+              disabled={!classrooms.length}
+              className="inline-flex h-12 items-center justify-center rounded-[20px] bg-[#9E81F0] px-8 text-[18px] font-semibold text-white shadow-[inset_0_-5px_0_rgba(103,79,184,0.32),0_12px_22px_rgba(158,129,240,0.24)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-55"
+            >
+              Товлох
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div>
         <Link
           href="/teacher/exams"
@@ -1026,10 +1286,37 @@ export default function TeacherExamEditPage() {
                   <div className="flex items-end justify-between gap-4 text-[15px] text-[#23202A]">
                     <span className="font-medium">Хугацаа</span>
                     <span className="text-right text-[15px]">
-                      {resolvedExamMeta.duration}
+                      {resolvedExamMeta.duration} мин
                     </span>
                   </div>
                 </div>
+
+                {scheduledExam ? (
+                  <>
+                    <div className="h-px bg-[#ECE6F3]" />
+
+                    <div className="space-y-2.5">
+                      <div className="flex items-end justify-between gap-4 text-[15px] text-[#23202A]">
+                        <span className="font-medium">Бүлэг</span>
+                        <span className="text-right text-[15px]">
+                          {scheduledExam.classroomName}
+                        </span>
+                      </div>
+                      <div className="flex items-end justify-between gap-4 text-[15px] text-[#23202A]">
+                        <span className="font-medium">Өдөр</span>
+                        <span className="text-right text-[15px]">
+                          {formatScheduleDate(scheduledExam.scheduledDate)}
+                        </span>
+                      </div>
+                      <div className="flex items-end justify-between gap-4 text-[15px] text-[#23202A]">
+                        <span className="font-medium">Эхлэх цаг</span>
+                        <span className="text-right text-[15px]">
+                          {scheduledExam.startTime}
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                ) : null}
 
                 <div className="h-px bg-[#ECE6F3]" />
 
@@ -1059,7 +1346,12 @@ export default function TeacherExamEditPage() {
                 <button
                   type="button"
                   onClick={deleteActiveQuestion}
-                  className="transition hover:text-[#DE5A52]"
+                  disabled={!activeQuestion}
+                  className={`transition ${
+                    activeQuestion
+                      ? "hover:text-[#DE5A52]"
+                      : "cursor-not-allowed opacity-40"
+                  }`}
                   aria-label="Сонгосон асуулт устгах"
                 >
                   <Trash2 className="h-6 w-6" strokeWidth={1.9} />
@@ -1239,16 +1531,18 @@ export default function TeacherExamEditPage() {
                         </div>
                       </div>
 
-                      <label className="mt-4 flex min-h-[220px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[18px] border border-dashed border-[#D9D0EE] bg-white px-4 py-6 transition hover:border-[#B59AF8]">
+                      <label className="mt-4 flex min-h-[220px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[18px] border border-dashed border-[#D9D0EE] bg-white transition hover:border-[#B59AF8]">
                         {activeQuestion.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={activeQuestion.imageUrl}
-                            alt="Асуултын зураг"
-                            className="max-h-[200px] w-full rounded-[14px] object-contain"
-                          />
+                          <div className="flex h-[220px] w-full items-center justify-center overflow-hidden px-3 py-3">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={activeQuestion.imageUrl}
+                              alt="Асуултын зураг"
+                              className="h-full w-full rounded-[14px] object-contain"
+                            />
+                          </div>
                         ) : (
-                          <div className="flex flex-col items-center gap-2 text-center text-[#8E8A94]">
+                          <div className="flex min-h-[220px] flex-col items-center justify-center gap-2 px-4 py-6 text-center text-[#8E8A94]">
                             <ImageIcon className="h-8 w-8" />
                             <span className="text-[15px] font-medium">
                               Зураг сонгох
@@ -1486,16 +1780,18 @@ export default function TeacherExamEditPage() {
                                   </div>
                                 </div>
 
-                                <label className="mt-3 flex min-h-[120px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[14px] border border-dashed border-[#D9D0EE] bg-white px-4 py-5 transition hover:border-[#B59AF8]">
+                                <label className="mt-3 flex min-h-[120px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[14px] border border-dashed border-[#D9D0EE] bg-white transition hover:border-[#B59AF8]">
                                   {choice.imageUrl ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img
-                                      src={choice.imageUrl}
-                                      alt={`${choice.label} хариултын зураг`}
-                                      className="max-h-[96px] w-full rounded-[12px] object-contain"
-                                    />
+                                    <div className="flex h-[120px] w-full items-center justify-center overflow-hidden px-2 py-2">
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img
+                                        src={choice.imageUrl}
+                                        alt={`${choice.label} хариултын зураг`}
+                                        className="h-full w-full rounded-[12px] object-contain"
+                                      />
+                                    </div>
                                   ) : (
-                                    <div className="flex flex-col items-center gap-2 text-center text-[#8E8A94]">
+                                    <div className="flex min-h-[120px] flex-col items-center justify-center gap-2 px-4 py-5 text-center text-[#8E8A94]">
                                       <ImageIcon className="h-6 w-6" />
                                       <span className="text-[13px]">
                                         Зураг сонгох
@@ -1633,13 +1929,21 @@ export default function TeacherExamEditPage() {
                 <p className="text-[14px] text-[#6F687D]">{statusMessage}</p>
               ) : null}
 
-              <div className="flex items-center justify-end gap-6 pt-2">
+              <div className="flex flex-wrap items-center justify-end gap-4 pt-2">
                 <button
                   type="button"
                   onClick={() => router.push("/teacher/exams")}
                   className="text-[20px] font-medium text-[#111111] transition hover:text-[#7E66DC]"
                 >
                   Цуцлах
+                </button>
+                <button
+                  type="button"
+                  onClick={openScheduleDialog}
+                  disabled={!canScheduleExam}
+                  className="inline-flex h-14 items-center justify-center rounded-[22px] border border-[#D9D0EE] bg-white px-8 text-[18px] font-semibold text-[#6F5DE2] transition hover:border-[#B7A3F7] hover:bg-[#F8F5FF] disabled:cursor-not-allowed disabled:opacity-55"
+                >
+                  Илгээх
                 </button>
                 <button
                   type="button"
@@ -1651,7 +1955,30 @@ export default function TeacherExamEditPage() {
                 </button>
               </div>
             </div>
-          ) : null}
+          ) : (
+            <div className="flex min-h-[420px] flex-col items-center justify-center rounded-[18px] border border-dashed border-[#D9D0EE] bg-[#FBFAFE] px-6 py-10 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-[#7E66DC] shadow-sm">
+                <Plus className="h-7 w-7" />
+              </div>
+              <h2 className="mt-5 text-[22px] font-semibold text-[#1F1B27]">
+                Асуулт алга байна
+              </h2>
+              <p className="mt-2 max-w-[420px] text-[15px] leading-7 text-[#6F687D]">
+                Сүүлийн асуултыг устгасан байна. Шинэ асуулт нэмээд үргэлжлүүлнэ үү.
+              </p>
+              <button
+                type="button"
+                onClick={addQuestion}
+                className="mt-6 inline-flex h-12 items-center justify-center gap-2 rounded-[18px] bg-[#9E81F0] px-6 text-[16px] font-semibold text-white shadow-[inset_0_-4px_0_rgba(103,79,184,0.28),0_10px_18px_rgba(158,129,240,0.2)] transition hover:opacity-95"
+              >
+                <Plus className="h-5 w-5" />
+                Асуулт нэмэх
+              </button>
+              {statusMessage ? (
+                <p className="mt-4 text-[14px] text-[#6F687D]">{statusMessage}</p>
+              ) : null}
+            </div>
+          )}
         </section>
       </div>
     </section>
