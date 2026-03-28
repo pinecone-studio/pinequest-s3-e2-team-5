@@ -113,6 +113,7 @@ export const examTypeDefs = gql`
     type Mutation{
         createExam(input: createExamInput!): Exam
         scheduleExam(input: scheduleExamInput!): Exam
+        deleteExam(examId: String!): Exam
     }
 `
 // id: text().primaryKey().notNull(),

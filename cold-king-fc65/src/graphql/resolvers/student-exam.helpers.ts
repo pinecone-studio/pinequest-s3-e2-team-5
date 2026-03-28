@@ -75,10 +75,10 @@ export async function loadQuestionsWithChoices(
 		.where(inArray(choices.questionId, questionIds))
 		.all();
 
-	return sortedQuestions.map((question) => ({
+	return sortedQuestions.map((question, index) => ({
 		...question,
 		prompt: question.question,
-		order: question.indexOnExam,
+		order: index + 1,
 		choices: questionChoices
 			.filter((choice) => choice.questionId === question.id)
 			.sort((left, right) => left.label.localeCompare(right.label)),

@@ -7,7 +7,6 @@ import {
   ChevronDown,
   ChevronLeft,
   CircleDot,
-  Clock3,
   FileText,
   Image as ImageIcon,
   PencilLine,
@@ -59,13 +58,28 @@ type QuestionDraft = {
 };
 
 type ExamByIdData = {
-  examById: {
-    id: string;
-    title: string;
-    subject: string;
-    description: string | null;
-    duration: number;
-    grade: string;
+  teacherExamDetail: {
+    exam: {
+      id: string;
+      title: string;
+      subject: string;
+      description: string | null;
+      duration: number;
+      grade: string;
+    };
+    questions: {
+      id: string;
+      type: QuestionType;
+      prompt: string;
+      order: number;
+      correctChoiceId: string | null;
+      choices: {
+        id: string;
+        label: string;
+        text: string;
+        isCorrect: boolean;
+      }[];
+    }[];
   };
 };
 
@@ -86,32 +100,36 @@ type UpdateExamData = {
   };
 };
 
-type ClassroomItem = {
-  id: string;
-  className: string;
-  classCode: string;
-};
-
-type ClassroomsByTeacherData = {
-  classroomsByTeacher: ClassroomItem[];
-};
-
-type ScheduledExamDraft = {
-  classroomId: string;
-  classroomName: string;
-  scheduledDate: string;
-  startTime: string;
+type DeleteExamData = {
+  deleteExam: {
+    id: string;
+  };
 };
 
 const GET_EXAM_BY_ID = gql`
-  query ExamById($examId: String!) {
-    examById(examId: $examId) {
-      id
-      title
-      subject
-      description
-      duration
-      grade
+  query GetTeacherExamEditData($examId: String!) {
+    teacherExamDetail(examId: $examId) {
+      exam {
+        id
+        title
+        subject
+        description
+        duration
+        grade
+      }
+      questions {
+        id
+        type
+        prompt
+        order
+        correctChoiceId
+        choices {
+          id
+          label
+          text
+          isCorrect
+        }
+      }
     }
   }
 `;
@@ -137,12 +155,10 @@ const UPDATE_EXAM = gql`
   }
 `;
 
-const GET_CLASSROOMS_BY_TEACHER = gql`
-  query GetClassroomsByTeacher {
-    classroomsByTeacher {
+const DELETE_EXAM = gql`
+  mutation DeleteExam($examId: String!) {
+    deleteExam(examId: $examId) {
       id
-      className
-      classCode
     }
   }
 `;
@@ -232,6 +248,39 @@ function createQuestionDraft(): QuestionDraft {
   };
 }
 
+function createQuestionDraftFromServer(
+  question: ExamByIdData["teacherExamDetail"]["questions"][number],
+): QuestionDraft {
+  return {
+    id: question.id,
+    question: question.prompt,
+    type: question.type,
+    topic: "",
+    difficulty: "",
+    imageUrl: "",
+    videoUrl: "",
+    imageFileName: "",
+    videoFileName: "",
+    showImageInput: false,
+    showVideoInput: false,
+    points: 1,
+    choices: normalizeQuestionChoices(
+      question.choices.map((choice) => ({
+        id: choice.id,
+        label: choice.label,
+        text: choice.text,
+        isCorrect: choice.isCorrect,
+        imageUrl: "",
+        videoUrl: "",
+        imageFileName: "",
+        videoFileName: "",
+        showImageInput: false,
+        showVideoInput: false,
+      })),
+    ),
+  };
+}
+
 function readFileAsDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -277,60 +326,26 @@ function getQuestionTypeLabel(type: QuestionType) {
   return "Бичих";
 }
 
-function formatDateInputValue(date = new Date()) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
-function formatTimeInputValue(date = new Date()) {
-  const nextHour = new Date(date);
-  nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
-
-  return [
-    String(nextHour.getHours()).padStart(2, "0"),
-    String(nextHour.getMinutes()).padStart(2, "0"),
-  ].join(":");
-}
-
-function formatScheduleDate(value: string) {
-  return value.replaceAll("-", "/");
-}
-
-function getGradePrefix(grade: string) {
-  return grade.match(/\d+/)?.[0] ?? "";
-}
-
 export default function TeacherExamEditPage() {
   const params = useParams<{ examId: string }>();
   const examId = Array.isArray(params.examId) ? params.examId[0] : params.examId;
   const router = useRouter();
 
-  const [questions, setQuestions] = useState<QuestionDraft[]>([
-    createQuestionDraft(),
-  ]);
+  const [fallbackQuestion] = useState<QuestionDraft>(() => createQuestionDraft());
+  const [draftQuestions, setDraftQuestions] = useState<QuestionDraft[] | null>(
+    null,
+  );
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [isExamDialogOpen, setIsExamDialogOpen] = useState(false);
-  const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
-  const [examMeta, setExamMeta] = useState<ExamByIdData["examById"] | null>(null);
+  const [examMeta, setExamMeta] = useState<ExamByIdData["teacherExamDetail"]["exam"] | null>(null);
   const [editSubject, setEditSubject] = useState("");
   const [editTitle, setEditTitle] = useState("");
   const [editGrade, setEditGrade] = useState("");
   const [editDuration, setEditDuration] = useState(60);
   const [editUploadedFileName, setEditUploadedFileName] = useState("");
   const [editExamError, setEditExamError] = useState("");
-  const [scheduleClassroomId, setScheduleClassroomId] = useState("");
-  const [scheduleDate, setScheduleDate] = useState(() => formatDateInputValue());
-  const [scheduleStartTime, setScheduleStartTime] = useState(() =>
-    formatTimeInputValue(),
-  );
-  const [scheduleError, setScheduleError] = useState("");
-  const [scheduledExam, setScheduledExam] = useState<ScheduledExamDraft | null>(
-    null,
-  );
+  const [deleteExamError, setDeleteExamError] = useState("");
   const [savedQuestionIds, setSavedQuestionIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -353,16 +368,38 @@ export default function TeacherExamEditPage() {
       variables: { examId },
       skip: !examId,
     });
-  const {
-    data: classroomsData,
-    loading: classroomsLoading,
-    error: classroomsError,
-  } = useQuery<ClassroomsByTeacherData>(GET_CLASSROOMS_BY_TEACHER);
 
   const [createQuestionWithChoices, { loading: saveQuestionLoading }] =
     useMutation<CreateQuestionWithChoicesData>(CREATE_QUESTION_WITH_CHOICES);
   const [updateExam, { loading: updateExamLoading }] =
     useMutation<UpdateExamData>(UPDATE_EXAM);
+  const [deleteExam, { loading: deleteExamLoading }] =
+    useMutation<DeleteExamData>(DELETE_EXAM);
+
+  const serverQuestions = useMemo(
+    () => examData?.teacherExamDetail.questions.map(createQuestionDraftFromServer) ?? [],
+    [examData],
+  );
+  const questions = useMemo(() => {
+    if (draftQuestions) {
+      return draftQuestions;
+    }
+
+    if (serverQuestions.length > 0) {
+      return serverQuestions;
+    }
+
+    return [fallbackQuestion];
+  }, [draftQuestions, fallbackQuestion, serverQuestions]);
+  const effectiveSavedQuestionIds = useMemo(() => {
+    const next = new Set(serverQuestions.map((question) => question.id));
+
+    for (const questionId of savedQuestionIds) {
+      next.add(questionId);
+    }
+
+    return next;
+  }, [savedQuestionIds, serverQuestions]);
 
   const activeQuestion = useMemo(() => {
     const fallback = questions[0] ?? null;
@@ -387,39 +424,15 @@ export default function TeacherExamEditPage() {
     return questions.reduce((sum, question) => sum + question.points, 0);
   }, [questions]);
 
-  const classrooms = useMemo(
-    () => classroomsData?.classroomsByTeacher ?? [],
-    [classroomsData?.classroomsByTeacher],
-  );
-  const examGrade = examMeta?.grade ?? examData?.examById.grade ?? "";
-  const preferredClassroomId = useMemo(() => {
-    const gradePrefix = getGradePrefix(examGrade);
-
-    if (!classrooms.length) {
-      return "";
-    }
-
-    if (!gradePrefix) {
-      return classrooms[0]?.id ?? "";
-    }
-
-    return (
-      classrooms.find((classroom) => classroom.className.includes(gradePrefix))
-        ?.id ??
-      classrooms[0]?.id ??
-      ""
-    );
-  }, [classrooms, examGrade]);
-  const effectiveScheduleClassroomId =
-    scheduleClassroomId || preferredClassroomId;
-  const selectedClassroom = useMemo(
-    () =>
-      classrooms.find(
-        (classroom) => classroom.id === effectiveScheduleClassroomId,
-      ) ?? null,
-    [classrooms, effectiveScheduleClassroomId],
-  );
-  const canScheduleExam = savedQuestionIds.size > 0;
+  const updateQuestions = (
+    updater: (current: QuestionDraft[]) => QuestionDraft[],
+  ) => {
+    setDraftQuestions((current) => {
+      const base =
+        current ?? (serverQuestions.length > 0 ? serverQuestions : [fallbackQuestion]);
+      return updater(base);
+    });
+  };
 
   useEffect(() => {
     const handlePointerDown = (event: MouseEvent) => {
@@ -464,13 +477,13 @@ export default function TeacherExamEditPage() {
       return;
     }
 
-    setQuestions((current) =>
+    updateQuestions((current) =>
       current.map((question) =>
         question.id === activeQuestion.id ? updater(question) : question,
       ),
     );
 
-    if (savedQuestionIds.has(activeQuestion.id)) {
+    if (effectiveSavedQuestionIds.has(activeQuestion.id)) {
       setDirtyQuestionIds((current) => {
         const next = new Set(current);
         next.add(activeQuestion.id);
@@ -483,13 +496,13 @@ export default function TeacherExamEditPage() {
     questionId: string,
     updater: (question: QuestionDraft) => QuestionDraft,
   ) => {
-    setQuestions((current) =>
+    updateQuestions((current) =>
       current.map((question) =>
         question.id === questionId ? updater(question) : question,
       ),
     );
 
-    if (savedQuestionIds.has(questionId)) {
+    if (effectiveSavedQuestionIds.has(questionId)) {
       setDirtyQuestionIds((current) => {
         const next = new Set(current);
         next.add(questionId);
@@ -506,14 +519,14 @@ export default function TeacherExamEditPage() {
 
   const addQuestion = () => {
     const nextQuestion = createQuestionDraft();
-    setQuestions((current) => [...current, nextQuestion]);
+    updateQuestions((current) => [...current, nextQuestion]);
     setActiveQuestionId(nextQuestion.id);
     setStatusMessage("");
     closeMenus();
   };
 
   const openExamEditDialog = () => {
-    const source = examMeta ?? examData?.examById;
+    const source = examMeta ?? examData?.teacherExamDetail.exam;
 
     if (!source) {
       return;
@@ -532,17 +545,48 @@ export default function TeacherExamEditPage() {
     setIsExamDialogOpen(true);
   };
 
-  const openScheduleDialog = () => {
-    if (!canScheduleExam) {
-      setStatusMessage(
-        "Дор хаяж нэг асуултаа хадгалсны дараа шалгалтын эхлэх мэдээллээ товлоно уу.",
-      );
+  const handleDeleteExam = async () => {
+    if (!window.confirm("Энэ шалгалтыг бүх асуулттай нь устгах уу?")) {
       return;
     }
 
-    setScheduleError("");
-    setStatusMessage("");
-    setIsScheduleDialogOpen(true);
+    try {
+      setDeleteExamError("");
+      await deleteExam({
+        variables: { examId },
+        optimisticResponse: {
+          deleteExam: {
+            __typename: "Exam",
+            id: examId,
+          },
+        },
+        update(cache) {
+          cache.modify({
+            fields: {
+              myExams(existingRefs = [], { readField }) {
+                return existingRefs.filter(
+                  (reference: unknown) => readField("id", reference) !== examId,
+                );
+              },
+              teacherScheduledExams(existingRefs = [], { readField }) {
+                return existingRefs.filter(
+                  (reference: unknown) => readField("id", reference) !== examId,
+                );
+              },
+            },
+          });
+          cache.evict({
+            id: cache.identify({ __typename: "Exam", id: examId }),
+          });
+          cache.gc();
+        },
+      });
+      router.push("/teacher/exams");
+    } catch (error) {
+      setDeleteExamError(
+        getApolloErrorMessage(error, "Шалгалт устгахад алдаа гарлаа."),
+      );
+    }
   };
 
   const handleUpdateExam = async () => {
@@ -586,79 +630,6 @@ export default function TeacherExamEditPage() {
         getApolloErrorMessage(error, "Шалгалтын мэдээлэл шинэчлэхэд алдаа гарлаа."),
       );
     }
-  };
-
-  const handleScheduleExam = () => {
-    if (!effectiveScheduleClassroomId) {
-      setScheduleError("Бүлгээ сонгоно уу.");
-      return;
-    }
-
-    if (!scheduleDate) {
-      setScheduleError("Өдрөө сонгоно уу.");
-      return;
-    }
-
-    if (!scheduleStartTime) {
-      setScheduleError("Эхлэх цагаа сонгоно уу.");
-      return;
-    }
-
-    if (!selectedClassroom) {
-      setScheduleError("Сонгосон бүлэг олдсонгүй.");
-      return;
-    }
-
-    setScheduledExam({
-      classroomId: effectiveScheduleClassroomId,
-      classroomName: selectedClassroom.className,
-      scheduledDate: scheduleDate,
-      startTime: scheduleStartTime,
-    });
-    setScheduleError("");
-    setStatusMessage(
-      `${selectedClassroom.className} бүлэгт ${formatScheduleDate(
-        scheduleDate,
-      )} ${scheduleStartTime}-д шалгалт эхлэхээр тохирууллаа.`,
-    );
-    setIsScheduleDialogOpen(false);
-  };
-
-  const deleteActiveQuestion = () => {
-    if (!activeQuestion) {
-      return;
-    }
-
-    if (questions.length === 1) {
-      setQuestions([]);
-      setActiveQuestionId(null);
-      setStatusMessage("Асуулт устгагдлаа. Шинэ асуулт нэмнэ үү.");
-      setSavedQuestionIds(new Set());
-      setDirtyQuestionIds(new Set());
-      closeMenus();
-      return;
-    }
-
-    const nextQuestions = questions.filter(
-      (question) => question.id !== activeQuestion.id,
-    );
-    const nextActive =
-      nextQuestions[activeQuestionIndex - 1] ?? nextQuestions[0] ?? null;
-
-    setQuestions(nextQuestions);
-    setActiveQuestionId(nextActive?.id ?? null);
-    setStatusMessage("Асуулт устгагдлаа.");
-    setSavedQuestionIds((current) => {
-      const next = new Set(current);
-      next.delete(activeQuestion.id);
-      return next;
-    });
-    setDirtyQuestionIds((current) => {
-      const next = new Set(current);
-      next.delete(activeQuestion.id);
-      return next;
-    });
-    closeMenus();
   };
 
   const addChoice = (afterChoiceId?: string) => {
@@ -892,7 +863,7 @@ export default function TeacherExamEditPage() {
         setActiveQuestionId(nextQuestion.id);
       } else {
         const freshQuestion = createQuestionDraft();
-        setQuestions((current) => [...current, freshQuestion]);
+        updateQuestions((current) => [...current, freshQuestion]);
         setActiveQuestionId(freshQuestion.id);
       }
 
@@ -916,7 +887,7 @@ export default function TeacherExamEditPage() {
       return;
     }
 
-    if (savedQuestionIds.has(activeQuestion.id)) {
+    if (effectiveSavedQuestionIds.has(activeQuestion.id)) {
       if (dirtyQuestionIds.has(activeQuestion.id)) {
         setStatusMessage(
           "Хадгалсан асуултыг дахин засварлан хадгалах backend боломж одоогоор алга.",
@@ -980,7 +951,7 @@ export default function TeacherExamEditPage() {
     return <main className="p-8 text-sm text-[#6F687D]">Уншиж байна...</main>;
   }
 
-  if (examError || !examData?.examById) {
+  if (examError || !examData?.teacherExamDetail) {
     return (
       <main className="p-8 text-sm text-red-600">
         {getApolloErrorMessage(examError, "Шалгалт ачаалж чадсангүй.")}
@@ -988,7 +959,7 @@ export default function TeacherExamEditPage() {
     );
   }
 
-  const resolvedExamMeta = examMeta ?? examData.examById;
+  const resolvedExamMeta = examMeta ?? examData.teacherExamDetail.exam;
 
   return (
     <section className="space-y-6">
@@ -1130,116 +1101,6 @@ export default function TeacherExamEditPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog
-        open={isScheduleDialogOpen}
-        onOpenChange={(open) => {
-          setIsScheduleDialogOpen(open);
-
-          if (!open) {
-            setScheduleError("");
-          }
-        }}
-      >
-        <DialogContent
-          showCloseButton={false}
-          className="max-w-[calc(100%-2rem)] rounded-[24px] border border-[#E8E2F1] bg-white px-6 py-6 shadow-[0_20px_70px_rgba(28,18,54,0.18)] sm:max-w-[660px]"
-        >
-          <DialogHeader className="gap-0">
-            <DialogTitle className="text-[28px] font-semibold tracking-tight text-[#111111]">
-              Шалгалт авах
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="mt-3 space-y-5">
-            <div className="space-y-2.5">
-              <label className="block text-[16px] font-medium text-[#111111]">
-                Бүлэг
-              </label>
-              <div className="relative">
-                <select
-                  value={effectiveScheduleClassroomId}
-                  onChange={(event) => setScheduleClassroomId(event.target.value)}
-                  disabled={!classrooms.length}
-                  className={`${examDialogFieldClassName} appearance-none pr-14 ${
-                    effectiveScheduleClassroomId ? "" : "text-[#8E8A94]"
-                  } ${!classrooms.length ? "cursor-not-allowed opacity-60" : ""}`}
-                >
-                  <option value="" disabled>
-                    {classroomsLoading
-                      ? "Бүлгүүдийг ачаалж байна..."
-                      : "Бүлэг сонгох"}
-                  </option>
-                  {classrooms.map((classroom) => (
-                    <option key={classroom.id} value={classroom.id}>
-                      {classroom.className} · {classroom.classCode}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8E8A94]" />
-              </div>
-              {classroomsError ? (
-                <p className="text-[13px] text-[#D25B56]">
-                  {getApolloErrorMessage(
-                    classroomsError,
-                    "Бүлгийн мэдээлэл ачаалж чадсангүй.",
-                  )}
-                </p>
-              ) : null}
-            </div>
-
-            <div className="space-y-2.5">
-              <label className="block text-[16px] font-medium text-[#111111]">
-                Өдөр
-              </label>
-              <input
-                type="date"
-                value={scheduleDate}
-                min={formatDateInputValue()}
-                onChange={(event) => setScheduleDate(event.target.value)}
-                className={examDialogFieldClassName}
-              />
-            </div>
-
-            <div className="space-y-2.5">
-              <label className="block text-[16px] font-medium text-[#111111]">
-                Эхлэх цаг
-              </label>
-              <div className="relative">
-                <input
-                  type="time"
-                  value={scheduleStartTime}
-                  onChange={(event) => setScheduleStartTime(event.target.value)}
-                  className={`${examDialogFieldClassName} pr-12`}
-                />
-                <Clock3 className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8E8A94]" />
-              </div>
-            </div>
-          </div>
-
-          {scheduleError ? (
-            <p className="mt-4 text-[14px] text-[#D25B56]">{scheduleError}</p>
-          ) : null}
-
-          <div className="-mx-6 -mb-6 mt-8 flex items-center justify-end gap-6 border-t border-[#ECE6F3] px-6 py-5">
-            <button
-              type="button"
-              onClick={() => setIsScheduleDialogOpen(false)}
-              className="text-[18px] font-medium text-[#111111] transition hover:text-[#7E66DC]"
-            >
-              Буцах
-            </button>
-            <button
-              type="button"
-              onClick={handleScheduleExam}
-              disabled={!classrooms.length}
-              className="inline-flex h-12 items-center justify-center rounded-[20px] bg-[#9E81F0] px-8 text-[18px] font-semibold text-white shadow-[inset_0_-5px_0_rgba(103,79,184,0.32),0_12px_22px_rgba(158,129,240,0.24)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-55"
-            >
-              Товлох
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       <div>
         <Link
           href="/teacher/exams"
@@ -1291,33 +1152,6 @@ export default function TeacherExamEditPage() {
                   </div>
                 </div>
 
-                {scheduledExam ? (
-                  <>
-                    <div className="h-px bg-[#ECE6F3]" />
-
-                    <div className="space-y-2.5">
-                      <div className="flex items-end justify-between gap-4 text-[15px] text-[#23202A]">
-                        <span className="font-medium">Бүлэг</span>
-                        <span className="text-right text-[15px]">
-                          {scheduledExam.classroomName}
-                        </span>
-                      </div>
-                      <div className="flex items-end justify-between gap-4 text-[15px] text-[#23202A]">
-                        <span className="font-medium">Өдөр</span>
-                        <span className="text-right text-[15px]">
-                          {formatScheduleDate(scheduledExam.scheduledDate)}
-                        </span>
-                      </div>
-                      <div className="flex items-end justify-between gap-4 text-[15px] text-[#23202A]">
-                        <span className="font-medium">Эхлэх цаг</span>
-                        <span className="text-right text-[15px]">
-                          {scheduledExam.startTime}
-                        </span>
-                      </div>
-                    </div>
-                  </>
-                ) : null}
-
                 <div className="h-px bg-[#ECE6F3]" />
 
                 <div className="space-y-2.5">
@@ -1345,18 +1179,18 @@ export default function TeacherExamEditPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={deleteActiveQuestion}
-                  disabled={!activeQuestion}
-                  className={`transition ${
-                    activeQuestion
-                      ? "hover:text-[#DE5A52]"
-                      : "cursor-not-allowed opacity-40"
-                  }`}
-                  aria-label="Сонгосон асуулт устгах"
+                  onClick={() => void handleDeleteExam()}
+                  disabled={deleteExamLoading}
+                  className="transition hover:text-[#DE5A52] disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Шалгалт устгах"
                 >
                   <Trash2 className="h-6 w-6" strokeWidth={1.9} />
                 </button>
               </div>
+
+              {deleteExamError ? (
+                <p className="mt-4 text-[14px] text-[#D25B56]">{deleteExamError}</p>
+              ) : null}
             </section>
 
             <section className="rounded-[18px] border border-[#E8E2F1] bg-white p-5 shadow-[0_4px_12px_rgba(53,31,107,0.04)]">
@@ -1936,14 +1770,6 @@ export default function TeacherExamEditPage() {
                   className="text-[20px] font-medium text-[#111111] transition hover:text-[#7E66DC]"
                 >
                   Цуцлах
-                </button>
-                <button
-                  type="button"
-                  onClick={openScheduleDialog}
-                  disabled={!canScheduleExam}
-                  className="inline-flex h-14 items-center justify-center rounded-[22px] border border-[#D9D0EE] bg-white px-8 text-[18px] font-semibold text-[#6F5DE2] transition hover:border-[#B7A3F7] hover:bg-[#F8F5FF] disabled:cursor-not-allowed disabled:opacity-55"
-                >
-                  Илгээх
                 </button>
                 <button
                   type="button"

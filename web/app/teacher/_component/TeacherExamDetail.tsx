@@ -1,10 +1,12 @@
 "use client";
 
 import { gql } from "@apollo/client";
-import { useQuery } from "@apollo/client/react";
+import { useMutation, useQuery } from "@apollo/client/react";
 import Link from "next/link";
 import { ChevronLeft, PencilLine, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { getApolloErrorMessage } from "@/lib/apollo-error";
 import { getSubjectDisplayLabel } from "../_data/dashboard";
 
 type TeacherExamDetailProps = {
@@ -39,6 +41,12 @@ type TeacherExamDetailData = {
   };
 };
 
+type DeleteExamData = {
+  deleteExam: {
+    id: string;
+  };
+};
+
 const GET_TEACHER_EXAM_DETAIL = gql`
   query GetTeacherExamDetail($examId: String!) {
     teacherExamDetail(examId: $examId) {
@@ -69,6 +77,14 @@ const GET_TEACHER_EXAM_DETAIL = gql`
   }
 `;
 
+const DELETE_EXAM = gql`
+  mutation DeleteExam($examId: String!) {
+    deleteExam(examId: $examId) {
+      id
+    }
+  }
+`;
+
 function formatScheduledDate(date: string | null) {
   if (!date) {
     return "-";
@@ -84,12 +100,16 @@ function formatScheduledDate(date: string | null) {
 
 export function TeacherExamDetail({ examId }: TeacherExamDetailProps) {
   const [focusedQuestion, setFocusedQuestion] = useState(1);
+  const [actionError, setActionError] = useState("");
+  const router = useRouter();
   const { data, loading, error } = useQuery<TeacherExamDetailData>(
     GET_TEACHER_EXAM_DETAIL,
     {
       variables: { examId },
     },
   );
+  const [deleteExam, { loading: deleteExamLoading }] =
+    useMutation<DeleteExamData>(DELETE_EXAM);
 
   if (loading) {
     return <div className="p-8 text-sm text-[#6F687D]">Уншиж байна...</div>;
@@ -105,13 +125,60 @@ export function TeacherExamDetail({ examId }: TeacherExamDetailProps) {
 
   const { exam, questions } = data.teacherExamDetail;
 
-  const handleFocusQuestion = (order: number) => {
-    setFocusedQuestion(order);
+  const handleFocusQuestion = (displayOrder: number) => {
+    setFocusedQuestion(displayOrder);
 
     const questionElement = document.getElementById(
-      `teacher-exam-question-${order}`,
+      `teacher-exam-question-${displayOrder}`,
     );
     questionElement?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const handleDeleteExam = async () => {
+    if (!window.confirm("Энэ шалгалтыг бүх асуулттай нь устгах уу?")) {
+      return;
+    }
+
+    try {
+      setActionError("");
+      await deleteExam({
+        variables: { examId },
+        optimisticResponse: {
+          deleteExam: {
+            __typename: "Exam",
+            id: examId,
+          },
+        },
+        update(cache) {
+          cache.modify({
+            fields: {
+              myExams(existingRefs = [], { readField }) {
+                return existingRefs.filter(
+                  (reference: unknown) => readField("id", reference) !== examId,
+                );
+              },
+              teacherScheduledExams(existingRefs = [], { readField }) {
+                return existingRefs.filter(
+                  (reference: unknown) => readField("id", reference) !== examId,
+                );
+              },
+            },
+          });
+          cache.evict({
+            id: cache.identify({ __typename: "Exam", id: examId }),
+          });
+          cache.gc();
+        },
+      });
+      router.push("/teacher/exams");
+    } catch (mutationError) {
+      setActionError(
+        getApolloErrorMessage(
+          mutationError,
+          "Шалгалт устгахад алдаа гарлаа.",
+        ),
+      );
+    }
   };
 
   const infoGroups = [
@@ -195,32 +262,42 @@ export function TeacherExamDetail({ examId }: TeacherExamDetailProps) {
                 </Link>
                 <button
                   type="button"
+                  onClick={() => void handleDeleteExam()}
+                  disabled={deleteExamLoading}
                   className="transition hover:text-[#DE5A52]"
                   aria-label="Шалгалт устгах"
                 >
                   <Trash2 className="h-6 w-6" strokeWidth={1.9} />
                 </button>
               </div>
+
+              {actionError ? (
+                <p className="mt-4 text-[14px] text-[#D25B56]">{actionError}</p>
+              ) : null}
             </section>
 
             <section className="rounded-[18px] border border-[#E8E2F1] bg-white p-5 shadow-[0_4px_12px_rgba(53,31,107,0.04)]">
               <p className="text-[17px] font-semibold text-[#23202A]">Асуулт</p>
 
               <div className="mt-4 grid grid-cols-5 gap-3">
-                {questions.map((question) => (
-                  <button
-                    key={question.id}
-                    type="button"
-                    onClick={() => handleFocusQuestion(question.order)}
-                    className={`flex h-11 w-11 items-center justify-center rounded-[10px] border text-[15px] font-medium transition ${
-                      focusedQuestion === question.order
-                        ? "border-[#9077F7] bg-[#F0EEFF] text-[#6F5DE2]"
-                        : "border-[#E8E2F1] bg-white text-[#2A2732] hover:border-[#D6CFF3]"
-                    }`}
-                  >
-                    {question.order}
-                  </button>
-                ))}
+                {questions.map((question, index) => {
+                  const displayOrder = index + 1;
+
+                  return (
+                    <button
+                      key={question.id}
+                      type="button"
+                      onClick={() => handleFocusQuestion(displayOrder)}
+                      className={`flex h-11 w-11 items-center justify-center rounded-[10px] border text-[15px] font-medium transition ${
+                        focusedQuestion === displayOrder
+                          ? "border-[#9077F7] bg-[#F0EEFF] text-[#6F5DE2]"
+                          : "border-[#E8E2F1] bg-white text-[#2A2732] hover:border-[#D6CFF3]"
+                      }`}
+                    >
+                      {displayOrder}
+                    </button>
+                  );
+                })}
 
                 <Link
                   href={`/teacher/exams/${exam.id}/edit`}
@@ -235,60 +312,64 @@ export function TeacherExamDetail({ examId }: TeacherExamDetailProps) {
         </aside>
 
         <div className="space-y-4">
-          {questions.map((question) => (
-            <article
-              key={question.id}
-              id={`teacher-exam-question-${question.order}`}
-              className="scroll-mt-24 rounded-[18px] border border-[#E8E2F1] bg-white p-5 shadow-[0_4px_12px_rgba(53,31,107,0.04)]"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <h2 className="text-[18px] font-semibold text-[#1F1B27]">
-                  {question.order}. {question.prompt}
-                </h2>
-                <span className="shrink-0 pt-0.5 text-[15px] font-medium text-[#2C2933]">
-                  1 оноо
-                </span>
-              </div>
+          {questions.map((question, index) => {
+            const displayOrder = index + 1;
 
-              {question.type === "mcq" ? (
-                <div className="mt-5 space-y-4">
-                  {question.choices.map((option) => {
-                    const isSelected = option.id === question.correctChoiceId;
+            return (
+              <article
+                key={question.id}
+                id={`teacher-exam-question-${displayOrder}`}
+                className="scroll-mt-24 rounded-[18px] border border-[#E8E2F1] bg-white p-5 shadow-[0_4px_12px_rgba(53,31,107,0.04)]"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <h2 className="text-[18px] font-semibold text-[#1F1B27]">
+                    {displayOrder}. {question.prompt}
+                  </h2>
+                  <span className="shrink-0 pt-0.5 text-[15px] font-medium text-[#2C2933]">
+                    1 оноо
+                  </span>
+                </div>
 
-                    return (
-                      <div key={option.id} className="flex items-center gap-3.5">
-                        <span
-                          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border bg-white ${
-                            isSelected ? "border-[#8F76F6]" : "border-[#BAB4C5]"
-                          }`}
-                        >
-                          {isSelected ? (
-                            <span className="h-4 w-4 rounded-full bg-[#8F76F6]" />
-                          ) : null}
-                        </span>
+                {question.type === "mcq" ? (
+                  <div className="mt-5 space-y-4">
+                    {question.choices.map((option) => {
+                      const isSelected = option.id === question.correctChoiceId;
 
-                        <div
-                          className={`flex-1 rounded-[14px] border px-4 py-3.5 text-left ${
-                            isSelected
-                              ? "border-[#DDD5FF] bg-[#F0EEFF]"
-                              : "border-[#E8E2F1] bg-white"
-                          }`}
-                        >
-                          <span className="text-[15px] font-medium text-[#27242F]">
-                            {option.label} {option.text}
+                      return (
+                        <div key={option.id} className="flex items-center gap-3.5">
+                          <span
+                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border bg-white ${
+                              isSelected ? "border-[#8F76F6]" : "border-[#BAB4C5]"
+                            }`}
+                          >
+                            {isSelected ? (
+                              <span className="h-4 w-4 rounded-full bg-[#8F76F6]" />
+                            ) : null}
                           </span>
+
+                          <div
+                            className={`flex-1 rounded-[14px] border px-4 py-3.5 text-left ${
+                              isSelected
+                                ? "border-[#DDD5FF] bg-[#F0EEFF]"
+                                : "border-[#E8E2F1] bg-white"
+                            }`}
+                          >
+                            <span className="text-[15px] font-medium text-[#27242F]">
+                              {option.label} {option.text}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="mt-5 rounded-[16px] border border-[#E8E2F1] bg-white px-4 py-4 text-[15px] leading-8 text-[#27242F]">
-                  Нээлттэй асуулт
-                </div>
-              )}
-            </article>
-          ))}
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="mt-5 rounded-[16px] border border-[#E8E2F1] bg-white px-4 py-4 text-[15px] leading-8 text-[#27242F]">
+                    Нээлттэй асуулт
+                  </div>
+                )}
+              </article>
+            );
+          })}
         </div>
       </div>
     </section>
