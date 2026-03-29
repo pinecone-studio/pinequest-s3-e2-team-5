@@ -4,12 +4,21 @@ import { gql } from "@apollo/client";
 import { useQuery } from "@apollo/client/react";
 import { useMemo, useState } from "react";
 import { TeacherExamCard } from "../_component/TeacherExamCard";
-import { subjectTabs, type ExamCard, type SubjectKey } from "../_data/dashboard";
+import { type ExamCard, type SubjectKey } from "../_data/dashboard";
+
+type DashboardCategoryKey = "active" | "scheduled" | "closed";
+
+const dashboardTabs: { key: DashboardCategoryKey; label: string }[] = [
+  { key: "active", label: "Идэвхтэй" },
+  { key: "scheduled", label: "Товлогдсон" },
+  { key: "closed", label: "Хаагдсан" },
+];
 
 type TeacherExamRecord = {
   id: string;
   title: string;
   subject: string;
+  openStatus: boolean;
   grade: string;
   duration: number;
   questionCount: number;
@@ -28,6 +37,7 @@ const GET_TEACHER_SCHEDULED_EXAMS = gql`
       id
       title
       subject
+      openStatus
       grade
       duration
       questionCount
@@ -51,6 +61,24 @@ function formatScheduledDate(date: string | null) {
   return `${month}.${day}.${year}`;
 }
 
+function getExamCategory(exam: TeacherExamRecord): DashboardCategoryKey {
+  if (!exam.openStatus) {
+    return "closed";
+  }
+
+  if (!exam.scheduledDate || !exam.startTime) {
+    return "scheduled";
+  }
+
+  const scheduledAt = new Date(`${exam.scheduledDate}T${exam.startTime}`);
+
+  if (Number.isNaN(scheduledAt.getTime())) {
+    return "scheduled";
+  }
+
+  return scheduledAt.getTime() > Date.now() ? "scheduled" : "active";
+}
+
 function mapExamToCard(exam: TeacherExamRecord): ExamCard {
   return {
     id: exam.id,
@@ -67,28 +95,28 @@ function mapExamToCard(exam: TeacherExamRecord): ExamCard {
 }
 
 export default function TeacherDashboardPage() {
-  const [activeTab, setActiveTab] = useState<SubjectKey>("all");
+  const [activeTab, setActiveTab] = useState<DashboardCategoryKey>("active");
   const { data } = useQuery<TeacherScheduledExamsData>(
     GET_TEACHER_SCHEDULED_EXAMS,
   );
 
   const cards = useMemo(
-    () => (data?.teacherScheduledExams ?? []).map(mapExamToCard),
+    () =>
+      (data?.teacherScheduledExams ?? []).map((exam) => ({
+        ...mapExamToCard(exam),
+        category: getExamCategory(exam),
+      })),
     [data],
   );
   const filteredCards = useMemo(() => {
-    if (activeTab === "all") {
-      return cards;
-    }
-
-    return cards.filter((exam) => exam.subject === activeTab);
+    return cards.filter((exam) => exam.category === activeTab);
   }, [activeTab, cards]);
 
   return (
     <section className="space-y-8">
       <div className="border-b border-[#E4E7F0]">
         <div className="flex flex-wrap items-end gap-8 text-[18px] font-semibold text-[#1B1A1F] lg:gap-10">
-          {subjectTabs.map((tab) => {
+          {dashboardTabs.map((tab) => {
             const isActive = tab.key === activeTab;
 
             return (

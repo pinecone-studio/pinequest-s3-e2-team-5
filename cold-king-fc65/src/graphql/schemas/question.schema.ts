@@ -65,5 +65,6 @@ enum QuestionType {
     type Mutation{
         createQuestionWithChoices(input: createQuestionInput!): Question
         updateQuestionWithChoices(input: updateQuestionInput!): Question
+        deleteQuestion(questionId: String!): Question
     }
 `
