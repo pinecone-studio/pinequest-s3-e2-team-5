@@ -17,7 +17,7 @@ import {
   Video,
 } from "lucide-react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Dialog,
@@ -344,7 +344,9 @@ function getQuestionTypeLabel(type: QuestionType) {
 
 export default function TeacherExamEditPage() {
   const params = useParams<{ examId: string }>();
+  const searchParams = useSearchParams();
   const examId = Array.isArray(params.examId) ? params.examId[0] : params.examId;
+  const requestedQuestionId = searchParams.get("questionId");
   const router = useRouter();
 
   const [fallbackQuestion] = useState<QuestionDraft>(() => createQuestionDraft());
@@ -422,14 +424,15 @@ export default function TeacherExamEditPage() {
 
   const activeQuestion = useMemo(() => {
     const fallback = questions[0] ?? null;
-    const resolvedId = activeQuestionId ?? fallback?.id ?? null;
+    const resolvedId =
+      activeQuestionId ?? requestedQuestionId ?? fallback?.id ?? null;
 
     if (!resolvedId) {
       return null;
     }
 
     return questions.find((question) => question.id === resolvedId) ?? fallback;
-  }, [activeQuestionId, questions]);
+  }, [activeQuestionId, questions, requestedQuestionId]);
 
   const activeQuestionIndex = useMemo(() => {
     if (!activeQuestion) {

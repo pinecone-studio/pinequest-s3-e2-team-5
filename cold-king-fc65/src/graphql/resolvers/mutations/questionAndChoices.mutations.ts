@@ -1,7 +1,7 @@
 import { choices } from "../../../db/schemas/choices.schema";
 import { exams } from "../../../db/schemas/exam.schema";
 import { questions } from "../../../db/schemas/question.schema";
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { GraphQLError } from "graphql";
 import { GraphQLContext } from "../../../server";
 import {
@@ -222,6 +222,65 @@ export const questionMutation = {
                     .get();
             } catch (error) {
                 rethrowQuestionMutationError(error, "updateQuestionWithChoices");
+            }
+        },
+        deleteQuestion: async (
+            _: unknown,
+            args: { questionId: string },
+            context: GraphQLContext,
+        ) => {
+            try {
+                const teacherId = assertAuthenticated(context);
+                const existingQuestion = await context.db
+                    .select()
+                    .from(questions)
+                    .where(eq(questions.id, args.questionId))
+                    .get();
+
+                if (!existingQuestion) {
+                    throw notFoundError("Question not found.");
+                }
+
+                const exam = await context.db
+                    .select({ id: exams.id })
+                    .from(exams)
+                    .where(
+                        and(
+                            eq(exams.id, existingQuestion.examId),
+                            eq(exams.createdBy, teacherId),
+                        ),
+                    )
+                    .get();
+
+                if (!exam) {
+                    throw notFoundError("Exam not found.");
+                }
+
+                await context.db
+                    .delete(choices)
+                    .where(eq(choices.questionId, existingQuestion.id));
+
+                await context.db
+                    .delete(questions)
+                    .where(eq(questions.id, existingQuestion.id));
+
+                const remainingQuestions = await context.db
+                    .select({ id: questions.id })
+                    .from(questions)
+                    .where(eq(questions.examId, exam.id))
+                    .orderBy(asc(questions.indexOnExam), asc(questions.id))
+                    .all();
+
+                for (const [index, question] of remainingQuestions.entries()) {
+                    await context.db
+                        .update(questions)
+                        .set({ indexOnExam: index + 1 })
+                        .where(eq(questions.id, question.id));
+                }
+
+                return existingQuestion;
+            } catch (error) {
+                rethrowQuestionMutationError(error, "deleteQuestion");
             }
         },
     }
