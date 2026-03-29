@@ -394,7 +394,7 @@ export default function StudentResultPage() {
                           </span>
 
                           <span className="text-[15px] font-medium text-[#383540]">
-                            {option.label} {option.text}
+                            {option.label}. {option.text}
                           </span>
                         </div>
                       );

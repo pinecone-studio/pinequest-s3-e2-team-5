@@ -330,7 +330,7 @@ export function StudentReviewDetail({
                           ].join(" ")}
                         >
                           <span className="text-[15px] font-medium text-[#27242F]">
-                            {option.label} {option.text}
+                            {option.label}. {option.text}
                           </span>
                         </div>
                       </div>

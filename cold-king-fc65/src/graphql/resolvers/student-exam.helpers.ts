@@ -4,6 +4,11 @@ import { exams } from "../../db/schemas/exam.schema";
 import { questions } from "../../db/schemas/question.schema";
 import { students } from "../../db/schemas/student.schema";
 import type { GraphQLContext } from "../../server";
+import {
+	legacyChoices,
+	supportsChoiceMediaColumns,
+} from "./choices-table.helpers";
+import { notFoundError } from "../errors";
 
 export async function requireStudentRecord(context: GraphQLContext) {
 	if (!context.auth.userId || !context.auth.isAuthenticated) {
@@ -41,7 +46,7 @@ export async function getAccessibleExamForStudent(
 		.get();
 
 	if (!exam) {
-		throw new Error("Exam not found.");
+		throw notFoundError("Exam not found.");
 	}
 
 	return {
@@ -69,11 +74,24 @@ export async function loadQuestionsWithChoices(
 	}
 
 	const questionIds = sortedQuestions.map((question) => question.id);
-	const questionChoices = await context.db
-		.select()
-		.from(choices)
-		.where(inArray(choices.questionId, questionIds))
-		.all();
+	const mediaColumnsSupported = await supportsChoiceMediaColumns(context);
+	const questionChoices = mediaColumnsSupported
+		? await context.db
+				.select()
+				.from(choices)
+				.where(inArray(choices.questionId, questionIds))
+				.all()
+		: (
+				await context.db
+					.select()
+					.from(legacyChoices)
+					.where(inArray(legacyChoices.questionId, questionIds))
+					.all()
+			).map((choice) => ({
+				...choice,
+				imageUrl: null,
+				videoUrl: null,
+			}));
 
 	return sortedQuestions.map((question, index) => ({
 		...question,

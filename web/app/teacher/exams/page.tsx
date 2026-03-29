@@ -115,10 +115,14 @@ const gradeOptions = [
   "12-р анги",
 ] as const;
 
+type GradeOption = (typeof gradeOptions)[number];
+
 const durationOptions = [30, 45, 60, 90, 120] as const;
 
 const fieldClassName =
-  "h-[56px] w-full rounded-[16px] border border-[#E9E0F7] bg-white px-4 text-[16px] text-[#1A1623] outline-none transition placeholder:text-[#8E8A94] focus:border-[#B69AF8] focus:ring-4 focus:ring-[#B69AF8]/15";
+  "h-[56px] w-full rounded-[14px] border border-[#E9E0F7] bg-white px-4 text-[16px] text-[#1A1623] outline-none transition placeholder:text-[#8E8A94] focus:border-[#B69AF8] focus:ring-4 focus:ring-[#B69AF8]/15";
+const scheduleDialogFieldClassName =
+  "h-[50px] w-full rounded-[12px] border border-[#E9E0F7] bg-white px-4 text-[16px] text-[#1A1623] outline-none transition placeholder:text-[#8E8A94] focus:border-[#B69AF8] focus:ring-4 focus:ring-[#B69AF8]/15 disabled:cursor-not-allowed disabled:bg-[#FAF8FE] disabled:text-[#8E8A94]";
 
 function formatScheduledDate(date: string | null) {
   if (!date) {
@@ -131,6 +135,35 @@ function formatScheduledDate(date: string | null) {
   }
 
   return `${month}.${day}.${year}`;
+}
+
+function getDefaultScheduleDate() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function getDefaultScheduleTime() {
+  const nextHour = new Date();
+  nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
+
+  return [
+    String(nextHour.getHours()).padStart(2, "0"),
+    String(nextHour.getMinutes()).padStart(2, "0"),
+  ].join(":");
+}
+
+function getGradeLabelFromClassroomName(className: string): GradeOption | string {
+  const match = className.match(/^(\d{1,2})/);
+
+  if (!match) {
+    return className;
+  }
+
+  return `${match[1]}-р анги`;
 }
 
 function mapExamToCard(exam: TeacherExamRecord): ExamCard {
@@ -155,12 +188,12 @@ export default function TeacherExamsPage() {
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState("");
   const [duration, setDuration] = useState(60);
-  const [grade, setGrade] = useState("");
+  const [selectedCreateClassroomId, setSelectedCreateClassroomId] = useState("");
   const [uploadedFileName, setUploadedFileName] = useState("");
   const [createError, setCreateError] = useState("");
   const [scheduleError, setScheduleError] = useState("");
   const [schedulingExam, setSchedulingExam] = useState<ExamCard | null>(null);
-  const [scheduleClassroomId, setScheduleClassroomId] = useState("");
+  const [scheduleGrade, setScheduleGrade] = useState("");
   const [scheduleDate, setScheduleDate] = useState("");
   const [scheduleStartTime, setScheduleStartTime] = useState("");
 
@@ -203,11 +236,46 @@ export default function TeacherExamsPage() {
     return cards.filter((exam) => exam.subject === activeTab);
   }, [activeTab, cards]);
 
-  const canContinue = Boolean(subject && title.trim() && grade && duration > 0);
+  const classrooms = classroomsData?.classroomsByTeacher ?? [];
+  const selectedCreateClassroom =
+    classrooms.find((classroom) => classroom.id === selectedCreateClassroomId) ??
+    null;
+  const selectedCreateGrade = selectedCreateClassroom
+    ? getGradeLabelFromClassroomName(selectedCreateClassroom.className)
+    : "";
+  const scheduleGradeOptions = gradeOptions.map((option) => ({
+    label: option,
+    classroomId:
+      classrooms.find(
+        (classroom) => getGradeLabelFromClassroomName(classroom.className) === option,
+      )?.id ?? "",
+  }));
+  const effectiveScheduleGrade =
+    scheduleGrade ||
+    scheduleGradeOptions.find((option) => option.classroomId)?.label ||
+    "";
+  const effectiveScheduleClassroomId =
+    scheduleGradeOptions.find((option) => option.label === effectiveScheduleGrade)
+      ?.classroomId || "";
+  const hasCreateClassroomOptions = classrooms.length > 0;
+  const hasSchedulableGrades = scheduleGradeOptions.some((option) =>
+    Boolean(option.classroomId),
+  );
+  const classroomErrorMessage = classroomsError
+    ? getApolloErrorMessage(classroomsError, "Ангиудыг ачаалж чадсангүй.")
+    : "";
+  const canContinue = Boolean(
+    subject && title.trim() && selectedCreateClassroomId && duration > 0,
+  );
 
   const handleCreateExam = async () => {
     if (!canContinue) {
       setCreateError("Хичээл, сэдэв, анги, хугацааг бүрэн бөглөнө үү.");
+      return;
+    }
+
+    if (!selectedCreateGrade) {
+      setCreateError("Анги дээр үүсгэсэн classroom-оос нэгийг сонгоно уу.");
       return;
     }
 
@@ -221,7 +289,7 @@ export default function TeacherExamsPage() {
             subject,
             description: uploadedFileName ? `Файл: ${uploadedFileName}` : "",
             duration,
-            grade,
+            grade: selectedCreateGrade,
           },
         },
       });
@@ -244,11 +312,14 @@ export default function TeacherExamsPage() {
   };
 
   const openScheduleDialog = (exam: ExamCard) => {
+    const defaultScheduleGrade =
+      gradeOptions.find((option) => option === exam.grade) ?? "";
+
     setSchedulingExam(exam);
     setScheduleError("");
-    setScheduleClassroomId("");
-    setScheduleDate("");
-    setScheduleStartTime("");
+    setScheduleGrade(defaultScheduleGrade);
+    setScheduleDate(getDefaultScheduleDate());
+    setScheduleStartTime(getDefaultScheduleTime());
     if (isLoaded && isSignedIn) {
       void refetchClassrooms();
     }
@@ -259,7 +330,7 @@ export default function TeacherExamsPage() {
       return;
     }
 
-    if (!scheduleClassroomId || !scheduleDate || !scheduleStartTime) {
+    if (!effectiveScheduleClassroomId || !scheduleDate || !scheduleStartTime) {
       setScheduleError("Бүлэг, өдөр, эхлэх цагаа бүрэн сонгоно уу.");
       return;
     }
@@ -271,7 +342,7 @@ export default function TeacherExamsPage() {
         variables: {
           input: {
             examId: schedulingExam.id,
-            classroomId: scheduleClassroomId,
+            classroomId: effectiveScheduleClassroomId,
             scheduledDate: scheduleDate,
             startTime: scheduleStartTime,
           },
@@ -282,12 +353,10 @@ export default function TeacherExamsPage() {
       setSchedulingExam(null);
     } catch (error) {
       setScheduleError(
-        error instanceof Error ? error.message : "Шалгалт товлоход алдаа гарлаа.",
+        getApolloErrorMessage(error, "Шалгалт товлоход алдаа гарлаа."),
       );
     }
   };
-
-  const classrooms = classroomsData?.classroomsByTeacher ?? [];
 
   return (
     <>
@@ -321,7 +390,7 @@ export default function TeacherExamsPage() {
 
             <DialogContent
               showCloseButton={false}
-              className="max-w-[calc(100%-2rem)] rounded-[24px] border border-[#E8E2F1] bg-white px-6 py-6 shadow-[0_20px_70px_rgba(28,18,54,0.18)] sm:max-w-[580px]"
+              className="max-w-[calc(100%-2rem)] rounded-[20px] border border-[#E8E2F1] bg-white px-6 py-6 shadow-[0_20px_70px_rgba(28,18,54,0.18)] sm:max-w-[580px]"
             >
               <DialogHeader className="gap-0">
                 <DialogTitle className="text-[28px] font-semibold tracking-tight text-[#111111]">
@@ -373,18 +442,23 @@ export default function TeacherExamsPage() {
                   </label>
                   <div className="relative">
                     <select
-                      value={grade}
-                      onChange={(event) => setGrade(event.target.value)}
+                      value={selectedCreateClassroomId}
+                      onChange={(event) =>
+                        setSelectedCreateClassroomId(event.target.value)
+                      }
+                      disabled={!hasCreateClassroomOptions}
                       className={`${fieldClassName} appearance-none pr-14 ${
-                        grade ? "" : "text-[#8E8A94]"
+                        selectedCreateClassroomId ? "" : "text-[#8E8A94]"
                       }`}
                     >
                       <option value="" disabled>
-                        Анги сонгох
+                        {hasCreateClassroomOptions
+                          ? "Анги сонгох"
+                          : "Анги олдсонгүй"}
                       </option>
-                      {gradeOptions.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
+                      {classrooms.map((classroom) => (
+                        <option key={classroom.id} value={classroom.id}>
+                          {classroom.className}
                         </option>
                       ))}
                     </select>
@@ -396,7 +470,7 @@ export default function TeacherExamsPage() {
                   <label className="block text-[16px] font-medium text-[#111111]">
                     Файл
                   </label>
-                  <label className="flex h-[56px] w-full cursor-pointer items-center gap-3 rounded-[16px] border border-[#E9E0F7] bg-white px-4 text-[16px] text-[#6E6A74] transition hover:border-[#D6C9F6]">
+                  <label className="flex h-[56px] w-full cursor-pointer items-center gap-3 rounded-[14px] border border-[#E9E0F7] bg-white px-4 text-[16px] text-[#6E6A74] transition hover:border-[#D6C9F6]">
                     <Upload className="h-5 w-5 text-[#6E6A74]" />
                     <span>{uploadedFileName || "Файл оруулах"}</span>
                     <input
@@ -434,6 +508,15 @@ export default function TeacherExamsPage() {
 
               {createError ? (
                 <p className="mt-4 text-[14px] text-[#D25B56]">{createError}</p>
+              ) : classroomErrorMessage ? (
+                <p className="mt-4 text-[14px] text-[#D25B56]">
+                  {classroomErrorMessage}
+                </p>
+              ) : !hasCreateClassroomOptions ? (
+                <p className="mt-4 text-[14px] text-[#6E6A74]">
+                  Эхлээд `School` хэсгээс анги үүсгэсний дараа энд classroom нэрс
+                  харагдана.
+                </p>
               ) : null}
 
               <div className="-mx-6 -mb-6 mt-8 flex items-center justify-end gap-6 border-t border-[#ECE6F3] px-6 py-5">
@@ -447,8 +530,8 @@ export default function TeacherExamsPage() {
                 <button
                   type="button"
                   onClick={handleCreateExam}
-                  disabled={isCreating}
-                  className="inline-flex h-12 items-center justify-center rounded-[20px] bg-[#9E81F0] px-8 text-[18px] font-semibold text-white shadow-[inset_0_-5px_0_rgba(103,79,184,0.32),0_12px_22px_rgba(158,129,240,0.24)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-55"
+                  disabled={isCreating || !hasCreateClassroomOptions}
+                  className="inline-flex h-12 items-center justify-center rounded-[14px] bg-[#9E81F0] px-8 text-[18px] font-semibold text-white shadow-[inset_0_-5px_0_rgba(103,79,184,0.32),0_12px_22px_rgba(158,129,240,0.24)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-55"
                 >
                   {isCreating ? "Үүсгэж байна..." : "Үргэлжлүүлэх"}
                 </button>
@@ -501,32 +584,39 @@ export default function TeacherExamsPage() {
           }
         }}
       >
-        <DialogContent className="max-w-[720px] rounded-[28px] border border-[#E8E2F1] bg-white px-6 py-6 shadow-[0_24px_80px_rgba(28,18,54,0.18)] sm:px-8 sm:py-8">
+        <DialogContent
+          showCloseButton={false}
+          className="flex max-w-[calc(100%-2rem)] flex-col rounded-[20px] border border-[#E8E2F1] bg-white px-6 py-7 shadow-[0_24px_80px_rgba(28,18,54,0.18)] sm:min-h-[456px] sm:max-w-[580px] sm:px-8 sm:py-8"
+        >
           <DialogHeader className="gap-0">
-            <DialogTitle className="text-[28px] font-semibold tracking-tight text-[#111111]">
+            <DialogTitle className="text-[24px] font-semibold tracking-tight text-[#111111]">
               Шалгалт авах
             </DialogTitle>
           </DialogHeader>
 
-          <div className="mt-4 space-y-5">
-            <div className="space-y-2.5">
-              <label className="block text-[16px] font-medium text-[#111111]">
+          <div className="mt-6 space-y-6">
+            <div className="space-y-3">
+              <label className="block text-[16px] font-semibold text-[#111111]">
                 Бүлэг
               </label>
               <div className="relative">
                 <select
-                  value={scheduleClassroomId}
-                  onChange={(event) => setScheduleClassroomId(event.target.value)}
-                  className={`${fieldClassName} appearance-none pr-14 ${
-                    scheduleClassroomId ? "" : "text-[#8E8A94]"
+                  value={effectiveScheduleGrade}
+                  onChange={(event) => setScheduleGrade(event.target.value)}
+                  className={`${scheduleDialogFieldClassName} appearance-none pr-14 ${
+                    effectiveScheduleGrade ? "" : "text-[#8E8A94]"
                   }`}
                 >
                   <option value="" disabled>
-                    {classrooms.length > 0 ? "Бүлэг сонгох" : "Бүлэг олдсонгүй"}
+                    {hasSchedulableGrades ? "Бүлэг сонгох" : "Бүлэг олдсонгүй"}
                   </option>
-                  {classrooms.map((classroom) => (
-                    <option key={classroom.id} value={classroom.id}>
-                      {classroom.className}
+                  {scheduleGradeOptions.map((option) => (
+                    <option
+                      key={option.label}
+                      value={option.label}
+                      disabled={!option.classroomId}
+                    >
+                      {option.label}
                     </option>
                   ))}
                 </select>
@@ -534,57 +624,57 @@ export default function TeacherExamsPage() {
               </div>
             </div>
 
-            <div className="space-y-2.5">
-              <label className="block text-[16px] font-medium text-[#111111]">
+            <div className="space-y-3">
+              <label className="block text-[16px] font-semibold text-[#111111]">
                 Өдөр
               </label>
               <input
                 type="date"
                 value={scheduleDate}
                 onChange={(event) => setScheduleDate(event.target.value)}
-                className={fieldClassName}
+                className={scheduleDialogFieldClassName}
               />
             </div>
 
-            <div className="space-y-2.5">
-              <label className="block text-[16px] font-medium text-[#111111]">
+            <div className="space-y-3">
+              <label className="block text-[16px] font-semibold text-[#111111]">
                 Эхлэх цаг
               </label>
               <input
                 type="time"
                 value={scheduleStartTime}
                 onChange={(event) => setScheduleStartTime(event.target.value)}
-                className={fieldClassName}
+                className={scheduleDialogFieldClassName}
               />
             </div>
           </div>
 
           {scheduleError ? (
             <p className="mt-4 text-[14px] text-[#D25B56]">{scheduleError}</p>
-          ) : classroomsError ? (
+          ) : classroomErrorMessage ? (
             <p className="mt-4 text-[14px] text-[#D25B56]">
-              {classroomsError.message}
+              {classroomErrorMessage}
             </p>
-          ) : classrooms.length === 0 ? (
+          ) : !hasSchedulableGrades ? (
             <p className="mt-4 text-[14px] text-[#6E6A74]">
-              Анги нээгээгүй эсвэл ангийн жагсаалт ачаалагдаагүй байна. `School`
-              хэсгээс анги үүсгээд дахин оролдоно уу.
+              `School` хэсэг дээр 9, 10, 11, 12 ангид classroom үүсгэсэн бол энд
+              сонголт болж гарна.
             </p>
           ) : null}
 
-          <div className="mt-8 flex items-center justify-end gap-6">
+          <div className="mt-auto flex items-center justify-end gap-8 pt-10">
             <button
               type="button"
               onClick={() => setSchedulingExam(null)}
-              className="text-[18px] font-medium text-[#111111] transition hover:text-[#7E66DC]"
+              className="text-[16px] font-medium text-[#111111] transition hover:text-[#7E66DC]"
             >
               Буцах
             </button>
             <button
               type="button"
               onClick={handleScheduleExam}
-              disabled={isScheduling}
-              className="inline-flex h-[52px] min-w-[170px] items-center justify-center rounded-[18px] bg-[#9E81F0] px-8 text-[18px] font-semibold text-white shadow-[inset_0_-5px_0_rgba(103,79,184,0.32),0_12px_22px_rgba(158,129,240,0.24)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-55"
+              disabled={isScheduling || !effectiveScheduleClassroomId}
+              className="inline-flex h-[52px] min-w-[170px] items-center justify-center rounded-[14px] bg-[#9E81F0] px-8 text-[18px] font-semibold text-white shadow-[inset_0_-5px_0_rgba(103,79,184,0.32),0_12px_22px_rgba(158,129,240,0.24)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-55"
             >
               {isScheduling ? "Товлож байна..." : "Товлох"}
             </button>

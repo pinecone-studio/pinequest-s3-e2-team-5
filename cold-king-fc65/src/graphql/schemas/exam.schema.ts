@@ -110,9 +110,19 @@ export const examTypeDefs = gql`
         startTime: String!
     }
 
+    input updateExamInput {
+        examId: String!
+        title: String!
+        subject: String!
+        description: String
+        duration: Int!
+        grade: String!
+    }
+
     type Mutation{
         createExam(input: createExamInput!): Exam
         scheduleExam(input: scheduleExamInput!): Exam
+        updateExam(input: updateExamInput!): Exam
         deleteExam(examId: String!): Exam
     }
 `

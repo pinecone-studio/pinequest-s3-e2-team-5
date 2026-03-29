@@ -1,6 +1,7 @@
 "use client";
 
 import { gql } from "@apollo/client";
+import type { Reference } from "@apollo/client/cache";
 import { useMutation, useQuery } from "@apollo/client/react";
 import Link from "next/link";
 import { ChevronLeft, PencilLine, Plus, Trash2 } from "lucide-react";
@@ -43,6 +44,7 @@ type TeacherExamDetailData = {
 
 type DeleteExamData = {
   deleteExam: {
+    __typename?: "Exam";
     id: string;
   };
 };
@@ -152,14 +154,17 @@ export function TeacherExamDetail({ examId }: TeacherExamDetailProps) {
         update(cache) {
           cache.modify({
             fields: {
-              myExams(existingRefs = [], { readField }) {
+              myExams(existingRefs: readonly Reference[] = [], { readField }) {
                 return existingRefs.filter(
-                  (reference: unknown) => readField("id", reference) !== examId,
+                  (reference) => readField("id", reference) !== examId,
                 );
               },
-              teacherScheduledExams(existingRefs = [], { readField }) {
+              teacherScheduledExams(
+                existingRefs: readonly Reference[] = [],
+                { readField },
+              ) {
                 return existingRefs.filter(
-                  (reference: unknown) => readField("id", reference) !== examId,
+                  (reference) => readField("id", reference) !== examId,
                 );
               },
             },
@@ -355,7 +360,7 @@ export function TeacherExamDetail({ examId }: TeacherExamDetailProps) {
                             }`}
                           >
                             <span className="text-[15px] font-medium text-[#27242F]">
-                              {option.label} {option.text}
+                              {option.label}. {option.text}
                             </span>
                           </div>
                         </div>

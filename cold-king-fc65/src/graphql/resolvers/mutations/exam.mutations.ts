@@ -3,7 +3,7 @@ import { classrooms } from "../../../db/schemas/classroom.schema";
 import { choices } from "../../../db/schemas/choices.schema";
 import { exams } from "../../../db/schemas/exam.schema";
 import { questions } from "../../../db/schemas/question.schema";
-import { assertAuthenticated } from "../../errors";
+import { assertAuthenticated, notFoundError, unauthorizedError } from "../../errors";
 import { and, eq, inArray } from "drizzle-orm";
 
 export const examMutation = {
@@ -53,7 +53,7 @@ export const examMutation = {
             context: GraphQLContext,
         ) => {
             if (!context.auth.userId || !context.auth.isAuthenticated) {
-                throw new Error("Unauthorized");
+                throw unauthorizedError();
             }
 
             const teacherId = context.auth.userId;
@@ -64,7 +64,7 @@ export const examMutation = {
                 .get();
 
             if (!exam) {
-                throw new Error("Exam not found.");
+                throw notFoundError("Exam not found.");
             }
 
             const classroom = await context.db
@@ -79,7 +79,7 @@ export const examMutation = {
                 .get();
 
             if (!classroom) {
-                throw new Error("Classroom not found.");
+                throw notFoundError("Classroom not found.");
             }
 
             return context.db
@@ -89,6 +89,44 @@ export const examMutation = {
                     scheduledDate: args.input.scheduledDate,
                     startTime: args.input.startTime,
                     openStatus: true,
+                })
+                .where(eq(exams.id, exam.id))
+                .returning()
+                .get();
+        },
+        updateExam: async (
+            _: unknown,
+            args: {
+                input: {
+                    examId: string;
+                    title: string;
+                    subject: string;
+                    description?: string | null;
+                    duration: number;
+                    grade: string;
+                };
+            },
+            context: GraphQLContext,
+        ) => {
+            const teacherId = assertAuthenticated(context);
+            const exam = await context.db
+                .select()
+                .from(exams)
+                .where(and(eq(exams.id, args.input.examId), eq(exams.createdBy, teacherId)))
+                .get();
+
+            if (!exam) {
+                throw notFoundError("Exam not found.");
+            }
+
+            return context.db
+                .update(exams)
+                .set({
+                    title: args.input.title,
+                    subject: args.input.subject,
+                    description: args.input.description ?? null,
+                    duration: args.input.duration,
+                    grade: args.input.grade,
                 })
                 .where(eq(exams.id, exam.id))
                 .returning()
@@ -109,7 +147,7 @@ export const examMutation = {
                 .get();
 
             if (!exam) {
-                throw new Error("Exam not found.");
+                throw notFoundError("Exam not found.");
             }
 
             const examQuestions = await context.db

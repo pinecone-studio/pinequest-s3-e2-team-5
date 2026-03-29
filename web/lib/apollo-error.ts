@@ -22,6 +22,33 @@ function localizeGraphqlMessage(message: string) {
     return "Шалгалт олдсонгүй.";
   }
 
+  if (message === "Question not found.") {
+    return "Асуулт олдсонгүй.";
+  }
+
+  if (message === "Classroom not found.") {
+    return "Анги олдсонгүй.";
+  }
+
+  if (message === "Student not found.") {
+    return "Сурагч олдсонгүй.";
+  }
+
+  if (message === "Submission not found.") {
+    return "Илгээсэн ажил олдсонгүй.";
+  }
+
+  if (
+    message ===
+    "Choice image and video fields are not available on the current database yet."
+  ) {
+    return "Сонголтын зураг, видео хадгалах боломж серверийн санд хараахан идэвхжээгүй байна.";
+  }
+
+  if (message === "Unexpected error.") {
+    return "Сервер талд алдаа гарлаа. Дахин нэвтэрч refresh хийгээд оролдоно уу.";
+  }
+
   return message;
 }
 
@@ -62,10 +89,6 @@ export function getApolloErrorMessage(error: unknown, fallback: string) {
   }
 
   if (apolloError.message) {
-    if (apolloError.message.trim() === "Unexpected error.") {
-      return "Сервер талд алдаа гарлаа. Дахин нэвтэрч refresh хийгээд оролдоно уу.";
-    }
-
     return getNetworkMessage(localizeGraphqlMessage(apolloError.message));
   }
 

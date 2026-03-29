@@ -1,6 +1,7 @@
 "use client";
 
 import { gql } from "@apollo/client";
+import type { Reference } from "@apollo/client/cache";
 import { useMutation, useQuery } from "@apollo/client/react";
 import {
   AlignLeft,
@@ -89,6 +90,12 @@ type CreateQuestionWithChoicesData = {
   };
 };
 
+type UpdateQuestionWithChoicesData = {
+  updateQuestionWithChoices: {
+    id: string;
+  };
+};
+
 type UpdateExamData = {
   updateExam: {
     id: string;
@@ -102,6 +109,7 @@ type UpdateExamData = {
 
 type DeleteExamData = {
   deleteExam: {
+    __typename?: "Exam";
     id: string;
   };
 };
@@ -137,6 +145,14 @@ const GET_EXAM_BY_ID = gql`
 const CREATE_QUESTION_WITH_CHOICES = gql`
   mutation CreateQuestionWithChoices($input: createQuestionInput!) {
     createQuestionWithChoices(input: $input) {
+      id
+    }
+  }
+`;
+
+const UPDATE_QUESTION_WITH_CHOICES = gql`
+  mutation UpdateQuestionWithChoices($input: updateQuestionInput!) {
+    updateQuestionWithChoices(input: $input) {
       id
     }
   }
@@ -371,6 +387,8 @@ export default function TeacherExamEditPage() {
 
   const [createQuestionWithChoices, { loading: saveQuestionLoading }] =
     useMutation<CreateQuestionWithChoicesData>(CREATE_QUESTION_WITH_CHOICES);
+  const [updateQuestionWithChoices, { loading: updateQuestionLoading }] =
+    useMutation<UpdateQuestionWithChoicesData>(UPDATE_QUESTION_WITH_CHOICES);
   const [updateExam, { loading: updateExamLoading }] =
     useMutation<UpdateExamData>(UPDATE_EXAM);
   const [deleteExam, { loading: deleteExamLoading }] =
@@ -400,6 +418,7 @@ export default function TeacherExamEditPage() {
 
     return next;
   }, [savedQuestionIds, serverQuestions]);
+  const isSavingQuestion = saveQuestionLoading || updateQuestionLoading;
 
   const activeQuestion = useMemo(() => {
     const fallback = questions[0] ?? null;
@@ -563,14 +582,17 @@ export default function TeacherExamEditPage() {
         update(cache) {
           cache.modify({
             fields: {
-              myExams(existingRefs = [], { readField }) {
+              myExams(existingRefs: readonly Reference[] = [], { readField }) {
                 return existingRefs.filter(
-                  (reference: unknown) => readField("id", reference) !== examId,
+                  (reference) => readField("id", reference) !== examId,
                 );
               },
-              teacherScheduledExams(existingRefs = [], { readField }) {
+              teacherScheduledExams(
+                existingRefs: readonly Reference[] = [],
+                { readField },
+              ) {
                 return existingRefs.filter(
-                  (reference: unknown) => readField("id", reference) !== examId,
+                  (reference) => readField("id", reference) !== examId,
                 );
               },
             },
@@ -887,11 +909,54 @@ export default function TeacherExamEditPage() {
       return;
     }
 
+    const questionInput = {
+      examId,
+      indexOnExam: activeQuestionIndex + 1,
+      question: activeQuestion.question.trim(),
+      type: activeQuestion.type,
+      topic: activeQuestion.topic?.trim() || null,
+      difficulty: activeQuestion.difficulty?.trim() || null,
+      imageUrl: activeQuestion.imageUrl?.trim() || null,
+      videoUrl: activeQuestion.videoUrl?.trim() || null,
+      choices:
+        activeQuestion.type === "mcq"
+          ? normalizeQuestionChoices(activeQuestion.choices).map((choice) => ({
+              id: choice.id,
+              label: choice.label,
+              text: choice.text.trim(),
+              isCorrect: choice.isCorrect,
+              imageUrl: choice.imageUrl?.trim() || null,
+              videoUrl: choice.videoUrl?.trim() || null,
+            }))
+          : [],
+    };
+
     if (effectiveSavedQuestionIds.has(activeQuestion.id)) {
       if (dirtyQuestionIds.has(activeQuestion.id)) {
-        setStatusMessage(
-          "Хадгалсан асуултыг дахин засварлан хадгалах backend боломж одоогоор алга.",
-        );
+        try {
+          setStatusMessage("Асуулт хадгалж байна...");
+
+          await updateQuestionWithChoices({
+            variables: {
+              input: {
+                questionId: activeQuestion.id,
+                ...questionInput,
+              },
+            },
+          });
+
+          setDirtyQuestionIds((current) => {
+            const next = new Set(current);
+            next.delete(activeQuestion.id);
+            return next;
+          });
+          setStatusMessage("Асуулт шинэчлэгдлээ. Дараагийн асуулт руу шилжив.");
+          moveToNextQuestion();
+        } catch (error) {
+          setStatusMessage(
+            getApolloErrorMessage(error, "Асуултууд хадгалахад алдаа гарлаа."),
+          );
+        }
         return;
       }
 
@@ -902,40 +967,33 @@ export default function TeacherExamEditPage() {
     try {
       setStatusMessage("Асуулт хадгалж байна...");
 
-      await createQuestionWithChoices({
+      const res = await createQuestionWithChoices({
         variables: {
-          input: {
-            examId,
-            indexOnExam: activeQuestionIndex + 1,
-            question: activeQuestion.question.trim(),
-            type: activeQuestion.type,
-            topic: activeQuestion.topic?.trim() || null,
-            difficulty: activeQuestion.difficulty?.trim() || null,
-            imageUrl: activeQuestion.imageUrl?.trim() || null,
-            videoUrl: activeQuestion.videoUrl?.trim() || null,
-            choices:
-              activeQuestion.type === "mcq"
-                ? normalizeQuestionChoices(activeQuestion.choices).map((choice) => ({
-                    id: choice.id,
-                    label: choice.label,
-                    text: choice.text.trim(),
-                    isCorrect: choice.isCorrect,
-                    imageUrl: choice.imageUrl?.trim() || null,
-                    videoUrl: choice.videoUrl?.trim() || null,
-                  }))
-                : [],
-          },
+          input: questionInput,
         },
       });
+      const createdQuestionId = res.data?.createQuestionWithChoices.id;
+
+      if (!createdQuestionId) {
+        setStatusMessage("Асуултын ID буцаагдсангүй.");
+        return;
+      }
+
+      updateQuestionById(activeQuestion.id, (question) => ({
+        ...question,
+        id: createdQuestionId,
+      }));
 
       setSavedQuestionIds((current) => {
         const next = new Set(current);
-        next.add(activeQuestion.id);
+        next.delete(activeQuestion.id);
+        next.add(createdQuestionId);
         return next;
       });
       setDirtyQuestionIds((current) => {
         const next = new Set(current);
         next.delete(activeQuestion.id);
+        next.delete(createdQuestionId);
         return next;
       });
       setStatusMessage("Асуулт хадгалагдлаа. Дараагийн асуулт руу шилжив.");
@@ -1774,10 +1832,10 @@ export default function TeacherExamEditPage() {
                 <button
                   type="button"
                   onClick={handleSave}
-                  disabled={saveQuestionLoading}
+                  disabled={isSavingQuestion}
                   className="inline-flex h-14 items-center justify-center rounded-[22px] bg-[#B7A3F7] px-8 text-[18px] font-semibold text-white shadow-[inset_0_-5px_0_rgba(126,102,220,0.28),0_12px_22px_rgba(183,163,247,0.24)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {saveQuestionLoading ? "Хадгалж байна..." : "Хадгалах"}
+                  {isSavingQuestion ? "Хадгалж байна..." : "Хадгалах"}
                 </button>
               </div>
             </div>

@@ -410,7 +410,7 @@ export default function StudentAccountPage() {
                             ) : null}
                           </span>
                           <span className="text-[15px] font-medium text-[#383540]">
-                            {option.label} {option.text}
+                            {option.label}. {option.text}
                           </span>
                         </button>
                       );

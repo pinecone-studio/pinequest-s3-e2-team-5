@@ -4,6 +4,7 @@ import { exams } from "../../db/schemas/exam.schema";
 import { studentExamSubmissions } from "../../db/schemas/student-exam-submission.schema";
 import { students } from "../../db/schemas/student.schema";
 import type { GraphQLContext } from "../../server";
+import { notFoundError } from "../errors";
 
 export async function requireTeacherId(context: GraphQLContext) {
 	if (!context.auth.userId || !context.auth.isAuthenticated) {
@@ -25,7 +26,7 @@ export async function getTeacherExam(
 		.get();
 
 	if (!exam) {
-		throw new Error("Exam not found.");
+		throw notFoundError("Exam not found.");
 	}
 
 	return exam;
@@ -61,7 +62,7 @@ export async function getTeacherStudentSubmission(
 		.get();
 
 	if (!student || student.teacherId !== exam.createdBy) {
-		throw new Error("Student not found.");
+		throw notFoundError("Student not found.");
 	}
 
 	const submission = await context.db
@@ -76,7 +77,7 @@ export async function getTeacherStudentSubmission(
 		.get();
 
 	if (!submission) {
-		throw new Error("Submission not found.");
+		throw notFoundError("Submission not found.");
 	}
 
 	return {
