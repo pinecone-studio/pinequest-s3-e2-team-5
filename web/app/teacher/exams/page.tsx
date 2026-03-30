@@ -7,7 +7,11 @@ import { ChevronDown, Plus, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { TeacherExamCard } from "../_component/TeacherExamCard";
-import { subjectTabs, type ExamCard, type SubjectKey } from "../_data/dashboard";
+import {
+  subjectTabs,
+  type ExamCard,
+  type SubjectKey,
+} from "../_data/dashboard";
 import {
   Dialog,
   DialogContent,
@@ -156,7 +160,9 @@ function getDefaultScheduleTime() {
   ].join(":");
 }
 
-function getGradeLabelFromClassroomName(className: string): GradeOption | string {
+function getGradeLabelFromClassroomName(
+  className: string,
+): GradeOption | string {
   const match = className.match(/^(\d{1,2})/);
 
   if (!match) {
@@ -169,7 +175,9 @@ function getGradeLabelFromClassroomName(className: string): GradeOption | string
 function mapExamToCard(exam: TeacherExamRecord): ExamCard {
   return {
     id: exam.id,
-    title: subjectOptions.find((item) => item.value === exam.subject)?.label || exam.subject,
+    title:
+      subjectOptions.find((item) => item.value === exam.subject)?.label ||
+      exam.subject,
     topic: exam.title,
     grade: exam.grade,
     date: formatScheduledDate(exam.scheduledDate),
@@ -188,7 +196,8 @@ export default function TeacherExamsPage() {
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState("");
   const [duration, setDuration] = useState(60);
-  const [selectedCreateClassroomId, setSelectedCreateClassroomId] = useState("");
+  const [selectedCreateClassroomId, setSelectedCreateClassroomId] =
+    useState("");
   const [uploadedFileName, setUploadedFileName] = useState("");
   const [createError, setCreateError] = useState("");
   const [scheduleError, setScheduleError] = useState("");
@@ -198,10 +207,12 @@ export default function TeacherExamsPage() {
   const [scheduleStartTime, setScheduleStartTime] = useState("");
 
   const router = useRouter();
-  const { data: examsData, refetch: refetchExams } =
-    useQuery<MyExamsData>(GET_MY_EXAMS, {
+  const { data: examsData, refetch: refetchExams } = useQuery<MyExamsData>(
+    GET_MY_EXAMS,
+    {
       skip: !isLoaded || !isSignedIn,
-    });
+    },
+  );
   const {
     data: classroomsData,
     error: classroomsError,
@@ -238,8 +249,9 @@ export default function TeacherExamsPage() {
 
   const classrooms = classroomsData?.classroomsByTeacher ?? [];
   const selectedCreateClassroom =
-    classrooms.find((classroom) => classroom.id === selectedCreateClassroomId) ??
-    null;
+    classrooms.find(
+      (classroom) => classroom.id === selectedCreateClassroomId,
+    ) ?? null;
   const selectedCreateGrade = selectedCreateClassroom
     ? getGradeLabelFromClassroomName(selectedCreateClassroom.className)
     : "";
@@ -247,7 +259,8 @@ export default function TeacherExamsPage() {
     label: option,
     classroomId:
       classrooms.find(
-        (classroom) => getGradeLabelFromClassroomName(classroom.className) === option,
+        (classroom) =>
+          getGradeLabelFromClassroomName(classroom.className) === option,
       )?.id ?? "",
   }));
   const effectiveScheduleGrade =
@@ -255,8 +268,9 @@ export default function TeacherExamsPage() {
     scheduleGradeOptions.find((option) => option.classroomId)?.label ||
     "";
   const effectiveScheduleClassroomId =
-    scheduleGradeOptions.find((option) => option.label === effectiveScheduleGrade)
-      ?.classroomId || "";
+    scheduleGradeOptions.find(
+      (option) => option.label === effectiveScheduleGrade,
+    )?.classroomId || "";
   const hasCreateClassroomOptions = classrooms.length > 0;
   const hasSchedulableGrades = scheduleGradeOptions.some((option) =>
     Boolean(option.classroomId),
@@ -363,10 +377,10 @@ export default function TeacherExamsPage() {
       <section className="space-y-12">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h1 className="text-[38px] font-semibold tracking-tight text-[#17131F]">
+            <h1 className="font-display text-[32px] font-semibold tracking-tight text-[#17131F]">
               Шалгалтууд
             </h1>
-            <p className="mt-1 text-[16px] font-medium text-[#787482]">
+            <p className="font-display mt-1 text-[16px] font-medium text-[#787482]">
               Хичээлийн шалгалтын материалууд
             </p>
           </div>
@@ -514,8 +528,8 @@ export default function TeacherExamsPage() {
                 </p>
               ) : !hasCreateClassroomOptions ? (
                 <p className="mt-4 text-[14px] text-[#6E6A74]">
-                  Эхлээд `School` хэсгээс анги үүсгэсний дараа энд classroom нэрс
-                  харагдана.
+                  Эхлээд `School` хэсгээс анги үүсгэсний дараа энд classroom
+                  нэрс харагдана.
                 </p>
               ) : null}
 

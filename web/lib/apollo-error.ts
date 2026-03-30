@@ -34,6 +34,14 @@ function localizeGraphqlMessage(message: string) {
     return "Сурагч олдсонгүй.";
   }
 
+  if (message === "Classroom has enrolled students.") {
+    return "Энэ ангид сурагч бүртгэлтэй тул устгах боломжгүй.";
+  }
+
+  if (message === "Classroom has linked exams.") {
+    return "Энэ ангид холбогдсон шалгалт байгаа тул устгах боломжгүй.";
+  }
+
   if (message === "Submission not found.") {
     return "Илгээсэн ажил олдсонгүй.";
   }

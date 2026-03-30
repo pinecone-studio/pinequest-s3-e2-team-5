@@ -5,12 +5,14 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import { useAuth } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
 import { ChevronDown, Plus } from "lucide-react";
+import Link from "next/link";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { getApolloErrorMessage } from "@/lib/apollo-error";
 
 type ClassroomItem = {
   id: string;
@@ -240,6 +242,12 @@ export function TeacherSchoolRequests() {
   };
 
   const classroomCards = classrooms.map(parseClassroomPresentation);
+  const classroomErrorMessage = myClassroomError
+    ? getApolloErrorMessage(
+        myClassroomError,
+        "Ангийн мэдээлэл ачаалж чадсангүй. Дахин оролдоно уу.",
+      )
+    : "";
 
   return (
     <section className="space-y-12">
@@ -376,9 +384,9 @@ export function TeacherSchoolRequests() {
         </Dialog>
       </div>
 
-      {myClassroomError ? (
+      {classroomErrorMessage ? (
         <div className="rounded-[18px] border border-[#F0C2BD] bg-[#FBEAEA] px-5 py-4 text-[14px] text-[#B63B3B]">
-          Ангийн мэдээлэл ачаалж чадсангүй. Дахин оролдоно уу.
+          {classroomErrorMessage}
         </div>
       ) : null}
 
@@ -389,9 +397,10 @@ export function TeacherSchoolRequests() {
       ) : classroomCards.length > 0 ? (
         <div className="grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(286px,286px))]">
           {classroomCards.map((classroom) => (
-            <article
+            <Link
               key={classroom.id}
-              className="rounded-[24px] border border-[#E8E2F1] bg-white px-5 py-5 shadow-[0_10px_24px_rgba(54,35,106,0.06)]"
+              href={`/teacher/classrooms/${classroom.id}`}
+              className="block rounded-[24px] border border-[#E8E2F1] bg-white px-5 py-5 shadow-[0_10px_24px_rgba(54,35,106,0.06)] transition hover:-translate-y-1 hover:border-[#D8CEF3] hover:shadow-[0_18px_34px_rgba(54,35,106,0.08)]"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3">
@@ -439,7 +448,7 @@ export function TeacherSchoolRequests() {
                   </span>
                 </div>
               </div>
-            </article>
+            </Link>
           ))}
         </div>
       ) : (
