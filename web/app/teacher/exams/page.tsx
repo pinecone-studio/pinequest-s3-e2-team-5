@@ -367,7 +367,7 @@ export default function TeacherExamsPage() {
               Шалгалтууд
             </h1>
             <p className="mt-1 text-[16px] font-medium text-[#787482]">
-              Хичээлийн шалгалтууд
+              Хичээлийн шалгалтын материалууд
             </p>
           </div>
 

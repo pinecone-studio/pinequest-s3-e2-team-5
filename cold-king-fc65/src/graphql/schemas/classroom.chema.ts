@@ -10,6 +10,7 @@ export const classroomTypeDefs = gql`
         teacherId: String!
         className: String!
         classCode: String!
+        studentCount: Int!
         createdAt: DateTime!
     }
 

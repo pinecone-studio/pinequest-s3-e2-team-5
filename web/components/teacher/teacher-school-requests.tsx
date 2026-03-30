@@ -1,10 +1,10 @@
 "use client";
 
+import { gql } from "@apollo/client";
+import { useMutation, useQuery } from "@apollo/client/react";
 import { useAuth } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { useMutation, useQuery } from "@apollo/client/react";
-import { gql } from "@apollo/client";
+import { ChevronDown, Plus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,30 +12,126 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-
 type ClassroomItem = {
   id: string;
   className: string;
   classCode: string;
+  studentCount: number;
   createdAt: number;
 };
 
 type myClassroomData = {
-  classroomsByTeacher: ClassroomItem[]
+  classroomsByTeacher: ClassroomItem[];
+};
+
+type SubjectOption = {
+  label: string;
+  accentColor: string;
+  softAccentColor: string;
+};
+
+type ClassroomCardPresentation = {
+  id: string;
+  title: string;
+  gradeLabel: string;
+  sectionLabel: string;
+  classCode: string;
+  studentCount: number;
+  accentColor: string;
+  softAccentColor: string;
+};
+
+const subjectOptions: SubjectOption[] = [
+  {
+    label: "Нийгэм",
+    accentColor: "#8B6FF7",
+    softAccentColor: "#F5F0FF",
+  },
+  {
+    label: "Иргэний боловсрол",
+    accentColor: "#73A5F4",
+    softAccentColor: "#EEF6FF",
+  },
+  {
+    label: "Математик",
+    accentColor: "#69B7D5",
+    softAccentColor: "#EDF8FB",
+  },
+  {
+    label: "Англи хэл",
+    accentColor: "#7CA970",
+    softAccentColor: "#F3FAEF",
+  },
+  {
+    label: "Хими",
+    accentColor: "#D98AEF",
+    softAccentColor: "#FCF1FF",
+  },
+  {
+    label: "Физик",
+    accentColor: "#6C95EA",
+    softAccentColor: "#EEF4FF",
+  },
+];
+
+const gradeOptions = ["9", "10", "11", "12"];
+
+const dialogFieldClassName =
+  "h-[58px] w-full rounded-[16px] border border-[#E9E0F7] bg-white px-4 text-[16px] text-[#1A1623] outline-none transition placeholder:text-[#8E8A94] focus:border-[#B59AF8] focus:ring-4 focus:ring-[#B59AF8]/12";
+
+function buildClassroomName({
+  grade,
+  section,
+  subjectLabel,
+}: {
+  grade: string;
+  section: string;
+  subjectLabel: string;
+}) {
+  return `${grade}${section} - ${subjectLabel}`;
+}
+
+function getSubjectOption(label?: string | null) {
+  return (
+    subjectOptions.find((option) => option.label === label) ?? subjectOptions[0]
+  );
+}
+
+function parseClassroomPresentation(
+  classroom: ClassroomItem,
+): ClassroomCardPresentation {
+  const rawClassName = classroom.className.trim();
+  const [classroomKey, ...subjectParts] = rawClassName.split(" - ");
+  const subjectLabel = subjectParts.join(" - ").trim();
+  const keyMatch = classroomKey?.match(/^(\d{1,2})(.*)$/);
+  const gradeValue = keyMatch?.[1]?.trim() ?? "";
+  const sectionValue = keyMatch?.[2]?.trim() ?? "";
+  const subjectOption = getSubjectOption(subjectLabel || null);
+  const fallbackTitle = rawClassName || "Шинэ анги";
+
+  return {
+    id: classroom.id,
+    title: subjectLabel || fallbackTitle,
+    gradeLabel: gradeValue ? `${gradeValue}-р анги` : rawClassName,
+    sectionLabel: sectionValue || "Тодорхойгүй",
+    classCode: classroom.classCode,
+    studentCount: classroom.studentCount ?? 0,
+    accentColor: subjectOption.accentColor,
+    softAccentColor: subjectOption.softAccentColor,
+  };
 }
 
 export const getMyClassrooms = gql`
-  query{
-    classroomsByTeacher{
+  query {
+    classroomsByTeacher {
       id
       className
       classCode
+      studentCount
       createdAt
     }
   }
-`
-
-
+`;
 
 export const createClassroomMutation = gql`
   mutation CreateClassroom($input: createClassroomInput!) {
@@ -50,167 +146,312 @@ export const createClassroomMutation = gql`
 
 interface createClassroomData {
   createClassroom: {
-    id: string
-    className: string
-    classCode: string
-    createdAt: number
-  }
+    id: string;
+    className: string;
+    classCode: string;
+    createdAt: number;
+  };
 }
 
 export function TeacherSchoolRequests() {
-  const { getToken, isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn } = useAuth();
   const [classrooms, setClassrooms] = useState<ClassroomItem[]>([]);
   const [statusMessage, setStatusMessage] = useState("");
   const [creatingClassroom, setCreatingClassroom] = useState(false);
-  const [className, setClassName] = useState("");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [selectedSubject, setSelectedSubject] = useState("");
+  const [selectedGrade, setSelectedGrade] = useState("");
+  const [section, setSection] = useState("");
 
-  const [showClassCode, setShowClassCode] = useState(false)
+  const [createClassRoom] =
+    useMutation<createClassroomData>(createClassroomMutation);
 
-  const [createClassRoom, { data: createClassroomData,
-    // loading: createClassroomLoading,
-    //  error: createClassroomError 
-  }] = useMutation<createClassroomData>(createClassroomMutation)
-
-  const { data: myClassroomData,
-    // loading: myClassroomLoading, 
+  const {
+    data: myClassroomData,
+    loading: myClassroomLoading,
     error: myClassroomError,
     refetch: refetchClassrooms,
   } = useQuery<myClassroomData>(getMyClassrooms, {
     skip: !isLoaded || !isSignedIn,
     fetchPolicy: "network-only",
-  })
+  });
 
-  useEffect(() => {
-    console.log(myClassroomData)
-    console.log(myClassroomError)
-  }, [myClassroomData, myClassroomError])
-
-  const loadClassroomData = async () => {
-    const token = await getToken()
-    if (!token) {
-      throw new Error("Missing clerk session token!")
-    }
-
-    setClassrooms(myClassroomData?.classroomsByTeacher ?? [])
-
-  }
-
+  const resetCreateDialog = () => {
+    setSelectedSubject("");
+    setSelectedGrade("");
+    setSection("");
+    setStatusMessage("");
+  };
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) {
       return;
     }
 
-    void (async () => {
-      try {
-        await loadClassroomData();
-        setStatusMessage("");
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Failed to load teacher portal.";
-        setStatusMessage(message);
-      }
-    })();
-  }, [getToken, isLoaded, isSignedIn, myClassroomData]);
-
+    const nextClassrooms = [...(myClassroomData?.classroomsByTeacher ?? [])].sort(
+      (left, right) => right.createdAt - left.createdAt,
+    );
+    setClassrooms(nextClassrooms);
+  }, [isLoaded, isSignedIn, myClassroomData]);
 
   const handleCreateClassroom = async () => {
     try {
-      const normalizedClassName = className.trim().toUpperCase();
-      if (!normalizedClassName) {
-        throw new Error("Class name is required.");
+      const normalizedSection = section.trim().toUpperCase();
+      if (!selectedSubject || !selectedGrade || !normalizedSection) {
+        throw new Error("Хичээл, анги, бүлгээ бүрэн бөглөнө үү.");
       }
 
       setCreatingClassroom(true);
       setStatusMessage("");
-      const token = await getToken();
-      if (!token) {
-        throw new Error("Missing Clerk session token.");
-      }
 
       const res = await createClassRoom({
         variables: {
           input: {
-            className: normalizedClassName
-          }
-        }
-      })
-
-      console.log(res)
+            className: buildClassroomName({
+              grade: selectedGrade,
+              section: normalizedSection,
+              subjectLabel: selectedSubject,
+            }),
+          },
+        },
+      });
 
       if (res.error) {
-        console.log(res.error)
-        return
-
+        throw new Error(res.error.message);
       }
 
-      setShowClassCode(true)
-
-      setClassName("");
       const refreshed = await refetchClassrooms();
-      setClassrooms(refreshed.data?.classroomsByTeacher ?? []);
+      setClassrooms(
+        [...(refreshed.data?.classroomsByTeacher ?? [])].sort(
+          (left, right) => right.createdAt - left.createdAt,
+        ),
+      );
+      setIsCreateDialogOpen(false);
+      resetCreateDialog();
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Failed to create classroom.";
+        error instanceof Error
+          ? error.message
+          : "Анги үүсгэж чадсангүй. Дахин оролдоно уу.";
       setStatusMessage(message);
     } finally {
       setCreatingClassroom(false);
     }
   };
 
+  const classroomCards = classrooms.map(parseClassroomPresentation);
+
   return (
-    <section className="space-y-6">
-      <article className="rounded-3xl border border-[#E7E8F0] bg-white p-6">
-        <h2 className="text-xl font-semibold text-[#111111]">Анги нээх</h2>
-        <p className="mt-2 text-sm text-[#6B7280]">
-          Зөвшөөрөгдсөн сургууль дээрээ анги нээгээд class code-оо сурагчдад өгнө.
-        </p>
-        {statusMessage}
-        <div className="mt-4 grid gap-3 md:grid-cols-[220px_1fr_auto]">
-          <input
-            className="h-11 rounded-xl border border-[#E7E8F0] bg-white px-3 text-sm"
-            placeholder="Class name (ex: 10A)"
-            value={className}
-            onChange={(event) => setClassName(event.target.value)}
-          />
-          <Button onClick={handleCreateClassroom} disabled={creatingClassroom}>
-            {creatingClassroom ? "Creating..." : "Create class"}
-          </Button>
+    <section className="space-y-12">
+      <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 className="text-[38px] font-semibold tracking-tight text-[#17131F]">
+            Ангиуд
+          </h1>
+          <p className="mt-1 text-[16px] font-medium text-[#787482]">
+            Анги үүсгэж, сурагч нэмэх
+          </p>
         </div>
 
-        <Dialog open={showClassCode} onOpenChange={setShowClassCode}>
-          <DialogContent className="sm:max-w-lg rounded-2xl">
-            <DialogHeader>
-              <DialogTitle className="text-lg font-semibold">
-                Class Code
-              </DialogTitle>
+        <Dialog
+          open={isCreateDialogOpen}
+          onOpenChange={(open) => {
+            setIsCreateDialogOpen(open);
+            if (!open && !creatingClassroom) {
+              resetCreateDialog();
+            }
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setIsCreateDialogOpen(true)}
+            className="inline-flex h-14 items-center gap-3 rounded-[22px] bg-[#9E81F0] px-8 text-[18px] font-semibold text-white shadow-[inset_0_-5px_0_rgba(103,79,184,0.38),0_12px_22px_rgba(158,129,240,0.28)] transition hover:translate-y-[-1px] hover:opacity-95"
+          >
+            <Plus className="h-6 w-6" />
+            Анги нэмэх
+          </button>
 
-              <p className="font-semibold text-2xl">
-                {createClassroomData?.createClassroom.classCode}
-              </p>
+          <DialogContent
+            showCloseButton={false}
+            overlayClassName="bg-black/35 supports-backdrop-filter:backdrop-blur-sm"
+            className="max-w-[calc(100%-2rem)] rounded-[28px] border border-[#E8E2F1] bg-white px-7 pb-8 pt-8 shadow-[0_30px_90px_rgba(20,14,35,0.24)] sm:max-w-[826px] sm:px-7"
+          >
+            <DialogHeader className="gap-0">
+              <DialogTitle className="text-[30px] font-semibold tracking-tight text-[#111111]">
+                Анги нэмэх
+              </DialogTitle>
             </DialogHeader>
+
+            <div className="mt-8 space-y-8">
+              <div className="space-y-3">
+                <label className="block text-[16px] font-semibold text-[#111111]">
+                  Хичээл
+                </label>
+                <div className="relative">
+                  <select
+                    value={selectedSubject}
+                    onChange={(event) => setSelectedSubject(event.target.value)}
+                    className={`${dialogFieldClassName} appearance-none pr-14 ${
+                      selectedSubject ? "" : "text-[#8E8A94]"
+                    }`}
+                  >
+                    <option value="" disabled>
+                      Хичээл сонгох
+                    </option>
+                    {subjectOptions.map((option) => (
+                      <option key={option.label} value={option.label}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8E8A94]" />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="block text-[16px] font-semibold text-[#111111]">
+                  Анги
+                </label>
+                <div className="relative">
+                  <select
+                    value={selectedGrade}
+                    onChange={(event) => setSelectedGrade(event.target.value)}
+                    className={`${dialogFieldClassName} appearance-none pr-14 ${
+                      selectedGrade ? "" : "text-[#8E8A94]"
+                    }`}
+                  >
+                    <option value="" disabled>
+                      Анги
+                    </option>
+                    {gradeOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}-р анги
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8E8A94]" />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="block text-[16px] font-semibold text-[#111111]">
+                  Бүлэг
+                </label>
+                <input
+                  value={section}
+                  onChange={(event) => setSection(event.target.value)}
+                  placeholder="Бүлэг"
+                  className={dialogFieldClassName}
+                  maxLength={4}
+                />
+              </div>
+            </div>
+
+            {statusMessage ? (
+              <p className="mt-5 text-[14px] text-[#D25B56]">{statusMessage}</p>
+            ) : null}
+
+            <div className="mt-10 flex items-center justify-end gap-8">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCreateDialogOpen(false);
+                  resetCreateDialog();
+                }}
+                className="text-[18px] font-medium text-[#111111] transition hover:text-[#7E66DC]"
+              >
+                Буцах
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCreateClassroom}
+                disabled={creatingClassroom}
+                className="inline-flex h-14 min-w-[196px] items-center justify-center rounded-[20px] bg-[#9E81F0] px-8 text-[18px] font-semibold text-white shadow-[inset_0_-5px_0_rgba(103,79,184,0.32),0_12px_22px_rgba(158,129,240,0.24)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-55"
+              >
+                {creatingClassroom ? "Үүсгэж байна..." : "Үргэлжлүүлэх"}
+              </button>
+            </div>
           </DialogContent>
         </Dialog>
+      </div>
 
+      {myClassroomError ? (
+        <div className="rounded-[18px] border border-[#F0C2BD] bg-[#FBEAEA] px-5 py-4 text-[14px] text-[#B63B3B]">
+          Ангийн мэдээлэл ачаалж чадсангүй. Дахин оролдоно уу.
+        </div>
+      ) : null}
 
-        {classrooms.length > 0 ? (
-          <div className="mt-5 space-y-2">
-            {classrooms.map((classroom) => (
-              <div
-                key={classroom.id}
-                className="rounded-xl border border-[#E7E8F0] bg-[#FAFAFF] px-4 py-3 text-sm"
-              >
-                <p className="font-medium text-[#111111]">
-                  · {classroom.className}
-                </p>
-                <p className="mt-1 text-[#6B7280]">
-                  Class code: <span className="font-semibold">{classroom.classCode}</span>
-                </p>
+      {myClassroomLoading ? (
+        <div className="rounded-[24px] border border-[#E7E8F0] bg-white px-6 py-8 text-[16px] text-[#6E6A74] shadow-[0_8px_24px_rgba(36,20,71,0.04)]">
+          Ангиудыг ачаалж байна...
+        </div>
+      ) : classroomCards.length > 0 ? (
+        <div className="grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(286px,286px))]">
+          {classroomCards.map((classroom) => (
+            <article
+              key={classroom.id}
+              className="rounded-[24px] border border-[#E8E2F1] bg-white px-5 py-5 shadow-[0_10px_24px_rgba(54,35,106,0.06)]"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <span
+                    className="mt-1 block h-8 w-[3px] rounded-full"
+                    style={{ backgroundColor: classroom.accentColor }}
+                  />
+                  <h2 className="text-[20px] font-semibold tracking-tight text-[#17131F]">
+                    {classroom.title}
+                  </h2>
+                </div>
+
+                <span
+                  className="rounded-full px-3 py-1 text-[12px] font-semibold"
+                  style={{
+                    color: classroom.accentColor,
+                    backgroundColor: classroom.softAccentColor,
+                  }}
+                >
+                  {classroom.classCode}
+                </span>
               </div>
-            ))}
-          </div>
-        ) : null}
-      </article>
+
+              <div className="mt-6 space-y-3">
+                <div className="flex items-center justify-between gap-4 text-[14px] text-[#111111]">
+                  <span>Анги</span>
+                  <span className="text-right font-medium">
+                    {classroom.gradeLabel}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 text-[14px] text-[#111111]">
+                  <span>Бүлэг</span>
+                  <span className="text-right font-medium">
+                    {classroom.sectionLabel}
+                  </span>
+                </div>
+
+                <div className="h-px bg-[#ECE6F3]" />
+
+                <div className="flex items-center justify-between gap-4 text-[14px] text-[#111111]">
+                  <span>Сурагчдын тоо</span>
+                  <span className="text-right font-medium">
+                    {classroom.studentCount}
+                  </span>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-[24px] border border-dashed border-[#D9D0EE] bg-white px-6 py-10 text-center shadow-[0_8px_24px_rgba(36,20,71,0.03)]">
+          <h2 className="text-[22px] font-semibold tracking-tight text-[#17131F]">
+            Анги алга байна
+          </h2>
+          <p className="mt-2 text-[15px] text-[#7A7484]">
+            `Анги нэмэх` товчоор шинэ анги үүсгээд сурагчдад class code-оо өгнө.
+          </p>
+        </div>
+      )}
     </section>
   );
 }
