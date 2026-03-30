@@ -1,4 +1,3 @@
-import { useMutation, useQuery } from "@apollo/client/react";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { useKeepAwake } from "expo-keep-awake";
@@ -12,21 +11,15 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
+import { useAppData } from "@/data/app-data";
 import { FullScreenLoader } from "@/components/FullScreenLoader";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { StatusCard } from "@/components/StatusCard";
-import {
-  GET_STUDENT_EXAM_DETAIL,
-  SUBMIT_STUDENT_EXAM,
-  type StudentAnswerDraft,
-  type StudentExamDetailData,
-  type SubmitStudentExamData,
-} from "@/graphql/student";
 import { clearExamDraft, getExamDraft, saveExamDraft } from "@/lib/exam-draft";
 import { colors, fonts, shadows } from "@/lib/theme";
+import type { StudentAnswerDraft } from "@/lib/student-types";
 import { formatCountdown } from "@/lib/student-exam";
 
 function getRemainingSeconds(durationMinutes: number, startedAt: number) {
@@ -37,13 +30,7 @@ function getRemainingSeconds(durationMinutes: number, startedAt: number) {
 export default function TakeExamScreen() {
   const params = useLocalSearchParams<{ examId: string }>();
   const examId = typeof params.examId === "string" ? params.examId : "";
-  const { data, loading, error } = useQuery<StudentExamDetailData>(GET_STUDENT_EXAM_DETAIL, {
-    variables: { examId },
-    skip: !examId,
-  });
-  const [submitStudentExam, { loading: submitLoading }] =
-    useMutation<SubmitStudentExamData>(SUBMIT_STUDENT_EXAM);
-
+  const { getExamById, submitExam } = useAppData();
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [answers, setAnswers] = useState<Record<string, StudentAnswerDraft>>({});
   const [submitError, setSubmitError] = useState("");
@@ -51,21 +38,18 @@ export default function TakeExamScreen() {
   const [captureCount, setCaptureCount] = useState(0);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [isRestoring, setIsRestoring] = useState(true);
+  const [submitLoading, setSubmitLoading] = useState(false);
   const warnedOnLeaveRef = useRef(false);
   const warnedOnCaptureRef = useRef(false);
   const autoSubmittedRef = useRef(false);
   const answersRef = useRef<Record<string, StudentAnswerDraft>>({});
   const startedAtRef = useRef<number | null>(null);
   const submitExamRef = useRef<(source: "manual" | "auto") => Promise<void>>(async () => {});
-
-  const exam = data?.studentExamDetail;
+  const exam = getExamById(examId);
   const answeredCount = useMemo(
     () =>
-      exam?.questions.filter((question) =>
-        Boolean(
-          answers[question.id]?.selectedChoiceId || answers[question.id]?.answerText?.trim(),
-        ),
-      ).length ?? 0,
+      exam?.questions.filter((question) => Boolean(answers[question.id]?.selectedChoiceId)).length ??
+      0,
     [answers, exam?.questions],
   );
   const palette = useMemo(() => exam?.questions.map((question) => question.order) ?? [], [exam]);
@@ -79,7 +63,7 @@ export default function TakeExamScreen() {
       warnedOnCaptureRef.current = true;
       Alert.alert(
         "Screenshot илэрлээ",
-        "iOS дээр screen recording хаалттай. Screenshot авсан тохиолдлыг энэ screen бүртгэж байна.",
+        "Шалгалтын үеэр screenshot тохиолдлыг бүртгэж байна. Screen recording protection идэвхтэй хэвээр.",
       );
     }
   });
@@ -107,14 +91,12 @@ export default function TakeExamScreen() {
       const restoredStartedAt =
         draft?.startedAt && draft.startedAt > 0 ? draft.startedAt : Date.now();
 
-      if (cancelled) {
-        return;
+      if (!cancelled) {
+        setAnswers(draft?.answers ?? {});
+        setStartedAt(restoredStartedAt);
+        setSecondsLeft(getRemainingSeconds(exam.duration, restoredStartedAt));
+        setIsRestoring(false);
       }
-
-      setAnswers(draft?.answers ?? {});
-      setStartedAt(restoredStartedAt);
-      setSecondsLeft(getRemainingSeconds(exam.duration, restoredStartedAt));
-      setIsRestoring(false);
     })();
 
     return () => {
@@ -182,20 +164,17 @@ export default function TakeExamScreen() {
     }
 
     setSubmitError("");
+    setSubmitLoading(true);
 
     try {
-      await submitStudentExam({
-        variables: {
-          input: {
-            examId: exam.id,
-            startedAt: startedAtRef.current,
-            answers: exam.questions.map((question) => ({
-              questionId: question.id,
-              selectedChoiceId: answersRef.current[question.id]?.selectedChoiceId ?? null,
-              answerText: answersRef.current[question.id]?.answerText?.trim() || null,
-            })),
-          },
-        },
+      await submitExam({
+        examId: exam.id,
+        startedAt: startedAtRef.current,
+        answers: exam.questions.map((question) => ({
+          questionId: question.id,
+          selectedChoiceId: answersRef.current[question.id]?.selectedChoiceId ?? null,
+          answerText: null,
+        })),
       });
 
       await clearExamDraft(exam.id);
@@ -208,6 +187,8 @@ export default function TakeExamScreen() {
             ? "Хугацаа дууссан ч шалгалтыг автоматаар илгээж чадсангүй."
             : "Шалгалт илгээхэд алдаа гарлаа.",
       );
+    } finally {
+      setSubmitLoading(false);
     }
   };
 
@@ -230,25 +211,15 @@ export default function TakeExamScreen() {
     }));
   };
 
-  const handleTextAnswerChange = (questionId: string, answerText: string) => {
-    setAnswers((previous) => ({
-      ...previous,
-      [questionId]: {
-        ...previous[questionId],
-        answerText,
-      },
-    }));
-  };
-
-  if (loading || isRestoring) {
+  if (isRestoring) {
     return <FullScreenLoader label="Шалгалтын session-ийг бэлдэж байна..." />;
   }
 
-  if (error || !exam) {
+  if (!exam) {
     return (
       <SafeAreaView style={styles.page}>
         <View style={styles.content}>
-          <StatusCard tone="error" message={error?.message || "Шалгалтын мэдээлэл олдсонгүй."} />
+          <StatusCard tone="error" message="Шалгалтын мэдээлэл олдсонгүй." />
         </View>
       </SafeAreaView>
     );
@@ -287,7 +258,7 @@ export default function TakeExamScreen() {
 
         <StatusCard
           tone="info"
-          message="Хариултууд device дээр draft байдлаар хадгалагдана. Screen recording block, screenshot alert, keep-awake идэвхтэй."
+          message="Screen recording protection, screenshot alert, keep-awake, app switch warning идэвхтэй."
         />
         {leaveCount > 0 ? (
           <StatusCard
@@ -296,10 +267,7 @@ export default function TakeExamScreen() {
           />
         ) : null}
         {captureCount > 0 ? (
-          <StatusCard
-            tone="warning"
-            message={`Шалгалтын үеэр ${captureCount} screenshot илэрлээ.`}
-          />
+          <StatusCard tone="warning" message={`Шалгалтын үеэр ${captureCount} screenshot илэрлээ.`} />
         ) : null}
         {submitError ? <StatusCard tone="error" message={submitError} /> : null}
 
@@ -323,12 +291,7 @@ export default function TakeExamScreen() {
           <View style={styles.paletteGrid}>
             {palette.map((order) => {
               const question = exam.questions.find((item) => item.order === order);
-              const isAnswered = question
-                ? Boolean(
-                    answers[question.id]?.selectedChoiceId ||
-                      answers[question.id]?.answerText?.trim(),
-                  )
-                : false;
+              const isAnswered = question ? Boolean(answers[question.id]?.selectedChoiceId) : false;
 
               return (
                 <View
@@ -359,42 +322,26 @@ export default function TakeExamScreen() {
                 <Text style={styles.questionPoints}>1 оноо</Text>
               </View>
 
-              {question.type === "mcq" ? (
-                <View style={styles.choiceList}>
-                  {question.choices.map((choice) => {
-                    const selected = answers[question.id]?.selectedChoiceId === choice.id;
+              <View style={styles.choiceList}>
+                {question.choices.map((choice) => {
+                  const selected = answers[question.id]?.selectedChoiceId === choice.id;
 
-                    return (
-                      <Pressable
-                        key={choice.id}
-                        style={[
-                          styles.choiceButton,
-                          selected ? styles.choiceButtonSelected : null,
-                        ]}
-                        onPress={() => handleSelectChoice(question.id, choice.id)}
-                      >
-                        <View
-                          style={[styles.radio, selected ? styles.radioSelected : null]}
-                        >
-                          {selected ? <View style={styles.radioInner} /> : null}
-                        </View>
-                        <Text style={styles.choiceText}>
-                          {choice.label}. {choice.text}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              ) : (
-                <TextInput
-                  multiline
-                  placeholder="Хариултаа энд бичнэ үү..."
-                  placeholderTextColor={colors.textSoft}
-                  style={styles.answerInput}
-                  value={answers[question.id]?.answerText ?? ""}
-                  onChangeText={(value) => handleTextAnswerChange(question.id, value)}
-                />
-              )}
+                  return (
+                    <Pressable
+                      key={choice.id}
+                      style={[styles.choiceButton, selected ? styles.choiceButtonSelected : null]}
+                      onPress={() => handleSelectChoice(question.id, choice.id)}
+                    >
+                      <View style={[styles.radio, selected ? styles.radioSelected : null]}>
+                        {selected ? <View style={styles.radioInner} /> : null}
+                      </View>
+                      <Text style={styles.choiceText}>
+                        {choice.label}. {choice.text}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
             </View>
           ))}
         </View>
@@ -610,20 +557,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
     color: colors.textSecondary,
-  },
-  answerInput: {
-    minHeight: 132,
-    marginTop: 16,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    paddingHorizontal: 15,
-    paddingVertical: 14,
-    fontFamily: fonts.sans.regular,
-    fontSize: 14,
-    lineHeight: 22,
-    color: colors.textPrimary,
-    textAlignVertical: "top",
   },
 });

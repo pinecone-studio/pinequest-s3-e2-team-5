@@ -1,5 +1,5 @@
 import * as SecureStore from "expo-secure-store";
-import type { StudentAnswerDraft } from "@/graphql/student";
+import type { StudentAnswerDraft } from "@/lib/student-types";
 
 type StoredExamDraft = {
   startedAt: number;

@@ -1,57 +1,26 @@
-import { useQuery } from "@apollo/client/react";
 import { router } from "expo-router";
-import { RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 import { EmptyState } from "@/components/EmptyState";
-import { FullScreenLoader } from "@/components/FullScreenLoader";
-import { StatusCard } from "@/components/StatusCard";
 import { StudentExamCard } from "@/components/StudentExamCard";
-import { StudentTopBar } from "@/components/StudentTopBar";
-import { GET_MY_EXAM_SUBMISSIONS, type MyExamSubmissionsData } from "@/graphql/student";
+import { useAppData } from "@/data/app-data";
 import { colors, fonts, shadows } from "@/lib/theme";
 import { formatStudentExamTimestamp } from "@/lib/student-exam";
 
 export default function ResultsScreen() {
-  const { data, loading, error, refetch } = useQuery<MyExamSubmissionsData>(GET_MY_EXAM_SUBMISSIONS, {
-    fetchPolicy: "cache-and-network",
-  });
-
-  const submissions = data?.myExamSubmissions ?? [];
-
-  if (loading && !data) {
-    return <FullScreenLoader label="Үр дүнг ачаалж байна..." />;
-  }
+  const { submissions } = useAppData();
 
   return (
     <SafeAreaView style={styles.page}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        refreshControl={
-          <RefreshControl
-            refreshing={loading && Boolean(data)}
-            onRefresh={() => {
-              void refetch();
-            }}
-            tintColor={colors.primary}
-          />
-        }
-      >
-        <StudentTopBar
-          eyebrow="Exam Results"
-          title="Миний үр дүн"
-          subtitle="Илгээсэн шалгалтуудын оноо, зөв хариулт, review дэлгэрэнгүйг эндээс харна."
-        />
-
+      <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.statsCard}>
           <Text style={styles.statsValue}>{submissions.length}</Text>
-          <Text style={styles.statsLabel}>Нийт илгээсэн шалгалт</Text>
+          <Text style={styles.statsLabel}>Илгээсэн шалгалт</Text>
         </View>
 
-        {error ? (
-          <StatusCard tone="error" message={error.message} />
-        ) : submissions.length === 0 ? (
+        {submissions.length === 0 ? (
           <EmptyState
-            title="Илгээсэн шалгалт алга"
-            description="Шалгалт өгсний дараа үр дүнгүүд энэ хэсэгт хадгалагдана."
+            title="Үр дүн алга"
+            description="Шалгалт өгсний дараа үр дүн болон асуултын review энд харагдана."
           />
         ) : (
           <View style={styles.cards}>
@@ -85,11 +54,11 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 120,
+    paddingTop: 8,
+    paddingBottom: 136,
   },
   statsCard: {
-    marginTop: 16,
+    marginTop: 0,
     marginBottom: 18,
     borderRadius: 22,
     borderWidth: 1,

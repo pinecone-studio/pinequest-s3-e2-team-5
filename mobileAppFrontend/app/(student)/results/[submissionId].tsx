@@ -1,26 +1,21 @@
-import { useQuery } from "@apollo/client/react";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
-import { FullScreenLoader } from "@/components/FullScreenLoader";
 import { StatusCard } from "@/components/StatusCard";
-import {
-  GET_STUDENT_EXAM_SUBMISSION_DETAIL,
-  type StudentExamSubmissionDetailData,
-  type SubmissionAnswerReview,
-} from "@/graphql/student";
+import { useAppData } from "@/data/app-data";
+import type { SubmissionAnswer } from "@/data/types";
 import { colors, fonts, shadows } from "@/lib/theme";
-import { formatScheduledDate, formatScheduledTime, formatStudentExamTimestamp } from "@/lib/student-exam";
+import {
+  formatScheduledDate,
+  formatScheduledTime,
+  formatStudentExamTimestamp,
+} from "@/lib/student-exam";
 
-function getPaletteTone(answer: SubmissionAnswerReview) {
-  if (answer.type === "mcq") {
-    return answer.isCorrect ? "correct" : "wrong";
-  }
-
-  return "pending";
+function getPaletteTone(answer: SubmissionAnswer) {
+  return answer.isCorrect ? "correct" : "wrong";
 }
 
-function getChoiceTone(answer: SubmissionAnswerReview, optionId: string) {
+function getChoiceTone(answer: SubmissionAnswer, optionId: string) {
   if (answer.correctChoiceId === optionId) {
     return "correct";
   }
@@ -35,21 +30,10 @@ function getChoiceTone(answer: SubmissionAnswerReview, optionId: string) {
 export default function ResultDetailScreen() {
   const params = useLocalSearchParams<{ submissionId: string }>();
   const submissionId = typeof params.submissionId === "string" ? params.submissionId : "";
-  const { data, loading, error } = useQuery<StudentExamSubmissionDetailData>(
-    GET_STUDENT_EXAM_SUBMISSION_DETAIL,
-    {
-      variables: { submissionId },
-      skip: !submissionId,
-    },
-  );
+  const { getSubmissionById } = useAppData();
+  const detail = getSubmissionById(submissionId);
 
-  const detail = data?.studentExamSubmissionDetail;
-
-  if (loading) {
-    return <FullScreenLoader label="Үр дүнгийн дэлгэрэнгүйг ачаалж байна..." />;
-  }
-
-  if (error || !detail) {
+  if (!detail) {
     return (
       <SafeAreaView style={styles.page}>
         <View style={styles.content}>
@@ -57,10 +41,7 @@ export default function ResultDetailScreen() {
             <Ionicons name="chevron-back" size={18} color={colors.textPrimary} />
             <Text style={styles.backText}>Буцах</Text>
           </Pressable>
-          <StatusCard
-            tone="error"
-            message={error?.message || "Үр дүнгийн дэлгэрэнгүй олдсонгүй."}
-          />
+          <StatusCard tone="error" message="Review олдсонгүй." />
         </View>
       </SafeAreaView>
     );
@@ -73,6 +54,7 @@ export default function ResultDetailScreen() {
           <Ionicons name="chevron-back" size={18} color={colors.textPrimary} />
           <Text style={styles.backText}>Буцах</Text>
         </Pressable>
+
         <View style={styles.heroCard}>
           <Text style={styles.heroTitle}>{detail.title}</Text>
           <Text style={styles.heroSubtitle}>
@@ -111,21 +93,10 @@ export default function ResultDetailScreen() {
                   key={answer.questionId}
                   style={[
                     styles.paletteItem,
-                    tone === "correct"
-                      ? styles.paletteCorrect
-                      : tone === "wrong"
-                        ? styles.paletteWrong
-                        : styles.palettePending,
+                    tone === "correct" ? styles.paletteCorrect : styles.paletteWrong,
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.paletteText,
-                      tone === "pending" ? styles.paletteTextPending : styles.paletteTextStrong,
-                    ]}
-                  >
-                    {answer.order}
-                  </Text>
+                  <Text style={[styles.paletteText, styles.paletteTextStrong]}>{answer.order}</Text>
                 </View>
               );
             })}
@@ -139,54 +110,45 @@ export default function ResultDetailScreen() {
                 {answer.order}. {answer.question}
               </Text>
 
-              {answer.type === "mcq" ? (
-                <View style={styles.choiceList}>
-                  {answer.choices.map((choice) => {
-                    const tone = getChoiceTone(answer, choice.id);
-                    return (
+              <View style={styles.choiceList}>
+                {answer.choices.map((choice) => {
+                  const tone = getChoiceTone(answer, choice.id);
+                  return (
+                    <View
+                      key={choice.id}
+                      style={[
+                        styles.choiceRow,
+                        tone === "correct"
+                          ? styles.choiceCorrect
+                          : tone === "wrong"
+                            ? styles.choiceWrong
+                            : null,
+                      ]}
+                    >
                       <View
-                        key={choice.id}
                         style={[
-                          styles.choiceRow,
+                          styles.choiceBadge,
                           tone === "correct"
-                            ? styles.choiceCorrect
+                            ? styles.choiceBadgeCorrect
                             : tone === "wrong"
-                              ? styles.choiceWrong
+                              ? styles.choiceBadgeWrong
                               : null,
                         ]}
                       >
-                        <View
+                        <Text
                           style={[
-                            styles.choiceBadge,
-                            tone === "correct"
-                              ? styles.choiceBadgeCorrect
-                              : tone === "wrong"
-                                ? styles.choiceBadgeWrong
-                                : null,
+                            styles.choiceBadgeText,
+                            tone === "neutral" ? null : styles.choiceBadgeTextStrong,
                           ]}
                         >
-                          <Text
-                            style={[
-                              styles.choiceBadgeText,
-                              tone === "neutral" ? null : styles.choiceBadgeTextStrong,
-                            ]}
-                          >
-                            {choice.label}
-                          </Text>
-                        </View>
-                        <Text style={styles.choiceText}>{choice.text}</Text>
+                          {choice.label}
+                        </Text>
                       </View>
-                    );
-                  })}
-                </View>
-              ) : (
-                <View style={styles.openAnswerCard}>
-                  <Text style={styles.openAnswerLabel}>Таны хариулт</Text>
-                  <Text style={styles.openAnswerText}>
-                    {answer.answerText?.trim() || "Хариулт оруулаагүй байна."}
-                  </Text>
-                </View>
-              )}
+                      <Text style={styles.choiceText}>{choice.text}</Text>
+                    </View>
+                  );
+                })}
+              </View>
             </View>
           ))}
         </View>
@@ -292,19 +254,12 @@ const styles = StyleSheet.create({
     borderColor: "#F0C2BD",
     backgroundColor: "#FBEAEA",
   },
-  palettePending: {
-    borderColor: "#F3D7A3",
-    backgroundColor: "#FFF7E7",
-  },
   paletteText: {
     fontFamily: fonts.sans.semibold,
     fontSize: 13,
   },
   paletteTextStrong: {
     color: colors.textPrimary,
-  },
-  paletteTextPending: {
-    color: "#B8860B",
   },
   answers: {
     marginTop: 16,
@@ -372,24 +327,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
     color: colors.textSecondary,
-  },
-  openAnswerCard: {
-    marginTop: 16,
-    borderRadius: 18,
-    backgroundColor: colors.surfaceTint,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-  },
-  openAnswerLabel: {
-    fontFamily: fonts.sans.medium,
-    fontSize: 12,
-    color: colors.textSoft,
-  },
-  openAnswerText: {
-    marginTop: 8,
-    fontFamily: fonts.sans.regular,
-    fontSize: 14,
-    lineHeight: 22,
-    color: colors.textPrimary,
   },
 });

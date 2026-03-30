@@ -1,12 +1,10 @@
-import { useQuery } from "@apollo/client/react";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
-import { FullScreenLoader } from "@/components/FullScreenLoader";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { StatusCard } from "@/components/StatusCard";
-import { GET_STUDENT_EXAM_DETAIL, type StudentExamDetailData } from "@/graphql/student";
+import { useAppData } from "@/data/app-data";
 import {
   cancelExamReminder,
   formatReminderDate,
@@ -15,20 +13,21 @@ import {
   scheduleExamReminder,
 } from "@/lib/notifications";
 import { colors, fonts, shadows } from "@/lib/theme";
-import { formatScheduledDate, formatScheduledTime, getExamEndTime, getStudentExamHeader } from "@/lib/student-exam";
+import {
+  formatScheduledDate,
+  formatScheduledTime,
+  getExamEndTime,
+  getStudentExamHeader,
+} from "@/lib/student-exam";
 
 export default function ExamDetailScreen() {
   const params = useLocalSearchParams<{ examId: string }>();
   const examId = typeof params.examId === "string" ? params.examId : "";
-  const { data, loading, error } = useQuery<StudentExamDetailData>(GET_STUDENT_EXAM_DETAIL, {
-    variables: { examId },
-    skip: !examId,
-  });
+  const { getExamById } = useAppData();
   const [reminderMessage, setReminderMessage] = useState("");
   const [hasReminder, setHasReminder] = useState(false);
   const [isReminderLoading, setIsReminderLoading] = useState(false);
-
-  const exam = data?.studentExamDetail;
+  const exam = getExamById(examId);
   const reminderDate = useMemo(
     () => getExamReminderDate(exam?.scheduledDate, exam?.startTime),
     [exam?.scheduledDate, exam?.startTime],
@@ -44,12 +43,12 @@ export default function ExamDetailScreen() {
     void (async () => {
       const reminder = await getExamReminder(exam.id);
 
-      if (cancelled) {
-        return;
+      if (!cancelled) {
+        setHasReminder(Boolean(reminder));
+        setReminderMessage(
+          reminder ? `${formatReminderDate(reminder.reminderDate)}-д reminder тавигдсан.` : "",
+        );
       }
-
-      setHasReminder(Boolean(reminder));
-      setReminderMessage(reminder ? `${formatReminderDate(reminder.reminderDate)}-д reminder тавигдсан.` : "");
     })();
 
     return () => {
@@ -89,11 +88,7 @@ export default function ExamDetailScreen() {
     }
   };
 
-  if (loading) {
-    return <FullScreenLoader label="Шалгалтын мэдээллийг ачаалж байна..." />;
-  }
-
-  if (error || !exam) {
+  if (!exam) {
     return (
       <SafeAreaView style={styles.page}>
         <View style={styles.content}>
@@ -101,10 +96,7 @@ export default function ExamDetailScreen() {
             <Ionicons name="chevron-back" size={18} color={colors.textPrimary} />
             <Text style={styles.backText}>Буцах</Text>
           </Pressable>
-          <StatusCard
-            tone="error"
-            message={error?.message || "Шалгалтын мэдээлэл олдсонгүй."}
-          />
+          <StatusCard tone="error" message="Шалгалтын мэдээлэл олдсонгүй." />
         </View>
       </SafeAreaView>
     );
@@ -117,6 +109,7 @@ export default function ExamDetailScreen() {
           <Ionicons name="chevron-back" size={18} color={colors.textPrimary} />
           <Text style={styles.backText}>Буцах</Text>
         </Pressable>
+
         {reminderMessage ? (
           <StatusCard
             tone={hasReminder ? "success" : reminderDate ? "info" : "warning"}
@@ -126,9 +119,7 @@ export default function ExamDetailScreen() {
 
         <View style={styles.card}>
           <Text style={styles.subjectLabel}>{getStudentExamHeader(exam.subject, exam.title)}</Text>
-          <Text style={styles.description}>
-            {exam.description || "Тайлбар оруулаагүй байна."}
-          </Text>
+          <Text style={styles.description}>{exam.description}</Text>
 
           <View style={styles.metaRow}>
             <View style={styles.metaChip}>
@@ -137,7 +128,7 @@ export default function ExamDetailScreen() {
             </View>
             <View style={styles.metaChip}>
               <Ionicons name="document-text-outline" size={14} color={colors.textSecondary} />
-              <Text style={styles.metaChipText}>{exam.questionCount} даалгавар</Text>
+              <Text style={styles.metaChipText}>{exam.questions.length} даалгавар</Text>
             </View>
           </View>
 
@@ -152,13 +143,16 @@ export default function ExamDetailScreen() {
             </View>
             <View style={styles.scheduleRow}>
               <Text style={styles.scheduleLabel}>Дуусах</Text>
-              <Text style={styles.scheduleValue}>{getExamEndTime(exam.startTime, exam.duration)}</Text>
+              <Text style={styles.scheduleValue}>
+                {getExamEndTime(exam.startTime, exam.duration)}
+              </Text>
             </View>
           </View>
 
           <View style={styles.noticeBox}>
             <Text style={styles.noticeText}>
-              Эхлүүлсний дараа хугацаа үргэлжлэн тоологдоно. Шалгалтын үеэр screen recording block, screenshot alert, app switch warning ажиллана.
+              Шалгалтын үеэр screen recording protection, screenshot alert, app switch warning
+              зэрэг хамгаалалт ажиллана.
             </Text>
           </View>
 
@@ -178,7 +172,7 @@ export default function ExamDetailScreen() {
           <PrimaryButton
             label="Эхлэх"
             onPress={() => router.push(`/(student)/exam/${exam.id}/take`)}
-            disabled={exam.questionCount === 0}
+            disabled={exam.questions.length === 0}
           />
         </View>
       </ScrollView>
