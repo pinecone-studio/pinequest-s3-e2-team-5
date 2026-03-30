@@ -28,7 +28,7 @@ type TeacherStudentSubmissionDetailData = {
     answers: {
       questionId: string;
       order: number;
-      prompt: string;
+      question: string;
       type: "mcq" | "open" | "short";
       submittedText: string | null;
       selectedChoiceId: string | null;
@@ -63,7 +63,7 @@ const GET_TEACHER_STUDENT_SUBMISSION_DETAIL = gql`
       answers {
         questionId
         order
-        prompt
+        question
         type
         submittedText
         selectedChoiceId
@@ -291,7 +291,7 @@ export function StudentReviewDetail({
             >
               <div className="flex items-start justify-between gap-4">
                 <h2 className="text-[18px] font-semibold text-[#1F1B27]">
-                  {question.order}. {question.prompt}
+                  {question.order}. {question.question}
                 </h2>
                 <span className="shrink-0 pt-0.5 text-[15px] font-medium text-[#2C2933]">
                   {question.type === "mcq"

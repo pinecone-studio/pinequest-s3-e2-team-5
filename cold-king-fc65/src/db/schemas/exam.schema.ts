@@ -8,7 +8,6 @@ export const exams = sqliteTable("exams", {
     subject: text().notNull(),
     description: text(),
 
-    openStatus: int({ mode: "boolean" }).notNull().default(false),
 
     duration: int().notNull(), //minutes
 
@@ -16,7 +15,4 @@ export const exams = sqliteTable("exams", {
 
     createdBy: text().notNull(),
 
-    classroomId: text(),
-    scheduledDate: text(),
-    startTime: text()
 })

@@ -6,6 +6,7 @@ import { studentExamSubmissions } from '../../../db/schemas/student-exam-submiss
 import { students } from '../../../db/schemas/student.schema';
 import { loadQuestionsWithChoices } from '../student-exam.helpers';
 import { getClassroomName, getTeacherExam, getTeacherStudentSubmission, requireTeacherId } from '../teacher-exam.helpers';
+import { announcedExams } from '../../../db/schemas/announcedExams.schema';
 
 export const examQuery = {
 	Exam: {
@@ -34,9 +35,8 @@ export const examQuery = {
 		},
 		teacherScheduledExams: async (_: unknown, _args: unknown, context: GraphQLContext) => {
 			const teacherId = await requireTeacherId(context);
-			const teacherExams = await context.db.select().from(exams).where(eq(exams.createdBy, teacherId)).all();
+			return await context.db.select().from(announcedExams).where(eq(announcedExams.createdBy, teacherId)).all();
 
-			return teacherExams.filter((exam) => Boolean(exam.classroomId && exam.scheduledDate && exam.startTime));
 		},
 		teacherExamDetail: async (_: unknown, args: { examId: string }, context: GraphQLContext) => {
 			const exam = await getTeacherExam(context, args.examId);
@@ -47,7 +47,7 @@ export const examQuery = {
 				questions: questions.map((question) => ({
 					id: question.id,
 					type: question.type,
-					prompt: question.prompt,
+					question: question.question,
 					order: question.order,
 					correctChoiceId: question.type === 'mcq' ? (question.choices.find((choice) => choice.isCorrect)?.id ?? null) : null,
 					choices: question.choices.map((choice) => ({
@@ -122,7 +122,7 @@ export const examQuery = {
 					return {
 						questionId: question.id,
 						order: question.order,
-						prompt: question.prompt,
+						question: question.question,
 						type: question.type,
 						submittedText: answer?.answerText ?? null,
 						selectedChoiceId: answer?.selectedChoiceId ?? null,

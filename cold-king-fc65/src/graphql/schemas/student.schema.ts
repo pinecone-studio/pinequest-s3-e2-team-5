@@ -36,7 +36,7 @@ export const studentTypeDefs = gql`
 	type StudentExamQuestion {
 		id: ID!
 		type: QuestionType!
-		prompt: String!
+		question: String!
 		order: Int!
 		imageUrl: String
 		videoUrl: String
@@ -54,6 +54,8 @@ export const studentTypeDefs = gql`
 		scheduledDate: String
 		startTime: String
 		duration: Int!
+		scheduledDate: String
+		startTime: String
 		questionCount: Int!
 		questions: [StudentExamQuestion!]!
 	}
@@ -74,7 +76,7 @@ export const studentTypeDefs = gql`
 	type StudentExamAnswerReview {
 		questionId: String!
 		order: Int!
-		prompt: String!
+		question: String!
 		type: QuestionType!
 		answerText: String
 		selectedChoiceId: String

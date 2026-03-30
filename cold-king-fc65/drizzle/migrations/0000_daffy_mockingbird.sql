@@ -1,8 +1,26 @@
+CREATE TABLE `announced_exam_grades` (
+	`id` text PRIMARY KEY NOT NULL,
+	`classroomId` text NOT NULL,
+	`announcedExamId` text NOT NULL,
+	`createdBy` text NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE `announced_exams` (
+	`id` text PRIMARY KEY NOT NULL,
+	`examId` text NOT NULL,
+	`openStatus` integer NOT NULL,
+	`scheduledDate` text NOT NULL,
+	`startTime` text NOT NULL,
+	`createdBy` text NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE `choices` (
 	`id` text PRIMARY KEY NOT NULL,
 	`questionId` text NOT NULL,
 	`text` text NOT NULL,
 	`label` text NOT NULL,
+	`imageUrl` text,
+	`videoUrl` text,
 	`isCorrect` integer NOT NULL
 );
 --> statement-breakpoint
@@ -20,7 +38,6 @@ CREATE TABLE `exams` (
 	`title` text NOT NULL,
 	`subject` text NOT NULL,
 	`description` text,
-	`openStatus` integer DEFAULT false NOT NULL,
 	`duration` integer NOT NULL,
 	`grade` text NOT NULL,
 	`createdBy` text NOT NULL
@@ -36,6 +53,30 @@ CREATE TABLE `questions` (
 	`videoUrl` text,
 	`topic` text,
 	`difficulty` text,
+	FOREIGN KEY (`examId`) REFERENCES `exams`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE TABLE `student_exam_answers` (
+	`id` text PRIMARY KEY NOT NULL,
+	`submissionId` text NOT NULL,
+	`questionId` text NOT NULL,
+	`selectedChoiceId` text,
+	`answerText` text,
+	`isCorrect` integer NOT NULL,
+	FOREIGN KEY (`submissionId`) REFERENCES `student_exam_submissions`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`questionId`) REFERENCES `questions`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE TABLE `student_exam_submissions` (
+	`id` text PRIMARY KEY NOT NULL,
+	`studentId` text NOT NULL,
+	`examId` text NOT NULL,
+	`startedAt` integer NOT NULL,
+	`submittedAt` integer NOT NULL,
+	`totalQuestions` integer NOT NULL,
+	`correctAnswers` integer NOT NULL,
+	`scorePercent` integer NOT NULL,
+	FOREIGN KEY (`studentId`) REFERENCES `students`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`examId`) REFERENCES `exams`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint

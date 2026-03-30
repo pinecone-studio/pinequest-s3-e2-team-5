@@ -1,4 +1,4 @@
-const defaultCorsOrigins = ["http://localhost:3000", "http://127.0.0.1:3000"];
+const defaultCorsOrigins = ["http://localhost:3000", "http://127.0.0.1:3000", "https://pinequest-s3-e2-team-5-web.ebmsteam10.workers.dev"];
 
 export type WorkerBindings = Env & {
 	CLERK_SECRET_KEY?: string;

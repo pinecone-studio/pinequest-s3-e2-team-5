@@ -1,4 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
+import { announcedExamGrades } from "../../db/schemas/announcedExamGrades.schema";
+import { announcedExams } from "../../db/schemas/announcedExams.schema";
 import { choices } from "../../db/schemas/choices.schema";
 import { exams } from "../../db/schemas/exam.schema";
 import { questions } from "../../db/schemas/question.schema";
@@ -33,25 +35,32 @@ export async function getAccessibleExamForStudent(
 	examId: string,
 ) {
 	const student = await requireStudentRecord(context);
-	const exam = await context.db
+	const examRecord = await context.db
 		.select()
-		.from(exams)
+		.from(announcedExamGrades)
+		.innerJoin(announcedExams, eq(announcedExamGrades.announcedExamId, announcedExams.id))
+		.innerJoin(exams, eq(announcedExams.examId, exams.id))
 		.where(
 			and(
 				eq(exams.id, examId),
-				eq(exams.classroomId, student.classroomId),
-				eq(exams.openStatus, true),
+				eq(announcedExamGrades.classroomId, student.classroomId),
+				eq(announcedExams.openStatus, true),
 			),
 		)
 		.get();
 
-	if (!exam) {
+	if (!examRecord) {
 		throw notFoundError("Exam not found.");
 	}
 
 	return {
 		student,
-		exam,
+		exam: {
+			...examRecord.exams,
+			scheduledDate: examRecord.announced_exams.scheduledDate,
+			startTime: examRecord.announced_exams.startTime,
+			openStatus: examRecord.announced_exams.openStatus,
+		},
 	};
 }
 
@@ -95,7 +104,7 @@ export async function loadQuestionsWithChoices(
 
 	return sortedQuestions.map((question, index) => ({
 		...question,
-		prompt: question.question,
+		question: question.question,
 		order: index + 1,
 		choices: questionChoices
 			.filter((choice) => choice.questionId === question.id)

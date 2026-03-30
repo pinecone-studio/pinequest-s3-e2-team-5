@@ -26,7 +26,7 @@ type AvailableExam = {
 type StudentExamQuestion = {
   id: string;
   type: "mcq" | "open" | "short";
-  prompt: string;
+  question: string;
   order: number;
   choices: {
     id: string;
@@ -87,7 +87,7 @@ const GET_STUDENT_EXAM_DETAIL = gql`
       questions {
         id
         type
-        prompt
+        question
         order
         choices {
           id
@@ -414,7 +414,7 @@ export default function StudentAccountPage() {
               >
                 <div className="flex items-start justify-between gap-4">
                   <h2 className="text-[16px] font-semibold text-[#27242F]">
-                    {question.order}. {question.prompt}
+                    {question.order}. {question.question}
                   </h2>
                   <span className="shrink-0 text-[14px] font-medium text-[#5E5A68]">
                     1 оноо

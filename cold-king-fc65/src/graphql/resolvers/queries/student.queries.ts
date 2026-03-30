@@ -4,15 +4,19 @@ import { studentExamAnswers } from '../../../db/schemas/student-exam-answer.sche
 import { studentExamSubmissions } from '../../../db/schemas/student-exam-submission.schema';
 import type { GraphQLContext } from '../../../server';
 import { getAccessibleExamForStudent, loadQuestionsWithChoices, requireStudentRecord } from '../student-exam.helpers';
+import { announcedExamGrades } from '../../../db/schemas/announcedExamGrades.schema';
+import { announcedExams } from '../../../db/schemas/announcedExams.schema';
 
 export const studentQuery = {
 	Query: {
 		availableExamsForStudent: async (_: unknown, _args: unknown, context: GraphQLContext) => {
 			const student = await requireStudentRecord(context);
-			const availableExams = await context.db
+			const availableAnnouncements = await context.db
 				.select()
-				.from(exams)
-				.where(and(eq(exams.classroomId, student.classroomId), eq(exams.openStatus, true)))
+				.from(announcedExamGrades)
+				.innerJoin(announcedExams, eq(announcedExamGrades.announcedExamId, announcedExams.id))
+				.innerJoin(exams, eq(announcedExams.examId, exams.id))
+				.where(eq(announcedExamGrades.classroomId, student.classroomId))
 				.all();
 
 			const submissions = await context.db
@@ -23,9 +27,9 @@ export const studentQuery = {
 			const submittedExamIds = new Set(submissions.map((submission) => submission.examId));
 
 			const examSummaries = await Promise.all(
-				availableExams
-					.filter((exam) => !submittedExamIds.has(exam.id))
-					.map(async (exam) => {
+				availableAnnouncements
+					.filter(({ announced_exams, exams }) => announced_exams.openStatus && !submittedExamIds.has(exams.id))
+					.map(async ({ exams: exam }) => {
 						const questionCount = (await loadQuestionsWithChoices(context, exam.id)).length;
 
 						return {
@@ -61,7 +65,7 @@ export const studentQuery = {
 				questions: examQuestions.map((question) => ({
 					id: question.id,
 					type: question.type,
-					prompt: question.prompt,
+					question: question.question,
 					order: question.order,
 					imageUrl: question.imageUrl,
 					videoUrl: question.videoUrl,
@@ -149,7 +153,7 @@ export const studentQuery = {
 					return {
 						questionId: question.id,
 						order: question.order,
-						prompt: question.prompt,
+						question: question.question,
 						type: question.type,
 						answerText: answer?.answerText ?? null,
 						selectedChoiceId: answer?.selectedChoiceId ?? null,

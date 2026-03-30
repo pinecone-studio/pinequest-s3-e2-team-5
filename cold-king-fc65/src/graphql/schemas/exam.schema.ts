@@ -27,7 +27,7 @@ export const examTypeDefs = gql`
     type TeacherExamQuestion {
         id: ID!
         type: QuestionType!
-        prompt: String!
+        question: String!
         order: Int!
         correctChoiceId: String
         choices: [TeacherExamChoice!]!
@@ -58,7 +58,7 @@ export const examTypeDefs = gql`
     type TeacherStudentExamAnswer {
         questionId: String!
         order: Int!
-        prompt: String!
+        question: String!
         type: QuestionType!
         submittedText: String
         selectedChoiceId: String

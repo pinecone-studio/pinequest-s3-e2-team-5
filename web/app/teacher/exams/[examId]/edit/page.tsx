@@ -71,7 +71,7 @@ type ExamByIdData = {
     questions: {
       id: string;
       type: QuestionType;
-      prompt: string;
+      question: string;
       order: number;
       correctChoiceId: string | null;
       choices: {
@@ -288,7 +288,7 @@ function createQuestionDraftFromServer(
 ): QuestionDraft {
   return {
     id: question.id,
-    question: question.prompt,
+    question: question.question,
     type: question.type,
     topic: "",
     difficulty: "",

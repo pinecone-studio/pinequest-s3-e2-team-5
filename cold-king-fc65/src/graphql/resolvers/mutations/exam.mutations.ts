@@ -5,6 +5,7 @@ import { exams } from "../../../db/schemas/exam.schema";
 import { questions } from "../../../db/schemas/question.schema";
 import { assertAuthenticated, notFoundError, unauthorizedError } from "../../errors";
 import { and, eq, inArray } from "drizzle-orm";
+import { announcedExams } from "../../../db/schemas/announcedExams.schema";
 
 export const examMutation = {
     Mutation: {
@@ -17,7 +18,6 @@ export const examMutation = {
                     description?: string | null;
                     duration: number;
                     grade: string;
-                    openStatus?: boolean | null;
                     createdBy?: string | null;
                 };
             },
@@ -34,7 +34,6 @@ export const examMutation = {
                     description: args.input.description ?? null,
                     duration: args.input.duration,
                     grade: args.input.grade,
-                    openStatus: args.input.openStatus ?? false,
                     createdBy: userId,
                 })
                 .returning()
@@ -83,14 +82,13 @@ export const examMutation = {
             }
 
             return context.db
-                .update(exams)
+                .update(announcedExams)
                 .set({
-                    classroomId: classroom.id,
                     scheduledDate: args.input.scheduledDate,
                     startTime: args.input.startTime,
                     openStatus: true,
                 })
-                .where(eq(exams.id, exam.id))
+                .where(eq(announcedExams.examId, exam.id))
                 .returning()
                 .get();
         },

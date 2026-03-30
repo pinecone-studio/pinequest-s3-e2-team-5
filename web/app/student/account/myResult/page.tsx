@@ -29,7 +29,7 @@ type SubmissionSummary = {
 type SubmissionAnswerReview = {
   questionId: string;
   order: number;
-  prompt: string;
+  question: string;
   type: "mcq" | "open" | "short";
   answerText: string | null;
   selectedChoiceId: string | null;
@@ -91,7 +91,7 @@ const GET_STUDENT_EXAM_SUBMISSION_DETAIL = gql`
       answers {
         questionId
         order
-        prompt
+        question
         type
         answerText
         selectedChoiceId
@@ -355,7 +355,7 @@ export default function StudentResultPage() {
               >
                 <div className="flex items-start justify-between gap-4">
                   <h2 className="text-[16px] font-semibold text-[#27242F]">
-                    {question.order}. {question.prompt}
+                    {question.order}. {question.question}
                   </h2>
                   <span className="shrink-0 text-[14px] font-medium text-[#5E5A68]">
                     {question.type === "mcq"
