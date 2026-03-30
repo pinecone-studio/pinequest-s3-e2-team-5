@@ -14,7 +14,7 @@ export const studentQuery = {
 			const availableAnnouncements = await context.db
 				.select()
 				.from(announcedExamGrades)
-				.innerJoin(announcedExams, eq(announcedExamGrades.announcedExamId, announcedExams.examId))
+				.innerJoin(announcedExams, eq(announcedExamGrades.announcedExamId, announcedExams.id))
 				.innerJoin(exams, eq(announcedExams.examId, exams.id))
 				.where(eq(announcedExamGrades.classroomId, student.classroomId))
 				.all();
@@ -128,8 +128,17 @@ export const studentQuery = {
 			const examRecord = await context.db
 				.select()
 				.from(announcedExams)
+				.innerJoin(
+					announcedExamGrades,
+					eq(announcedExamGrades.announcedExamId, announcedExams.id),
+				)
 				.innerJoin(exams, eq(announcedExams.examId, exams.id))
-				.where(eq(exams.id, submission.examId))
+				.where(
+					and(
+						eq(exams.id, submission.examId),
+						eq(announcedExamGrades.classroomId, student.classroomId),
+					),
+				)
 				.get();
 
 			if (!examRecord) {
