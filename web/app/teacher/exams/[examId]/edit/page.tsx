@@ -107,6 +107,12 @@ type UpdateExamData = {
   };
 };
 
+type DeleteQuestionData = {
+  deleteQuestion: {
+    id: string;
+  };
+};
+
 type DeleteExamData = {
   deleteExam: {
     __typename?: "Exam";
@@ -171,6 +177,14 @@ const UPDATE_EXAM = gql`
   }
 `;
 
+const DELETE_QUESTION = gql`
+  mutation DeleteQuestion($questionId: String!) {
+    deleteQuestion(questionId: $questionId) {
+      id
+    }
+  }
+`;
+
 const DELETE_EXAM = gql`
   mutation DeleteExam($examId: String!) {
     deleteExam(examId: $examId) {
@@ -182,6 +196,7 @@ const DELETE_EXAM = gql`
 const typeOptions: { value: QuestionType; label: string }[] = [
   { value: "mcq", label: "Сонголт" },
   { value: "open", label: "Бичих" },
+  { value: "short", label: "Богино" },
 ];
 
 const subjectOptions = [
@@ -260,8 +275,12 @@ function createQuestionDraft(): QuestionDraft {
     showImageInput: false,
     showVideoInput: false,
     points: 1,
-    choices: ["A", "B"].map(createChoice),
+    choices: createDefaultMcqChoices(),
   };
+}
+
+function createDefaultMcqChoices() {
+  return ["A", "B"].map(createChoice);
 }
 
 function createQuestionDraftFromServer(
@@ -339,6 +358,10 @@ function getQuestionTypeLabel(type: QuestionType) {
     return "Сонголт";
   }
 
+  if (type === "short") {
+    return "Богино";
+  }
+
   return "Бичих";
 }
 
@@ -381,7 +404,12 @@ export default function TeacherExamEditPage() {
   const choiceInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const choiceIdToFocusRef = useRef<string | null>(null);
 
-  const { data: examData, loading: examLoading, error: examError } =
+  const {
+    data: examData,
+    loading: examLoading,
+    error: examError,
+    refetch: refetchExam,
+  } =
     useQuery<ExamByIdData>(GET_EXAM_BY_ID, {
       variables: { examId },
       skip: !examId,
@@ -393,6 +421,8 @@ export default function TeacherExamEditPage() {
     useMutation<UpdateQuestionWithChoicesData>(UPDATE_QUESTION_WITH_CHOICES);
   const [updateExam, { loading: updateExamLoading }] =
     useMutation<UpdateExamData>(UPDATE_EXAM);
+  const [deleteQuestion, { loading: deleteQuestionLoading }] =
+    useMutation<DeleteQuestionData>(DELETE_QUESTION);
   const [deleteExam, { loading: deleteExamLoading }] =
     useMutation<DeleteExamData>(DELETE_EXAM);
 
@@ -545,6 +575,62 @@ export default function TeacherExamEditPage() {
     setActiveQuestionId(nextQuestion.id);
     setStatusMessage("");
     closeMenus();
+  };
+
+  const removeQuestionLocally = (questionId: string) => {
+    const currentIndex = questions.findIndex((question) => question.id === questionId);
+
+    updateQuestions((current) => current.filter((question) => question.id !== questionId));
+    setSavedQuestionIds((current) => {
+      const next = new Set(current);
+      next.delete(questionId);
+      return next;
+    });
+    setDirtyQuestionIds((current) => {
+      const next = new Set(current);
+      next.delete(questionId);
+      return next;
+    });
+
+    const nextQuestion =
+      questions[currentIndex + 1] ??
+      questions[currentIndex - 1] ??
+      null;
+
+    setActiveQuestionId(nextQuestion?.id ?? null);
+    closeMenus();
+  };
+
+  const handleDeleteActiveQuestion = async () => {
+    if (!activeQuestion) {
+      return;
+    }
+
+    if (!window.confirm("Энэ асуултыг устгах уу?")) {
+      return;
+    }
+
+    if (!effectiveSavedQuestionIds.has(activeQuestion.id)) {
+      removeQuestionLocally(activeQuestion.id);
+      setStatusMessage("Асуултын draft устгагдлаа.");
+      return;
+    }
+
+    try {
+      setStatusMessage("Асуулт устгаж байна...");
+      await deleteQuestion({
+        variables: {
+          questionId: activeQuestion.id,
+        },
+      });
+      removeQuestionLocally(activeQuestion.id);
+      await refetchExam();
+      setStatusMessage("Асуулт устгагдлаа.");
+    } catch (error) {
+      setStatusMessage(
+        getApolloErrorMessage(error, "Асуулт устгахад алдаа гарлаа."),
+      );
+    }
   };
 
   const openExamEditDialog = () => {
@@ -947,6 +1033,7 @@ export default function TeacherExamEditPage() {
               },
             },
           });
+          await refetchExam();
 
           setDirtyQuestionIds((current) => {
             const next = new Set(current);
@@ -999,6 +1086,7 @@ export default function TeacherExamEditPage() {
         next.delete(createdQuestionId);
         return next;
       });
+      await refetchExam();
       setStatusMessage("Асуулт хадгалагдлаа. Дараагийн асуулт руу шилжив.");
       moveToNextQuestion();
     } catch (error) {
@@ -1302,6 +1390,16 @@ export default function TeacherExamEditPage() {
                 </h1>
 
                 <div className="flex items-center gap-4 text-[#6F687D]">
+                  <button
+                    type="button"
+                    onClick={() => void handleDeleteActiveQuestion()}
+                    disabled={deleteQuestionLoading}
+                    className="transition hover:text-[#DE5A52] disabled:cursor-not-allowed disabled:opacity-40"
+                    aria-label="Асуулт устгах"
+                  >
+                    <Trash2 className="h-6 w-6" />
+                  </button>
+
                   <div className="relative" ref={insertMenuRef}>
                     <button
                       type="button"
@@ -1370,6 +1468,14 @@ export default function TeacherExamEditPage() {
                                 updateActiveQuestion((question) => ({
                                   ...question,
                                   type: option.value,
+                                  choices:
+                                    option.value === "mcq"
+                                      ? normalizeQuestionChoices(
+                                          question.choices.length >= 2
+                                            ? question.choices
+                                            : createDefaultMcqChoices(),
+                                        )
+                                      : question.choices,
                                 }));
                                 closeMenus();
                               }}

@@ -34,6 +34,8 @@ export const studentQuery = {
 							subject: exam.subject,
 							description: exam.description,
 							grade: exam.grade,
+							scheduledDate: exam.scheduledDate,
+							startTime: exam.startTime,
 							duration: exam.duration,
 							questionCount,
 						};
@@ -133,6 +135,8 @@ export const studentQuery = {
 				title: exam.title,
 				subject: exam.subject,
 				grade: exam.grade,
+				scheduledDate: exam.scheduledDate,
+				startTime: exam.startTime,
 				duration: exam.duration,
 				questionCount: submission.totalQuestions,
 				correctAnswers: submission.correctAnswers,

@@ -21,6 +21,8 @@ export const studentTypeDefs = gql`
 		subject: String!
 		description: String
 		grade: String!
+		scheduledDate: String
+		startTime: String
 		duration: Int!
 		questionCount: Int!
 	}
@@ -49,6 +51,8 @@ export const studentTypeDefs = gql`
 		subject: String!
 		description: String
 		grade: String!
+		scheduledDate: String
+		startTime: String
 		duration: Int!
 		questionCount: Int!
 		questions: [StudentExamQuestion!]!
@@ -85,6 +89,8 @@ export const studentTypeDefs = gql`
 		title: String!
 		subject: String!
 		grade: String!
+		scheduledDate: String
+		startTime: String
 		duration: Int!
 		questionCount: Int!
 		correctAnswers: Int!

@@ -50,20 +50,24 @@ export function TeacherHeader() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const rawFullName = user?.unsafeMetadata?.fullName;
+  const rawFirstName = user?.unsafeMetadata?.firstName;
+  const rawLastName = user?.unsafeMetadata?.lastName;
+  const metadataName = [
+    typeof rawLastName === "string" ? rawLastName.trim() : "",
+    typeof rawFirstName === "string" ? rawFirstName.trim() : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
   const displayName =
     typeof rawFullName === "string" && rawFullName.trim()
       ? rawFullName
-      : [user?.lastName, user?.firstName].filter(Boolean).join(" ") ||
+      : metadataName ||
+        [user?.lastName, user?.firstName].filter(Boolean).join(" ") ||
         user?.fullName ||
         user?.firstName ||
+        user?.primaryEmailAddress?.emailAddress?.split("@")[0] ||
         user?.username ||
         "Багш";
-  const initials = displayName
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join("");
 
   useEffect(() => {
     const handlePointerDown = (event: MouseEvent) => {
@@ -137,18 +141,23 @@ export function TeacherHeader() {
             aria-expanded={isProfileMenuOpen}
             className="flex items-center gap-3 text-left transition hover:opacity-90"
           >
-            <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-[#E7E8F0] bg-[#F6F2FF] text-[14px] font-bold text-white shadow-[0_4px_10px_rgba(53,31,107,0.08)]">
+            <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-[#E7E8F0] bg-[#F6F2FF] text-[14px] font-bold text-white shadow-[0_4px_10px_rgba(53,31,107,0.08)]">
               {user?.imageUrl ? (
                 <Image
                   src={user.imageUrl}
                   alt={displayName}
-                  width={48}
-                  height={48}
+                  width={44}
+                  height={44}
                   className="h-full w-full object-cover"
                 />
               ) : (
                 <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#F4A261] to-[#E76F51]">
-                  {initials || "Б"}
+                  {displayName
+                    .split(/\s+/)
+                    .filter(Boolean)
+                    .slice(0, 2)
+                    .map((part) => part.charAt(0).toUpperCase())
+                    .join("") || "Б"}
                 </span>
               )}
             </div>

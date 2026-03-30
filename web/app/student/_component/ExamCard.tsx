@@ -70,7 +70,7 @@ export default function ExamCard({
 }: ExamCardProps) {
   const cardContent = (
     <div
-      className={`group flex max-h-[226px] max-w-[264px] cursor-pointer flex-col gap-3 rounded-[20px] p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${bg}`}
+      className={`group flex  max-w-[264px] cursor-pointer flex-col gap-3 rounded-[20px] p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${bg}`}
     >
       <div
         className={`flex h-12 w-12 items-center justify-center rounded-2xl ${iconBg}`}
@@ -94,8 +94,12 @@ export default function ExamCard({
           {exercises} дасгал
         </span>
       </div>
-      <p className="text-[12px] text-[#8B8B8B]">{scheduledDate || "2026"}</p>
-      <p className="text-[12px] text-[#8B8B8B]">{startTime}</p>
+      <div>
+        <p className="text-[12px] text-black font-bold ">
+          Эхлэх цаг - /{startTime}/
+        </p>
+        <p className="text-[12px] text-[#8B8B8B]">{scheduledDate}</p>
+      </div>
     </div>
   );
 

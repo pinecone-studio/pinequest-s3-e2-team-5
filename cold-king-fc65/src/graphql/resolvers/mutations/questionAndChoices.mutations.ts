@@ -37,6 +37,24 @@ type UpdateQuestionInput = CreateQuestionInput & {
     questionId: string,
 }
 
+async function deleteChoicesForQuestion(
+    context: GraphQLContext,
+    questionId: string,
+) {
+    const mediaColumnsSupported = await supportsChoiceMediaColumns(context);
+
+    if (mediaColumnsSupported) {
+        await context.db
+            .delete(choices)
+            .where(eq(choices.questionId, questionId));
+        return;
+    }
+
+    await context.db
+        .delete(legacyChoices)
+        .where(eq(legacyChoices.questionId, questionId));
+}
+
 function rethrowQuestionMutationError(error: unknown, action: string): never {
     if (error instanceof GraphQLError) {
         throw error;
@@ -175,9 +193,7 @@ export const questionMutation = {
                     })
                     .where(eq(questions.id, args.input.questionId));
 
-                await context.db
-                    .delete(choices)
-                    .where(eq(choices.questionId, args.input.questionId));
+                await deleteChoicesForQuestion(context, args.input.questionId);
 
                 if (args.input.choices?.length) {
                     const mediaColumnsSupported = await supportsChoiceMediaColumns(context);
@@ -256,9 +272,7 @@ export const questionMutation = {
                     throw notFoundError("Exam not found.");
                 }
 
-                await context.db
-                    .delete(choices)
-                    .where(eq(choices.questionId, existingQuestion.id));
+                await deleteChoicesForQuestion(context, existingQuestion.id);
 
                 await context.db
                     .delete(questions)

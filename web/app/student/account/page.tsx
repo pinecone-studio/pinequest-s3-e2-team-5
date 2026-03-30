@@ -64,6 +64,8 @@ const GET_AVAILABLE_EXAMS = gql`
       subject
       description
       grade
+      scheduledDate
+      startTime
       duration
       questionCount
     }
@@ -110,6 +112,52 @@ function formatTime(totalSeconds: number) {
   const seconds = totalSeconds % 60;
 
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(
+    2,
+    "0",
+  )}`;
+}
+
+function formatScheduledDate(date: string | null | undefined) {
+  if (!date) {
+    return "Товлоогүй";
+  }
+
+  const [year, month, day] = date.split("-");
+  if (!year || !month || !day) {
+    return date;
+  }
+
+  return `${year}/${month}/${day}`;
+}
+
+function formatScheduledTime(time: string | null | undefined) {
+  if (!time) {
+    return "--:--";
+  }
+
+  return time.slice(0, 5);
+}
+
+function getExamEndTime(
+  startTime: string | null | undefined,
+  durationMinutes: number,
+) {
+  if (!startTime) {
+    return "--:--";
+  }
+
+  const [hours, minutes] = startTime.split(":").map(Number);
+
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+    return startTime;
+  }
+
+  const totalMinutes = hours * 60 + minutes + durationMinutes;
+  const normalizedMinutes = ((totalMinutes % 1440) + 1440) % 1440;
+  const endHours = Math.floor(normalizedMinutes / 60);
+  const endMinutes = normalizedMinutes % 60;
+
+  return `${String(endHours).padStart(2, "0")}:${String(endMinutes).padStart(
     2,
     "0",
   )}`;
@@ -474,8 +522,8 @@ export default function StudentAccountPage() {
 
   if (selectedExamId) {
     return (
-      <section className="animate-in fade-in slide-in-from-bottom-2 flex min-h-[calc(100vh-152px)] w-full items-center justify-center duration-300">
-        <div className="flex max-h-[338px] w-full max-w-[744px] flex-col gap-8 rounded-[32px] border border-[#DCD9FF] bg-[#F9F8FF] px-[26px] pb-[30px] pt-[30px]">
+      <section className="animate-in fade-in slide-in-from-bottom-2 flex min-h-[calc(100vh-152px)] w-full items-start justify-center px-4 pt-28 duration-300 sm:pt-36">
+        <div className="flex w-full max-w-[586px] flex-col gap-7 rounded-[28px] border border-[#DED8FB] bg-[#FBFAFF] px-5 pb-5 pt-5 shadow-[0_8px_24px_rgba(132,112,222,0.06)] sm:px-5 sm:pb-6 sm:pt-6">
           {activeExamLoading || !activeExam ? (
             <div className="flex min-h-[240px] items-center justify-center text-[#6B7280]">
               <Loader2 className="mr-3 h-5 w-5 animate-spin" />
@@ -483,55 +531,70 @@ export default function StudentAccountPage() {
             </div>
           ) : (
             <>
-              <div className="flex flex-col gap-7">
-                <div className="w-full">
-                  <h1 className="text-[24px] leading-[1.05] font-semibold tracking-[-0.03em] text-[#111111]">
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <h1 className="text-[19px] font-semibold text-[#17161C]">
                     {
                       getStudentExamPresentation(activeExam.subject)
                         .subjectLabel
                     }
                   </h1>
 
-                  <p className="mt-2 text-[18px] font-medium text-[#4B4658]">
-                    {activeExam.title}
-                  </p>
-                  <p className="mt-3 text-[16px] font-normal text-[#8B8B8B]">
+                  <p className="text-[14px] leading-6 font-normal text-[#AAA5B3]">
                     {activeExam.description || "Тайлбар оруулаагүй байна."}
                   </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-6">
-                  <div className="inline-flex h-[28px] items-center gap-3 rounded-full bg-[#FAFAF8] px-6 text-[14px] leading-none font-medium text-[#111111]">
-                    <Clock3 className="h-[18px] w-[18px]" strokeWidth={2.1} />
+                <div className="flex flex-wrap items-center gap-6 pt-1">
+                  <div className="inline-flex items-center gap-1.5 text-[14px] font-medium text-[#25222B]">
+                    <Clock3 className="h-[14px] w-[14px]" strokeWidth={2.1} />
                     <span>{activeExam.duration} мин</span>
                   </div>
 
-                  <div className="inline-flex h-[28px] items-center gap-3 rounded-full bg-[#FAFAF8] px-6 text-[14px] leading-none font-medium text-[#111111]">
-                    <PenLine className="h-[18px] w-[18px]" strokeWidth={2.1} />
+                  <div className="inline-flex items-center gap-1.5 text-[14px] font-medium text-[#25222B]">
+                    <PenLine className="h-[14px] w-[14px]" strokeWidth={2.1} />
                     <span>{activeExam.questionCount} дасгал</span>
+                  </div>
+                </div>
+
+                <div className="max-w-[155px] space-y-2.5 pt-2">
+                  <div className="flex items-center justify-between gap-8 text-[15px] text-[#1D1C22]">
+                    <span className="font-medium">Эхлэх</span>
+                    <span className="font-normal text-[#34313A]">
+                      {formatScheduledTime(activeExam.startTime)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-8 text-[15px] text-[#1D1C22]">
+                    <span className="font-medium">Дуусах</span>
+                    <span className="font-normal text-[#34313A]">
+                      {getExamEndTime(
+                        activeExam.startTime,
+                        activeExam.duration,
+                      )}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              <div className="w-full rounded-[12px] border border-[#DCDAF5] bg-[#F2F1FF] px-[8px] py-[10px]">
-                <div className="flex items-start gap-2">
+              <div className="w-full rounded-[11px] border border-[#DDD7F5] bg-[#F3F1FF] px-4 py-2.5">
+                <div className="flex items-start gap-3">
                   <Info
-                    className="mt-0.5 h-5 w-5 shrink-0 text-[#141414]"
+                    className="mt-0.5 h-4 w-4 shrink-0 text-[#16151B]"
                     strokeWidth={2.1}
                   />
-                  <p className="max-w-[590px] text-[14px] leading-[1.35] font-normal text-[#141414]">
-                    Шалгалтыг эхлүүлсний дараа хариултуудаа шууд backend рүү
-                    илгээх боломжтой болно.
+                  <p className="text-[12px] leading-5 font-normal text-[#2A2731]">
+                    Шалгалтыг эхлүүлсэн тохиолдолд хугацаа зогсохгүй үргэлжлэн
+                    тоологдож, дуусмагц автоматаар илгээгдэхийг анхаарна уу.
                   </p>
                 </div>
               </div>
 
-              <div className="mt-auto">
-                <div className="flex w-full items-center justify-end gap-[18px]">
+              <div className="mt-1">
+                <div className="flex w-full items-center justify-end gap-12 pr-1">
                   <button
                     type="button"
                     onClick={() => setSelectedExamId(null)}
-                    className="cursor-pointer text-[16px] leading-none font-medium text-[#111111] transition hover:text-[#7C63E6]"
+                    className="cursor-pointer text-[15px] leading-none font-medium text-[#232028] transition hover:text-[#7C63E6]"
                   >
                     Буцах
                   </button>
@@ -540,7 +603,7 @@ export default function StudentAccountPage() {
                     type="button"
                     onClick={handleStartExam}
                     disabled={activeExam.questionCount === 0}
-                    className="flex h-[44px] min-w-[144px] cursor-pointer items-center justify-center rounded-[18px] bg-[linear-gradient(180deg,#9D86EA_0%,#8E74E0_100%)] px-10 text-[16px] leading-none font-semibold text-white shadow-[inset_0_-8px_0_rgba(95,74,171,0.22),0_8px_18px_rgba(144,118,226,0.22)] transition hover:brightness-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="flex h-[34px] min-w-[113px] cursor-pointer items-center justify-center rounded-[13px] bg-[linear-gradient(180deg,#A789F4_0%,#8C6EE4_100%)] px-8 text-[15px] leading-none font-semibold text-white shadow-[inset_0_-4px_0_rgba(104,78,187,0.28),0_6px_14px_rgba(144,118,226,0.18)] transition hover:brightness-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     Эхлэх
                   </button>
