@@ -203,6 +203,7 @@ export default function TeacherExamsPage() {
   const [scheduleError, setScheduleError] = useState("");
   const [schedulingExam, setSchedulingExam] = useState<ExamCard | null>(null);
   const [scheduleGrade, setScheduleGrade] = useState("");
+  const [examGrade, setExamGrade] = useState("")
   const [scheduleDate, setScheduleDate] = useState("");
   const [scheduleStartTime, setScheduleStartTime] = useState("");
 
@@ -279,7 +280,7 @@ export default function TeacherExamsPage() {
     ? getApolloErrorMessage(classroomsError, "Ангиудыг ачаалж чадсангүй.")
     : "";
   const canContinue = Boolean(
-    subject && title.trim() && selectedCreateClassroomId && duration > 0,
+    subject && title.trim() && examGrade && duration > 0,
   );
 
   const handleCreateExam = async () => {
@@ -457,6 +458,8 @@ export default function TeacherExamsPage() {
                     <input
                       className="border w-full h-10 rounded-lg"
                       placeholder="angi"
+                      value={examGrade}
+                      onChange={(e) => setExamGrade(e.target.value)}
                     />
                   </div>
                 </div>
