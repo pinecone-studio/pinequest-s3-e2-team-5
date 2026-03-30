@@ -7,6 +7,7 @@ export type WorkerBindings = Env & {
 	CLERK_JWT_KEY?: string;
 	CLERK_AUTHORIZED_PARTIES?: string;
 	CORS_ORIGINS?: string;
+	exam_media?: R2Bucket;
 };
 
 export function getPublishableKey(env: WorkerBindings) {

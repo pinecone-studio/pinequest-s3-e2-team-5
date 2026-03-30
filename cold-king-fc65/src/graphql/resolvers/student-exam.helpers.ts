@@ -42,7 +42,7 @@ export async function getAccessibleExamForStudent(
 		.innerJoin(exams, eq(announcedExams.examId, exams.id))
 		.where(
 			and(
-				eq(announcedExams.examId, announcedExamId),
+				eq(announcedExams.id, announcedExamId),
 				eq(announcedExamGrades.classroomId, student.classroomId),
 				eq(announcedExams.openStatus, true),
 			),

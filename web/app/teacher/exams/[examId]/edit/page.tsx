@@ -3,6 +3,7 @@
 import { gql } from "@apollo/client";
 import type { Reference } from "@apollo/client/cache";
 import { useMutation, useQuery } from "@apollo/client/react";
+import { useAuth } from "@clerk/nextjs";
 import {
   AlignLeft,
   ChevronDown,
@@ -35,6 +36,7 @@ import {
 import { FormulaKeyboardDialog } from "@/components/math/formula-keyboard-dialog";
 import { MathBlock, MathInline } from "@/components/math";
 import { getApolloErrorMessage } from "@/lib/apollo-error";
+import { getCloudflareGraphqlUrl } from "@/lib/cloudflare-sync";
 
 type QuestionType = "mcq" | "open" | "short";
 
@@ -81,12 +83,16 @@ type ExamByIdData = {
       id: string;
       type: QuestionType;
       question: string;
+      imageUrl: string | null;
+      videoUrl: string | null;
       order: number;
       correctChoiceId: string | null;
       choices: {
         id: string;
         label: string;
         text: string;
+        imageUrl: string | null;
+        videoUrl: string | null;
         isCorrect: boolean;
       }[];
     }[];
@@ -138,12 +144,16 @@ const GET_EXAM_BY_ID = gql`
         id
         type
         question
+        imageUrl
+        videoUrl
         order
         correctChoiceId
         choices {
           id
           label
           text
+          imageUrl
+          videoUrl
           isCorrect
         }
       }
@@ -286,8 +296,8 @@ function createQuestionDraftFromServer(
     type: question.type,
     topic: "",
     difficulty: "",
-    imageUrl: "",
-    videoUrl: "",
+    imageUrl: question.imageUrl ?? "",
+    videoUrl: question.videoUrl ?? "",
     imageFileName: "",
     videoFileName: "",
     showImageInput: false,
@@ -299,8 +309,8 @@ function createQuestionDraftFromServer(
         label: choice.label,
         text: choice.text,
         isCorrect: choice.isCorrect,
-        imageUrl: "",
-        videoUrl: "",
+        imageUrl: choice.imageUrl ?? "",
+        videoUrl: choice.videoUrl ?? "",
         imageFileName: "",
         videoFileName: "",
         showImageInput: false,
@@ -326,6 +336,25 @@ function readFileAsDataUrl(file: File) {
     reader.onerror = () => reject(new Error("Файлыг уншихад алдаа гарлаа."));
     reader.readAsDataURL(file);
   });
+}
+
+async function dataUrlToFile(dataUrl: string, fallbackName: string) {
+  const response = await fetch(dataUrl);
+  const blob = await response.blob();
+
+  return new File([blob], fallbackName.trim() || "image", {
+    type: blob.type || "application/octet-stream",
+  });
+}
+
+function getQuestionImageUploadUrl() {
+  const graphqlUrl = getCloudflareGraphqlUrl();
+
+  if (!graphqlUrl) {
+    throw new Error("GraphQL URL тохируулагдаагүй байна.");
+  }
+
+  return graphqlUrl.replace(/\/graphql\/?$/, "/uploads/question-image");
 }
 
 function normalizeQuestionChoices(choices: ChoiceDraft[]) {
@@ -457,6 +486,7 @@ function renderPreviewContent(value: string) {
 }
 
 export default function TeacherExamEditPage() {
+  const { getToken } = useAuth();
   const params = useParams<{ examId: string }>();
   const searchParams = useSearchParams();
   const examId = Array.isArray(params.examId) ? params.examId[0] : params.examId;
@@ -504,6 +534,10 @@ export default function TeacherExamEditPage() {
       variables: { examId },
       skip: !examId,
     });
+
+  useEffect(() => {
+    console.log(examData)
+  }, [examData])
 
   const [createQuestionWithChoices, { loading: saveQuestionLoading }] =
     useMutation<CreateQuestionWithChoicesData>(CREATE_QUESTION_WITH_CHOICES);
@@ -705,11 +739,11 @@ export default function TeacherExamEditPage() {
         question.choices.map((choice) =>
           choice.id === formulaTarget.choiceId
             ? {
-                ...choice,
+              ...choice,
               text: choice.text.trim()
-                  ? `${choice.text} ${trimmedLatex} `
-                  : `${trimmedLatex} `,
-              }
+                ? `${choice.text} ${trimmedLatex} `
+                : `${trimmedLatex} `,
+            }
             : choice,
         ),
       ),
@@ -983,6 +1017,7 @@ export default function TeacherExamEditPage() {
     }
   };
 
+
   const handleChoiceAttachmentSelect = async (
     questionId: string,
     choiceId: string,
@@ -1024,6 +1059,59 @@ export default function TeacherExamEditPage() {
         getApolloErrorMessage(error, "Файл уншихад алдаа гарлаа."),
       );
     }
+  };
+
+  const uploadImageIfNeeded = async ({
+    sourceUrl,
+    fileName,
+    questionId,
+    choiceId,
+  }: {
+    sourceUrl: string;
+    fileName: string;
+    questionId: string;
+    choiceId?: string;
+  }) => {
+    const trimmedSourceUrl = sourceUrl.trim();
+
+    if (!trimmedSourceUrl) {
+      return null;
+    }
+
+    if (!trimmedSourceUrl.startsWith("data:image/")) {
+      return trimmedSourceUrl;
+    }
+
+    const token = await getToken();
+    const uploadUrl = getQuestionImageUploadUrl();
+    const file = await dataUrlToFile(trimmedSourceUrl, fileName || "image");
+    const formData = new FormData();
+
+    formData.set("file", file);
+    formData.set("examId", examId);
+    formData.set("questionId", questionId);
+
+    if (choiceId) {
+      formData.set("choiceId", choiceId);
+    }
+
+    const response = await fetch(uploadUrl, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error("Зураг R2 руу хадгалах үед алдаа гарлаа.");
+    }
+
+    const payload = (await response.json()) as { url?: string; error?: string };
+
+    if (!payload.url) {
+      throw new Error(payload.error || "Зургийн URL буцаагдсангүй.");
+    }
+
+    return payload.url;
   };
 
   const removeChoice = (choiceId: string) => {
@@ -1091,27 +1179,60 @@ export default function TeacherExamEditPage() {
       return;
     }
 
-    const questionInput = {
-      examId,
-      indexOnExam: activeQuestionIndex + 1,
-      question: activeQuestion.question.trim(),
-      type: activeQuestion.type,
-      topic: activeQuestion.topic?.trim() || null,
-      difficulty: activeQuestion.difficulty?.trim() || null,
-      imageUrl: activeQuestion.imageUrl?.trim() || null,
-      videoUrl: activeQuestion.videoUrl?.trim() || null,
-      choices:
+    let questionInput;
+
+    try {
+      setStatusMessage("Зураг байршуулж байна...");
+
+      const uploadedQuestionImageUrl = await uploadImageIfNeeded({
+        sourceUrl: activeQuestion.imageUrl,
+        fileName: activeQuestion.imageFileName,
+        questionId: activeQuestion.id,
+      });
+
+      const uploadedChoices =
         activeQuestion.type === "mcq"
-          ? normalizeQuestionChoices(activeQuestion.choices).map((choice) => ({
-            id: choice.id,
-            label: choice.label,
-            text: choice.text.trim(),
-            isCorrect: choice.isCorrect,
-            imageUrl: choice.imageUrl?.trim() || null,
-            videoUrl: choice.videoUrl?.trim() || null,
-          }))
-          : [],
-    };
+          ? await Promise.all(
+            normalizeQuestionChoices(activeQuestion.choices).map(async (choice) => ({
+              ...choice,
+              imageUrl:
+                (await uploadImageIfNeeded({
+                  sourceUrl: choice.imageUrl,
+                  fileName: choice.imageFileName,
+                  questionId: activeQuestion.id,
+                  choiceId: choice.id,
+                })) ?? null,
+            })),
+          )
+          : [];
+
+      questionInput = {
+        examId,
+        indexOnExam: activeQuestionIndex + 1,
+        question: activeQuestion.question.trim(),
+        type: activeQuestion.type,
+        topic: activeQuestion.topic?.trim() || null,
+        difficulty: activeQuestion.difficulty?.trim() || null,
+        imageUrl: uploadedQuestionImageUrl,
+        videoUrl: activeQuestion.videoUrl?.trim() || null,
+        choices:
+          activeQuestion.type === "mcq"
+            ? uploadedChoices.map((choice) => ({
+              id: choice.id,
+              label: choice.label,
+              text: choice.text.trim(),
+              isCorrect: choice.isCorrect,
+              imageUrl: choice.imageUrl,
+              videoUrl: choice.videoUrl?.trim() || null,
+            }))
+            : [],
+      };
+    } catch (error) {
+      setStatusMessage(
+        getApolloErrorMessage(error, "Зургийг хадгалахад алдаа гарлаа."),
+      );
+      return;
+    }
 
     if (effectiveSavedQuestionIds.has(activeQuestion.id)) {
       if (dirtyQuestionIds.has(activeQuestion.id)) {
@@ -1457,8 +1578,8 @@ export default function TeacherExamEditPage() {
                         closeMenus();
                       }}
                       className={`flex h-11 w-11 items-center justify-center rounded-[10px] border text-[15px] font-medium transition ${isActive
-                          ? "border-[#9077F7] bg-[#F0EEFF] text-[#6F5DE2]"
-                          : "border-[#E8E2F1] bg-white text-[#2A2732] hover:border-[#D6CFF3]"
+                        ? "border-[#9077F7] bg-[#F0EEFF] text-[#6F5DE2]"
+                        : "border-[#E8E2F1] bg-white text-[#2A2732] hover:border-[#D6CFF3]"
                         }`}
                     >
                       {index + 1}
@@ -1513,8 +1634,8 @@ export default function TeacherExamEditPage() {
                               type="button"
                               onClick={() => showQuestionMediaInput(option.key)}
                               className={`flex w-full items-center gap-4 px-5 py-4 text-left text-[18px] text-[#111111] transition hover:bg-[#F8F6FF] ${option.key === "pdf"
-                                  ? "border-t border-[#EAE4F4]"
-                                  : ""
+                                ? "border-t border-[#EAE4F4]"
+                                : ""
                                 }`}
                             >
                               <Icon className="h-6 w-6 text-[#6F687D]" />
@@ -1572,7 +1693,7 @@ export default function TeacherExamEditPage() {
               </div>
 
               {hasMathPreview(activeQuestion.question) &&
-              editingQuestionId !== activeQuestion.id ? (
+                editingQuestionId !== activeQuestion.id ? (
                 <button
                   type="button"
                   onClick={() => setEditingQuestionId(activeQuestion.id)}
@@ -1747,8 +1868,8 @@ export default function TeacherExamEditPage() {
                               }))
                             }
                             className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-white transition ${choice.isCorrect
-                                ? "border-[#8F76F6]"
-                                : "border-[#BAB4C5] hover:border-[#8F76F6]"
+                              ? "border-[#8F76F6]"
+                              : "border-[#BAB4C5] hover:border-[#8F76F6]"
                               }`}
                             aria-label={`${choice.label} зөв хариулт болгох`}
                           >
@@ -1818,8 +1939,8 @@ export default function TeacherExamEditPage() {
                                         showChoiceMediaInput(choice.id, option.key)
                                       }
                                       className={`flex w-full items-center gap-4 px-5 py-4 text-left text-[18px] text-[#111111] transition hover:bg-[#F8F6FF] ${option.key === "pdf"
-                                          ? "border-t border-[#EAE4F4]"
-                                          : ""
+                                        ? "border-t border-[#EAE4F4]"
+                                        : ""
                                         }`}
                                     >
                                       <Icon className="h-6 w-6 text-[#6F687D]" />
@@ -1836,8 +1957,8 @@ export default function TeacherExamEditPage() {
                             onClick={() => removeChoice(choice.id)}
                             disabled={isRemoveDisabled}
                             className={`transition ${isRemoveDisabled
-                                ? "cursor-not-allowed opacity-45"
-                                : "hover:text-[#DE5A52]"
+                              ? "cursor-not-allowed opacity-45"
+                              : "hover:text-[#DE5A52]"
                               }`}
                             aria-label={`${choice.label} хариулт устгах`}
                           >

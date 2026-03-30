@@ -36,6 +36,8 @@ export const examTypeDefs = gql`
         id: ID!
         label: String!
         text: String!
+        imageUrl: String
+        videoUrl: String
         isCorrect: Boolean!
     }
 
@@ -44,6 +46,8 @@ export const examTypeDefs = gql`
         id: ID!
         type: QuestionType!
         question: String!
+        imageUrl: String
+        videoUrl: String
         order: Int!
         correctChoiceId: String
         choices: [TeacherExamChoice!]!

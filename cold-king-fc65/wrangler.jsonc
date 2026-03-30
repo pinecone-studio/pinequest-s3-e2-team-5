@@ -38,7 +38,14 @@
 		"CLERK_SECRET_KEY": "sk_test_cSgZSSRpRAwe963ApyN1x0pQaQuLA5zEZBbpzRyeYi",
 		"CLERK_JWT_KEY": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsa6vio+az6kCL+no2w+9EfcDSAjqqRo0/KmOkGrZQT0Kr7nKlBOnfbSiMavbCfq4AbnD4K+laMV1AdeN5IcnfuAmXPpiV2pM1CMxRzInWcFpEWqc+LbG5jWgUyewXJwQhYFftVBFGI+R2xIyjK/vqfKTGPdke8pVcg+n8IbM/MIlHnGVDQrJSHAxVj5M6sVtYPwfkjRMyVjgPQm+yb08gjAOQIN0FZHK41xsXt3+Jght9XruFKcR3jcTDFOiowR3VGZstNbxTN50po3Jyv10JD0+rd1frxYUF4kYnkbKQ4HsTIikdZnXvacC+P7ByaAj7jZkiiVq99k6YTO1/glLRQIDAQAB",
 		// "FRONTEND_ORIGIN": "https://pinequest-s3-e2-team-5-web-preview.ebmsteam10.workers.dev/"
-	}
+	},
+	"r2_buckets": [
+		{
+			"bucket_name": "exam-media",
+			"binding": "exam_media",
+			"remote": true
+		}
+	]
 	/**
 	 * Smart Placement
 	 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
