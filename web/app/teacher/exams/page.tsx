@@ -356,7 +356,7 @@ export default function TeacherExamsPage() {
         variables: {
           input: {
             examId: schedulingExam.id,
-            classroomId: effectiveScheduleClassroomId,
+            classroomId: selectedCreateClassroomId,
             scheduledDate: scheduleDate,
             startTime: scheduleStartTime,
           },
@@ -421,9 +421,8 @@ export default function TeacherExamsPage() {
                     <select
                       value={subject}
                       onChange={(event) => setSubject(event.target.value)}
-                      className={`${fieldClassName} appearance-none pr-14 text-[#1A1623] ${
-                        subject ? "" : "text-[#8E8A94]"
-                      }`}
+                      className={`${fieldClassName} appearance-none pr-14 text-[#1A1623] ${subject ? "" : "text-[#8E8A94]"
+                        }`}
                     >
                       <option value="" disabled>
                         Хичээл сонгох
@@ -454,29 +453,11 @@ export default function TeacherExamsPage() {
                   <label className="block text-[16px] font-medium text-[#111111]">
                     Анги
                   </label>
-                  <div className="relative">
-                    <select
-                      value={selectedCreateClassroomId}
-                      onChange={(event) =>
-                        setSelectedCreateClassroomId(event.target.value)
-                      }
-                      disabled={!hasCreateClassroomOptions}
-                      className={`${fieldClassName} appearance-none pr-14 ${
-                        selectedCreateClassroomId ? "" : "text-[#8E8A94]"
-                      }`}
-                    >
-                      <option value="" disabled>
-                        {hasCreateClassroomOptions
-                          ? "Анги сонгох"
-                          : "Анги олдсонгүй"}
-                      </option>
-                      {classrooms.map((classroom) => (
-                        <option key={classroom.id} value={classroom.id}>
-                          {classroom.className}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8E8A94]" />
+                  <div>
+                    <input
+                      className="border w-full h-10 rounded-lg"
+                      placeholder="angi"
+                    />
                   </div>
                 </div>
 
@@ -564,11 +545,10 @@ export default function TeacherExamsPage() {
                   key={tab.key}
                   type="button"
                   onClick={() => setActiveTab(tab.key)}
-                  className={`border-b-2 pb-3 transition-colors ${
-                    isActive
-                      ? "border-[#9A7BFF] text-[#9A7BFF]"
-                      : "border-transparent text-[#25232A]"
-                  }`}
+                  className={`border-b-2 pb-3 transition-colors ${isActive
+                    ? "border-[#9A7BFF] text-[#9A7BFF]"
+                    : "border-transparent text-[#25232A]"
+                    }`}
                 >
                   {tab.label}
                 </button>
@@ -615,22 +595,22 @@ export default function TeacherExamsPage() {
               </label>
               <div className="relative">
                 <select
-                  value={effectiveScheduleGrade}
-                  onChange={(event) => setScheduleGrade(event.target.value)}
-                  className={`${scheduleDialogFieldClassName} appearance-none pr-14 ${
-                    effectiveScheduleGrade ? "" : "text-[#8E8A94]"
-                  }`}
+                  value={selectedCreateClassroomId}
+                  onChange={(event) =>
+                    setSelectedCreateClassroomId(event.target.value)
+                  }
+                  disabled={!hasCreateClassroomOptions}
+                  className={`${fieldClassName} appearance-none pr-14 ${selectedCreateClassroomId ? "" : "text-[#8E8A94]"
+                    }`}
                 >
                   <option value="" disabled>
-                    {hasSchedulableGrades ? "Бүлэг сонгох" : "Бүлэг олдсонгүй"}
+                    {hasCreateClassroomOptions
+                      ? "Анги сонгох"
+                      : "Анги олдсонгүй"}
                   </option>
-                  {scheduleGradeOptions.map((option) => (
-                    <option
-                      key={option.label}
-                      value={option.label}
-                      disabled={!option.classroomId}
-                    >
-                      {option.label}
+                  {classrooms.map((classroom) => (
+                    <option key={classroom.id} value={classroom.id}>
+                      {classroom.className}
                     </option>
                   ))}
                 </select>

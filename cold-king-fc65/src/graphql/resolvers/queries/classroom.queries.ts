@@ -5,6 +5,7 @@ import { studentExamSubmissions } from "../../../db/schemas/student-exam-submiss
 import { students } from "../../../db/schemas/student.schema";
 import { GraphQLContext } from "../../../server"
 import { assertAuthenticated, notFoundError } from "../../errors";
+import { announcedExamGrades } from "../../../db/schemas/announcedExamGrades.schema";
 
 function formatStudentListName(firstName: string, lastName: string) {
 	const normalizedFirstName = firstName.trim();
@@ -61,8 +62,8 @@ export const classRoomQuery = {
 
 			const classroomExams = await context.db
 				.select()
-				.from(exams)
-				.where(eq(exams.classroomId, classroom.id))
+				.from(announcedExamGrades)
+				.where(eq(announcedExamGrades.classroomId, classroom.id))
 				.all();
 
 			const examIds = classroomExams.map((exam) => exam.id);

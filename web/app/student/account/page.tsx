@@ -184,6 +184,11 @@ export default function StudentAccountPage() {
     error: availableExamsError,
     refetch: refetchAvailableExams,
   } = useQuery<AvailableExamsData>(GET_AVAILABLE_EXAMS);
+
+  useEffect(() => {
+    console.log(availableExamsData)
+  }, [availableExamsData])
+
   const {
     data: activeExamData,
     loading: activeExamLoading,

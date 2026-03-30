@@ -7,5 +7,6 @@ export const announcedExamGrades = sqliteTable("announced_exam_grades", {
     classroomId: text().notNull(),
 
     announcedExamId: text().notNull(),
+    
     createdBy: text().notNull()
 })

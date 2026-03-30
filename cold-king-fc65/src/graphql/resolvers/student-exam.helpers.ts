@@ -32,17 +32,17 @@ export async function requireStudentRecord(context: GraphQLContext) {
 
 export async function getAccessibleExamForStudent(
 	context: GraphQLContext,
-	examId: string,
+	announcedExamId: string,
 ) {
 	const student = await requireStudentRecord(context);
 	const examRecord = await context.db
 		.select()
 		.from(announcedExamGrades)
-		.innerJoin(announcedExams, eq(announcedExamGrades.announcedExamId, announcedExams.id))
+		.innerJoin(announcedExams, eq(announcedExamGrades.announcedExamId, announcedExams.examId))
 		.innerJoin(exams, eq(announcedExams.examId, exams.id))
 		.where(
 			and(
-				eq(exams.id, examId),
+				eq(announcedExams.id, announcedExamId),
 				eq(announcedExamGrades.classroomId, student.classroomId),
 				eq(announcedExams.openStatus, true),
 			),
@@ -57,6 +57,7 @@ export async function getAccessibleExamForStudent(
 		student,
 		exam: {
 			...examRecord.exams,
+			announcedExamId: examRecord.announced_exams.id,
 			scheduledDate: examRecord.announced_exams.scheduledDate,
 			startTime: examRecord.announced_exams.startTime,
 			openStatus: examRecord.announced_exams.openStatus,
@@ -86,21 +87,21 @@ export async function loadQuestionsWithChoices(
 	const mediaColumnsSupported = await supportsChoiceMediaColumns(context);
 	const questionChoices = mediaColumnsSupported
 		? await context.db
-				.select()
-				.from(choices)
-				.where(inArray(choices.questionId, questionIds))
-				.all()
+			.select()
+			.from(choices)
+			.where(inArray(choices.questionId, questionIds))
+			.all()
 		: (
-				await context.db
-					.select()
-					.from(legacyChoices)
-					.where(inArray(legacyChoices.questionId, questionIds))
-					.all()
-			).map((choice) => ({
-				...choice,
-				imageUrl: null,
-				videoUrl: null,
-			}));
+			await context.db
+				.select()
+				.from(legacyChoices)
+				.where(inArray(legacyChoices.questionId, questionIds))
+				.all()
+		).map((choice) => ({
+			...choice,
+			imageUrl: null,
+			videoUrl: null,
+		}));
 
 	return sortedQuestions.map((question, index) => ({
 		...question,
