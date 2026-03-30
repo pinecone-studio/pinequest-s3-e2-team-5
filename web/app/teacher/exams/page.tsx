@@ -356,7 +356,7 @@ export default function TeacherExamsPage() {
         variables: {
           input: {
             examId: schedulingExam.id,
-            classroomId: selectedCreateClassroomId,
+            classroomId: effectiveScheduleClassroomId,
             scheduledDate: scheduleDate,
             startTime: scheduleStartTime,
           },
