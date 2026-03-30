@@ -17,6 +17,7 @@ export const studentTypeDefs = gql`
 
 	type StudentAvailableExam {
 		id: ID!
+		examId: String!
 		title: String!
 		subject: String!
 		description: String

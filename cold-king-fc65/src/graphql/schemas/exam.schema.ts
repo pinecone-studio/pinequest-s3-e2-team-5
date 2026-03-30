@@ -6,15 +6,30 @@ export const examTypeDefs = gql`
         title: String!
         subject: String!
         description: String
-        openStatus: Boolean!
+        openStatus: Boolean
         duration: Int!
         grade: String!
         createdBy: String!
-        classroomId: String
         classroomName: String
         scheduledDate: String
         startTime: String
         questionCount: Int!
+    }
+
+    type AnnouncedExam {
+        id: ID!
+        examId: String!
+        openStatus: Boolean!
+        scheduledDate: String!
+        startTime: String!
+        createdBy: String!
+    }
+
+    type AnnouncedExamGrade{
+        id: ID!
+        classroomId: String!
+        announcedExamId: String!
+        createdBy: String!
     }
 
     type TeacherExamChoice {
@@ -23,6 +38,7 @@ export const examTypeDefs = gql`
         text: String!
         isCorrect: Boolean!
     }
+
 
     type TeacherExamQuestion {
         id: ID!
@@ -121,7 +137,7 @@ export const examTypeDefs = gql`
 
     type Mutation{
         createExam(input: createExamInput!): Exam
-        scheduleExam(input: scheduleExamInput!): Exam
+        scheduleExam(input: scheduleExamInput!): AnnouncedExam
         updateExam(input: updateExamInput!): Exam
         deleteExam(examId: String!): Exam
     }

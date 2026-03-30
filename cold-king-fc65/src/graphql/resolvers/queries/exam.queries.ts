@@ -1,12 +1,24 @@
 import { and, eq } from 'drizzle-orm';
 import { GraphQLContext } from '../../../server';
+import { classrooms } from '../../../db/schemas/classroom.schema';
 import { exams } from '../../../db/schemas/exam.schema';
 import { studentExamAnswers } from '../../../db/schemas/student-exam-answer.schema';
 import { studentExamSubmissions } from '../../../db/schemas/student-exam-submission.schema';
 import { students } from '../../../db/schemas/student.schema';
 import { loadQuestionsWithChoices } from '../student-exam.helpers';
-import { getClassroomName, getTeacherExam, getTeacherStudentSubmission, requireTeacherId } from '../teacher-exam.helpers';
+import { getTeacherExam, getTeacherStudentSubmission, requireTeacherId } from '../teacher-exam.helpers';
+import { announcedExamGrades } from '../../../db/schemas/announcedExamGrades.schema';
 import { announcedExams } from '../../../db/schemas/announcedExams.schema';
+
+async function getExamAnnouncementMetadata(context: GraphQLContext, examId: string) {
+	return context.db
+		.select()
+		.from(announcedExams)
+		.leftJoin(announcedExamGrades, eq(announcedExamGrades.announcedExamId, announcedExams.id))
+		.leftJoin(classrooms, eq(classrooms.id, announcedExamGrades.classroomId))
+		.where(eq(announcedExams.examId, examId))
+		.get();
+}
 
 export const examQuery = {
 	Exam: {
@@ -14,8 +26,37 @@ export const examQuery = {
 			const questions = await loadQuestionsWithChoices(context, exam.id);
 			return questions.length;
 		},
-		classroomName: async (exam: { classroomId?: string | null }, _args: unknown, context: GraphQLContext) => {
-			return getClassroomName(context, exam.classroomId ?? null);
+		openStatus: async (exam: { id: string; openStatus?: boolean | null }, _args: unknown, context: GraphQLContext) => {
+			if (typeof exam.openStatus === 'boolean') {
+				return exam.openStatus;
+			}
+
+			const metadata = await getExamAnnouncementMetadata(context, exam.id);
+			return metadata?.announced_exams.openStatus ?? null;
+		},
+		classroomName: async (exam: { id: string; classroomName?: string | null }, _args: unknown, context: GraphQLContext) => {
+			if ('classroomName' in exam) {
+				return exam.classroomName ?? null;
+			}
+
+			const metadata = await getExamAnnouncementMetadata(context, exam.id);
+			return metadata?.classrooms?.className ?? null;
+		},
+		scheduledDate: async (exam: { id: string; scheduledDate?: string | null }, _args: unknown, context: GraphQLContext) => {
+			if ('scheduledDate' in exam) {
+				return exam.scheduledDate ?? null;
+			}
+
+			const metadata = await getExamAnnouncementMetadata(context, exam.id);
+			return metadata?.announced_exams.scheduledDate ?? null;
+		},
+		startTime: async (exam: { id: string; startTime?: string | null }, _args: unknown, context: GraphQLContext) => {
+			if ('startTime' in exam) {
+				return exam.startTime ?? null;
+			}
+
+			const metadata = await getExamAnnouncementMetadata(context, exam.id);
+			return metadata?.announced_exams.startTime ?? null;
 		},
 	},
 	Query: {
@@ -35,7 +76,22 @@ export const examQuery = {
 		},
 		teacherScheduledExams: async (_: unknown, _args: unknown, context: GraphQLContext) => {
 			const teacherId = await requireTeacherId(context);
-			return await context.db.select().from(announcedExams).where(eq(announcedExams.createdBy, teacherId)).all();
+			const scheduledExams = await context.db
+				.select()
+				.from(announcedExams)
+				.innerJoin(exams, eq(announcedExams.examId, exams.id))
+				.leftJoin(announcedExamGrades, eq(announcedExamGrades.announcedExamId, announcedExams.id))
+				.leftJoin(classrooms, eq(classrooms.id, announcedExamGrades.classroomId))
+				.where(eq(announcedExams.createdBy, teacherId))
+				.all();
+
+			return scheduledExams.map(({ exams: exam, announced_exams, classrooms }) => ({
+				...exam,
+				openStatus: announced_exams.openStatus,
+				scheduledDate: announced_exams.scheduledDate,
+				startTime: announced_exams.startTime,
+				classroomName: classrooms?.className ?? null,
+			}));
 
 		},
 		teacherExamDetail: async (_: unknown, args: { examId: string }, context: GraphQLContext) => {

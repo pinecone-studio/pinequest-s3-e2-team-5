@@ -6,6 +6,7 @@ import { questions } from "../../../db/schemas/question.schema";
 import { assertAuthenticated, notFoundError, unauthorizedError } from "../../errors";
 import { and, eq, inArray } from "drizzle-orm";
 import { announcedExams } from "../../../db/schemas/announcedExams.schema";
+import { announcedExamGrades } from "../../../db/schemas/announcedExamGrades.schema";
 
 export const examMutation = {
     Mutation: {
@@ -81,16 +82,32 @@ export const examMutation = {
                 throw notFoundError("Classroom not found.");
             }
 
-            return context.db
-                .update(announcedExams)
-                .set({
+            const announcedExam = await context.db
+                .insert(announcedExams)
+                .values({
+                    id: crypto.randomUUID(),
                     scheduledDate: args.input.scheduledDate,
                     startTime: args.input.startTime,
                     openStatus: true,
+                    examId: args.input.examId,
+                    createdBy: context.auth.userId
                 })
-                .where(eq(announcedExams.examId, exam.id))
                 .returning()
                 .get();
+
+            await context.db
+                .insert(announcedExamGrades)
+                .values({
+                    id: crypto.randomUUID(),
+                    classroomId: args.input.classroomId,
+                    announcedExamId: announcedExam.id,
+                    createdBy: context.auth.userId
+                });
+
+            return announcedExam;
+
+
+
         },
         updateExam: async (
             _: unknown,

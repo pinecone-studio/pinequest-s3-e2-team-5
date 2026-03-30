@@ -4,6 +4,7 @@ import { exams } from "../../../db/schemas/exam.schema";
 import { students } from "../../../db/schemas/student.schema";
 import { GraphQLContext } from "../../../server"
 import { assertAuthenticated, badUserInputError, notFoundError } from "../../errors";
+import { announcedExamGrades } from "../../../db/schemas/announcedExamGrades.schema";
 
 function generateClassCode() {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -105,8 +106,8 @@ export const classroomMutation = {
 
             const examExists = await context.db
                 .select({ id: exams.id })
-                .from(exams)
-                .where(eq(exams.classroomId, classroom.id))
+                .from(announcedExamGrades)
+                .where(eq(announcedExamGrades.classroomId, classroom.id))
                 .get();
 
             if (examExists) {
