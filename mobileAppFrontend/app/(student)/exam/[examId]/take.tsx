@@ -1,19 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { useKeepAwake } from "expo-keep-awake";
-import { usePreventScreenCapture, useScreenshotListener } from "expo-screen-capture";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Alert,
-  AppState,
-  Pressable,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useAppData } from "@/data/app-data";
+import { SecurityOverlay } from "@/components/SecurityOverlay";
+import { SecureText } from "@/components/SecureText";
 import { FullScreenLoader } from "@/components/FullScreenLoader";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { StatusCard } from "@/components/StatusCard";
@@ -21,6 +14,8 @@ import { clearExamDraft, getExamDraft, saveExamDraft } from "@/lib/exam-draft";
 import { colors, fonts, shadows } from "@/lib/theme";
 import type { StudentAnswerDraft } from "@/lib/student-types";
 import { formatCountdown } from "@/lib/student-exam";
+import { shuffleQuestionsForUser } from "@/security/question-order";
+import { useExamIntegrity } from "@/security/useExamIntegrity";
 
 function getRemainingSeconds(durationMinutes: number, startedAt: number) {
   const expiresAt = startedAt + durationMinutes * 60 * 1000;
@@ -30,42 +25,54 @@ function getRemainingSeconds(durationMinutes: number, startedAt: number) {
 export default function TakeExamScreen() {
   const params = useLocalSearchParams<{ examId: string }>();
   const examId = typeof params.examId === "string" ? params.examId : "";
-  const { getExamById, submitExam } = useAppData();
+  const { getExamById, submitExam, student } = useAppData();
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [answers, setAnswers] = useState<Record<string, StudentAnswerDraft>>({});
   const [submitError, setSubmitError] = useState("");
-  const [leaveCount, setLeaveCount] = useState(0);
-  const [captureCount, setCaptureCount] = useState(0);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [isRestoring, setIsRestoring] = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
-  const warnedOnLeaveRef = useRef(false);
-  const warnedOnCaptureRef = useRef(false);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const autoSubmittedRef = useRef(false);
   const answersRef = useRef<Record<string, StudentAnswerDraft>>({});
   const startedAtRef = useRef<number | null>(null);
-  const submitExamRef = useRef<(source: "manual" | "auto") => Promise<void>>(async () => {});
+  const submitExamRef = useRef<
+    (source: "manual" | "auto" | "background" | "session_replaced") => Promise<void>
+  >(async () => {});
   const exam = getExamById(examId);
-  const answeredCount = useMemo(
-    () =>
-      exam?.questions.filter((question) => Boolean(answers[question.id]?.selectedChoiceId)).length ??
-      0,
-    [answers, exam?.questions],
+
+  const shuffledQuestions = useMemo(
+    () => (exam ? shuffleQuestionsForUser(exam.questions, student.email, exam.id) : []),
+    [exam, student.email],
   );
-  const palette = useMemo(() => exam?.questions.map((question) => question.order) ?? [], [exam]);
+
+  const currentQuestion = shuffledQuestions[currentQuestionIndex] ?? null;
+  const currentAnswer = currentQuestion ? answers[currentQuestion.id]?.selectedChoiceId ?? null : null;
+  const answeredCount = useMemo(
+    () => shuffledQuestions.filter((question) => Boolean(answers[question.id]?.selectedChoiceId)).length,
+    [answers, shuffledQuestions],
+  );
+  const isLastQuestion = currentQuestionIndex >= shuffledQuestions.length - 1;
 
   useKeepAwake();
-  usePreventScreenCapture();
-  useScreenshotListener(() => {
-    setCaptureCount((current) => current + 1);
 
-    if (!warnedOnCaptureRef.current) {
-      warnedOnCaptureRef.current = true;
-      Alert.alert(
-        "Screenshot илэрлээ",
-        "Шалгалтын үеэр screenshot тохиолдлыг бүртгэж байна. Screen recording protection идэвхтэй хэвээр.",
+  const {
+    leaveCount,
+    screenshotCount,
+    recordingCount,
+    violationCount,
+    warningMessage,
+    recordingBlurActive,
+    faceStatus,
+    nativeMonitoringAvailable,
+  } = useExamIntegrity({
+    userId: student.email,
+    examId,
+    onAutoSubmit: async (reason) => {
+      await submitExamRef.current(
+        reason === "timer" ? "auto" : reason === "session_replaced" ? "session_replaced" : "background",
       );
-    }
+    },
   });
 
   useEffect(() => {
@@ -88,12 +95,14 @@ export default function TakeExamScreen() {
       autoSubmittedRef.current = false;
 
       const draft = await getExamDraft(exam.id);
-      const restoredStartedAt =
-        draft?.startedAt && draft.startedAt > 0 ? draft.startedAt : Date.now();
+      const restoredStartedAt = draft?.startedAt && draft.startedAt > 0 ? draft.startedAt : Date.now();
 
       if (!cancelled) {
         setAnswers(draft?.answers ?? {});
         setStartedAt(restoredStartedAt);
+        setCurrentQuestionIndex(
+          Math.min(Math.max(draft?.currentQuestionIndex ?? 0, 0), Math.max(shuffledQuestions.length - 1, 0)),
+        );
         setSecondsLeft(getRemainingSeconds(exam.duration, restoredStartedAt));
         setIsRestoring(false);
       }
@@ -102,7 +111,7 @@ export default function TakeExamScreen() {
     return () => {
       cancelled = true;
     };
-  }, [exam]);
+  }, [exam, shuffledQuestions.length]);
 
   useEffect(() => {
     if (!exam || !startedAt || isRestoring) {
@@ -130,35 +139,18 @@ export default function TakeExamScreen() {
       void saveExamDraft(exam.id, {
         startedAt,
         answers,
+        currentQuestionIndex,
       });
     }, 250);
 
     return () => {
       clearTimeout(timeout);
     };
-  }, [answers, exam, isRestoring, startedAt]);
+  }, [answers, currentQuestionIndex, exam, isRestoring, startedAt]);
 
-  useEffect(() => {
-    const subscription = AppState.addEventListener("change", (nextState) => {
-      if (nextState !== "active") {
-        setLeaveCount((current) => current + 1);
-
-        if (!warnedOnLeaveRef.current) {
-          warnedOnLeaveRef.current = true;
-          Alert.alert(
-            "Шалгалтын хамгаалалт",
-            "Та app-оос гарсан ч хугацаа үргэлжилнэ. Буцаж орвол draft автоматаар сэргээнэ.",
-          );
-        }
-      }
-    });
-
-    return () => {
-      subscription.remove();
-    };
-  }, []);
-
-  submitExamRef.current = async (source: "manual" | "auto") => {
+  submitExamRef.current = async (
+    source: "manual" | "auto" | "background" | "session_replaced",
+  ) => {
     if (!exam || !startedAtRef.current) {
       return;
     }
@@ -183,9 +175,13 @@ export default function TakeExamScreen() {
       setSubmitError(
         caughtError instanceof Error
           ? caughtError.message
-          : source === "auto"
-            ? "Хугацаа дууссан ч шалгалтыг автоматаар илгээж чадсангүй."
-            : "Шалгалт илгээхэд алдаа гарлаа.",
+          : source === "session_replaced"
+            ? "Өөр төхөөрөмжөөс session солигдсон тул auto-submit хийхэд алдаа гарлаа."
+          : source === "background"
+            ? "Та app-оос удаан гарсан тул auto-submit хийхэд алдаа гарлаа."
+            : source === "auto"
+              ? "Хугацаа дууссан ч шалгалтыг автоматаар илгээж чадсангүй."
+              : "Шалгалт илгээхэд алдаа гарлаа.",
       );
     } finally {
       setSubmitLoading(false);
@@ -211,11 +207,25 @@ export default function TakeExamScreen() {
     }));
   };
 
+  const handleNextQuestion = () => {
+    if (!currentQuestion || !currentAnswer) {
+      Alert.alert("Хариулт сонгоно уу", "Дараагийн асуулт руу орохын өмнө нэг сонголт тэмдэглэнэ үү.");
+      return;
+    }
+
+    if (isLastQuestion) {
+      void submitExamRef.current("manual");
+      return;
+    }
+
+    setCurrentQuestionIndex((current) => current + 1);
+  };
+
   if (isRestoring) {
     return <FullScreenLoader label="Шалгалтын session-ийг бэлдэж байна..." />;
   }
 
-  if (!exam) {
+  if (!exam || !currentQuestion) {
     return (
       <SafeAreaView style={styles.page}>
         <View style={styles.content}>
@@ -226,17 +236,29 @@ export default function TakeExamScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.page}>
+    <SafeAreaView edges={["top", "left", "right"]} style={styles.page}>
       <Stack.Screen
         options={{
           gestureEnabled: false,
         }}
       />
 
+      {recordingBlurActive || warningMessage ? (
+        <SecurityOverlay
+          blockInteraction={recordingBlurActive}
+          blurred={recordingBlurActive}
+          message={
+            recordingBlurActive
+              ? "Screen recording эсвэл mirroring илэрсэн тул sensitive контент нуусан."
+              : warningMessage
+          }
+        />
+      ) : null}
+
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerEyebrow}>Secure Exam Mode</Text>
-          <Text style={styles.headerTitle}>Шалгалт явагдаж байна</Text>
+          <SecureText style={styles.headerEyebrow}>Secure Exam Mode</SecureText>
+          <SecureText style={styles.headerTitle}>Шалгалт явагдаж байна</SecureText>
         </View>
         <View style={[styles.timerChip, secondsLeft < 300 ? styles.timerChipDanger : null]}>
           <Ionicons
@@ -244,111 +266,113 @@ export default function TakeExamScreen() {
             size={16}
             color={secondsLeft < 300 ? colors.dangerText : colors.textSecondary}
           />
-          <Text style={[styles.timerText, secondsLeft < 300 ? styles.timerTextDanger : null]}>
+          <SecureText style={[styles.timerText, secondsLeft < 300 ? styles.timerTextDanger : null]}>
             {formatCountdown(secondsLeft)}
-          </Text>
+          </SecureText>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>{exam.title}</Text>
-        <Text style={styles.subtitle}>
-          {answeredCount}/{exam.questions.length} асуулт бөглөгдсөн
-        </Text>
+        <SecureText style={styles.title}>{exam.title}</SecureText>
+        <SecureText style={styles.subtitle}>
+          Нэг удаад нэг асуулт харагдана. Өмнөх асуулт руу буцах боломжгүй.
+        </SecureText>
 
         <StatusCard
           tone="info"
-          message="Screen recording protection, screenshot alert, keep-awake, app switch warning идэвхтэй."
+          message={
+            nativeMonitoringAvailable
+              ? "Screenshot, app switch, recording, face presence мониторинг идэвхтэй."
+              : "Screenshot болон app switch хамгаалалт идэвхтэй. Face / recording native мониторинг нь dev build дээр идэвхжинэ."
+          }
         />
         {leaveCount > 0 ? (
           <StatusCard
             tone="warning"
-            message={`Та шалгалтын үеэр app-оос ${leaveCount} удаа гарсан байна. Хугацаа үргэлжилж байгаа.`}
+            message={`App switch ${leaveCount} удаа бүртгэгдсэн. 5 секундээс илүү гарвал auto-submit хийнэ.`}
           />
-        ) : null}
-        {captureCount > 0 ? (
-          <StatusCard tone="warning" message={`Шалгалтын үеэр ${captureCount} screenshot илэрлээ.`} />
         ) : null}
         {submitError ? <StatusCard tone="error" message={submitError} /> : null}
 
         <View style={styles.progressCard}>
           <View>
-            <Text style={styles.progressValue}>{answeredCount}</Text>
-            <Text style={styles.progressLabel}>Бөглөсөн</Text>
+            <SecureText style={styles.progressValue}>{answeredCount}</SecureText>
+            <SecureText style={styles.progressLabel}>Бөглөсөн</SecureText>
           </View>
           <View>
-            <Text style={styles.progressValue}>{exam.questions.length - answeredCount}</Text>
-            <Text style={styles.progressLabel}>Үлдсэн</Text>
+            <SecureText style={styles.progressValue}>{shuffledQuestions.length - answeredCount}</SecureText>
+            <SecureText style={styles.progressLabel}>Үлдсэн</SecureText>
           </View>
           <View>
-            <Text style={styles.progressValue}>{captureCount}</Text>
-            <Text style={styles.progressLabel}>Screenshot</Text>
+            <SecureText style={styles.progressValue}>{violationCount}</SecureText>
+            <SecureText style={styles.progressLabel}>Violation</SecureText>
           </View>
         </View>
 
-        <View style={styles.paletteCard}>
-          <Text style={styles.paletteTitle}>Асуултын палитр</Text>
-          <View style={styles.paletteGrid}>
-            {palette.map((order) => {
-              const question = exam.questions.find((item) => item.order === order);
-              const isAnswered = question ? Boolean(answers[question.id]?.selectedChoiceId) : false;
+        <View style={styles.securityMetaCard}>
+          <View style={styles.securityMetaRow}>
+            <SecureText style={styles.securityMetaLabel}>Question</SecureText>
+            <SecureText style={styles.securityMetaValue}>
+              {currentQuestionIndex + 1} / {shuffledQuestions.length}
+            </SecureText>
+          </View>
+          <View style={styles.securityMetaRow}>
+            <SecureText style={styles.securityMetaLabel}>Screenshots</SecureText>
+            <SecureText style={styles.securityMetaValue}>{screenshotCount}</SecureText>
+          </View>
+          <View style={styles.securityMetaRow}>
+            <SecureText style={styles.securityMetaLabel}>Recording</SecureText>
+            <SecureText style={styles.securityMetaValue}>{recordingCount}</SecureText>
+          </View>
+          <View style={styles.securityMetaRow}>
+            <SecureText style={styles.securityMetaLabel}>Face status</SecureText>
+            <SecureText style={styles.securityMetaValue}>
+              {faceStatus === "unsupported"
+                ? "Unavailable"
+                : faceStatus === "single_face"
+                  ? "Single"
+                  : faceStatus === "multiple_faces"
+                    ? "Multiple"
+                    : "No face"}
+            </SecureText>
+          </View>
+        </View>
+
+        <View style={styles.questionCard}>
+          <View style={styles.questionHeader}>
+            <SecureText style={styles.questionCounter}>Асуулт {currentQuestionIndex + 1}</SecureText>
+            <SecureText style={styles.questionPoints}>1 оноо</SecureText>
+          </View>
+
+          <SecureText style={styles.questionTitle}>
+            {currentQuestion.question}
+          </SecureText>
+
+          <View style={styles.choiceList}>
+            {currentQuestion.choices.map((choice) => {
+              const selected = answers[currentQuestion.id]?.selectedChoiceId === choice.id;
 
               return (
-                <View
-                  key={order}
-                  style={[styles.paletteItem, isAnswered ? styles.paletteItemDone : null]}
+                <Pressable
+                  key={choice.id}
+                  style={[styles.choiceButton, selected ? styles.choiceButtonSelected : null]}
+                  onPress={() => handleSelectChoice(currentQuestion.id, choice.id)}
                 >
-                  <Text
-                    style={[
-                      styles.paletteItemText,
-                      isAnswered ? styles.paletteItemTextDone : null,
-                    ]}
-                  >
-                    {order}
-                  </Text>
-                </View>
+                  <View style={[styles.radio, selected ? styles.radioSelected : null]}>
+                    {selected ? <View style={styles.radioInner} /> : null}
+                  </View>
+                  <SecureText style={styles.choiceText}>
+                    {choice.label}. {choice.text}
+                  </SecureText>
+                </Pressable>
               );
             })}
           </View>
         </View>
 
-        <View style={styles.questions}>
-          {exam.questions.map((question) => (
-            <View key={question.id} style={styles.questionCard}>
-              <View style={styles.questionHeader}>
-                <Text style={styles.questionTitle}>
-                  {question.order}. {question.question}
-                </Text>
-                <Text style={styles.questionPoints}>1 оноо</Text>
-              </View>
-
-              <View style={styles.choiceList}>
-                {question.choices.map((choice) => {
-                  const selected = answers[question.id]?.selectedChoiceId === choice.id;
-
-                  return (
-                    <Pressable
-                      key={choice.id}
-                      style={[styles.choiceButton, selected ? styles.choiceButtonSelected : null]}
-                      onPress={() => handleSelectChoice(question.id, choice.id)}
-                    >
-                      <View style={[styles.radio, selected ? styles.radioSelected : null]}>
-                        {selected ? <View style={styles.radioInner} /> : null}
-                      </View>
-                      <Text style={styles.choiceText}>
-                        {choice.label}. {choice.text}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-          ))}
-        </View>
-
         <PrimaryButton
-          label={submitLoading ? "Илгээж байна..." : "Шалгалт илгээх"}
-          onPress={() => void submitExamRef.current("manual")}
+          label={submitLoading ? "Илгээж байна..." : isLastQuestion ? "Шалгалт илгээх" : "Дараагийн асуулт"}
+          onPress={() => void handleNextQuestion()}
           disabled={submitLoading}
           loading={submitLoading}
         />
@@ -447,48 +471,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textMuted,
   },
-  paletteCard: {
+  securityMetaCard: {
     marginBottom: 16,
     borderRadius: 24,
     backgroundColor: colors.surface,
-    padding: 18,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
     ...shadows.card,
   },
-  paletteTitle: {
-    fontFamily: fonts.sans.semibold,
-    fontSize: 15,
-    color: colors.textPrimary,
-  },
-  paletteGrid: {
-    marginTop: 12,
+  securityMetaRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  paletteItem: {
-    height: 38,
-    width: 38,
     alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.surfaceTint,
+    justifyContent: "space-between",
+    paddingVertical: 9,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  paletteItemDone: {
-    borderColor: colors.primarySoft,
-    backgroundColor: colors.primary,
-  },
-  paletteItemText: {
-    fontFamily: fonts.sans.semibold,
+  securityMetaLabel: {
+    fontFamily: fonts.sans.medium,
     fontSize: 13,
+    color: colors.textMuted,
+  },
+  securityMetaValue: {
+    fontFamily: fonts.sans.semibold,
+    fontSize: 14,
     color: colors.textPrimary,
-  },
-  paletteItemTextDone: {
-    color: "#FFFFFF",
-  },
-  questions: {
-    gap: 16,
   },
   questionCard: {
     borderRadius: 28,
@@ -498,20 +505,26 @@ const styles = StyleSheet.create({
   },
   questionHeader: {
     flexDirection: "row",
-    gap: 10,
+    alignItems: "center",
     justifyContent: "space-between",
+    gap: 10,
   },
-  questionTitle: {
-    flex: 1,
-    fontFamily: fonts.sans.semibold,
-    fontSize: 16,
-    lineHeight: 24,
-    color: colors.textPrimary,
+  questionCounter: {
+    fontFamily: fonts.sans.medium,
+    fontSize: 12,
+    color: colors.primary,
   },
   questionPoints: {
     fontFamily: fonts.sans.medium,
     fontSize: 12,
     color: colors.textSoft,
+  },
+  questionTitle: {
+    marginTop: 12,
+    fontFamily: fonts.sans.semibold,
+    fontSize: 17,
+    lineHeight: 25,
+    color: colors.textPrimary,
   },
   choiceList: {
     marginTop: 16,
@@ -519,7 +532,6 @@ const styles = StyleSheet.create({
   },
   choiceButton: {
     flexDirection: "row",
-    alignItems: "flex-start",
     gap: 12,
     borderRadius: 18,
     borderWidth: 1,
@@ -529,13 +541,13 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   choiceButtonSelected: {
-    borderColor: colors.primarySoft,
+    borderColor: colors.primary,
     backgroundColor: "#F6F2FF",
   },
   radio: {
     marginTop: 2,
-    height: 20,
-    width: 20,
+    height: 22,
+    width: 22,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 999,
@@ -553,9 +565,9 @@ const styles = StyleSheet.create({
   },
   choiceText: {
     flex: 1,
-    fontFamily: fonts.sans.regular,
+    fontFamily: fonts.sans.medium,
     fontSize: 14,
     lineHeight: 22,
-    color: colors.textSecondary,
+    color: colors.textPrimary,
   },
 });
