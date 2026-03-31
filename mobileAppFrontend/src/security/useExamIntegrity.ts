@@ -40,6 +40,7 @@ export function useExamIntegrity({ userId, examId, onAutoSubmit }: UseExamIntegr
   const autoSubmitInFlightRef = useRef(false);
   const overlayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionReplaceHandledRef = useRef(false);
+  const lastCaptureStateRef = useRef<boolean | null>(null);
 
   usePreventScreenCapture(`exam-${examId}`);
 
@@ -88,7 +89,7 @@ export function useExamIntegrity({ userId, examId, onAutoSubmit }: UseExamIntegr
 
   useScreenshotListener(() => {
     setScreenshotCount((current) => current + 1);
-    showWarning("Screenshot илэрлээ. Энэ үйлдэл violation log-д бүртгэгдлээ.");
+    showWarning("Дэлгэцийн зураг авсан нь илэрлээ. Энэ үйлдэл зөрчлийн бүртгэлд хадгалагдлаа.");
     void pushViolation("screenshot");
   });
 
@@ -119,12 +120,12 @@ export function useExamIntegrity({ userId, examId, onAutoSubmit }: UseExamIntegr
 
         if (duration > 5000 && !autoSubmitInFlightRef.current) {
           autoSubmitInFlightRef.current = true;
-          showWarning("Та 5 секундээс илүү app-оос гарсан тул шалгалтыг автоматаар илгээнэ.");
+          showWarning("Та 5 секундээс илүү аппаас гарсан тул шалгалтыг автоматаар илгээнэ.");
           void onAutoSubmit("background").finally(() => {
             autoSubmitInFlightRef.current = false;
           });
         } else if (leaveCountRef.current > 3) {
-          showWarning("App switch 3-аас олон удаа бүртгэгдлээ. Энэ нь violation болсон.");
+          showWarning("Аппаас 3-аас олон удаа гарсан нь бүртгэгдлээ. Энэ нь зөрчилд тооцогдоно.");
         }
       }
 
@@ -141,23 +142,17 @@ export function useExamIntegrity({ userId, examId, onAutoSubmit }: UseExamIntegr
       return;
     }
 
-    void startNativeSecureExamMonitoring({ userId, examId }).catch(() => {});
-
-    void (async () => {
-      const isCaptured = await getCurrentCaptureState();
-
-      if (isCaptured) {
-        recordingStartedAtRef.current = Date.now();
-        setRecordingBlurActive(true);
-        await setNativeSensitiveBlurEnabled(true).catch(() => {});
+    const handleCaptureState = (event: { isCaptured: boolean; timestamp: number }) => {
+      if (lastCaptureStateRef.current === event.isCaptured) {
+        return;
       }
-    })();
 
-    const recordingSubscription = subscribeCaptureState((event) => {
+      lastCaptureStateRef.current = event.isCaptured;
+
       if (event.isCaptured) {
         recordingStartedAtRef.current = event.timestamp;
         setRecordingBlurActive(true);
-        showWarning("Screen recording эсвэл mirroring илэрлээ. Контент blur хийгдэж байна.");
+        showWarning("Дэлгэц бичлэг эсвэл дэлгэц толиндуулалт илэрлээ. Агуулгыг бүдгэрүүлж байна.");
         void setNativeSensitiveBlurEnabled(true).catch(() => {});
         void pushViolation("recording");
       } else {
@@ -165,14 +160,28 @@ export function useExamIntegrity({ userId, examId, onAutoSubmit }: UseExamIntegr
         setRecordingBlurActive(false);
         void setNativeSensitiveBlurEnabled(false).catch(() => {});
       }
+    };
+
+    void startNativeSecureExamMonitoring({ userId, examId }).catch(() => {});
+
+    const recordingSubscription = subscribeCaptureState((event) => {
+      handleCaptureState(event);
     });
+
+    void (async () => {
+      const isCaptured = await getCurrentCaptureState();
+      handleCaptureState({
+        isCaptured,
+        timestamp: Date.now(),
+      });
+    })();
 
     const faceIntegrity = createFaceIntegrityService({
       onStatusChange: setFaceStatus,
     });
     const removeFaceViolationListener = faceIntegrity.onFaceViolation((violation) => {
       if (violation.type === "multiple_faces") {
-        showWarning("Олон нүүр илэрлээ. Энэ үйлдэл violation log-д бүртгэгдлээ.");
+        showWarning("Олон нүүр илэрлээ. Энэ үйлдэл зөрчлийн бүртгэлд хадгалагдлаа.");
         void pushViolation("multi_face");
         return;
       }
@@ -181,7 +190,7 @@ export function useExamIntegrity({ userId, examId, onAutoSubmit }: UseExamIntegr
       noFaceStartedAtRef.current = null;
       showWarning(
         noFaceViolationCountRef.current > 1
-          ? "Нүүр олон дахин алдагдлаа. Энэ violation log-д бүртгэгдлээ."
+          ? "Нүүр олон дахин алдагдлаа. Энэ үйлдэл зөрчлийн бүртгэлд хадгалагдлаа."
           : "5 секундээс илүү хугацаанд нүүр илрээгүй байна.",
       );
       void pushViolation("no_face", violation.duration);
@@ -191,6 +200,7 @@ export function useExamIntegrity({ userId, examId, onAutoSubmit }: UseExamIntegr
     return () => {
       recordingSubscription.remove();
       removeFaceViolationListener();
+      lastCaptureStateRef.current = null;
       void faceIntegrity.stopFaceMonitoring().catch(() => {});
       void setNativeSensitiveBlurEnabled(false).catch(() => {});
       void stopNativeSecureExamMonitoring().catch(() => {});
@@ -207,7 +217,7 @@ export function useExamIntegrity({ userId, examId, onAutoSubmit }: UseExamIntegr
         }
 
         sessionReplaceHandledRef.current = true;
-        showWarning("Өөр төхөөрөмжөөс session орлогдсон тул шалгалтыг автоматаар илгээнэ.");
+        showWarning("Өөр төхөөрөмжөөс шалгалтын төлөв орлогдсон тул шалгалтыг автоматаар илгээнэ.");
         void pushViolation("session_replaced");
         void onAutoSubmit("session_replaced");
       },

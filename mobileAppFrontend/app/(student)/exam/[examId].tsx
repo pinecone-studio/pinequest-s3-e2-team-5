@@ -46,7 +46,7 @@ export default function ExamDetailScreen() {
       if (!cancelled) {
         setHasReminder(Boolean(reminder));
         setReminderMessage(
-          reminder ? `${formatReminderDate(reminder.reminderDate)}-д reminder тавигдсан.` : "",
+          reminder ? `${formatReminderDate(reminder.reminderDate)}-д сануулга тавигдсан.` : "",
         );
       }
     })();
@@ -67,7 +67,7 @@ export default function ExamDetailScreen() {
       if (hasReminder) {
         await cancelExamReminder(exam.id);
         setHasReminder(false);
-        setReminderMessage("Reminder цуцлагдлаа.");
+        setReminderMessage("Сануулга цуцлагдлаа.");
       } else {
         const scheduled = await scheduleExamReminder({
           examId: exam.id,
@@ -77,11 +77,11 @@ export default function ExamDetailScreen() {
           startTime: exam.startTime,
         });
         setHasReminder(true);
-        setReminderMessage(`${formatReminderDate(scheduled.reminderDate)}-д reminder тавигдлаа.`);
+        setReminderMessage(`${formatReminderDate(scheduled.reminderDate)}-д сануулга тавигдлаа.`);
       }
     } catch (caughtError) {
       setReminderMessage(
-        caughtError instanceof Error ? caughtError.message : "Reminder тохируулахад алдаа гарлаа.",
+        caughtError instanceof Error ? caughtError.message : "Сануулга тохируулахад алдаа гарлаа.",
       );
     } finally {
       setIsReminderLoading(false);
@@ -151,8 +151,8 @@ export default function ExamDetailScreen() {
 
           <View style={styles.noticeBox}>
             <Text style={styles.noticeText}>
-              Шалгалтын үеэр screen recording protection, screenshot alert, app switch warning
-              зэрэг хамгаалалт ажиллана.
+              Шалгалтын үеэр дэлгэц бичлэгийн хамгаалалт, дэлгэцийн зураг авах сэрэмжлүүлэг,
+              аппаас гарах анхааруулга зэрэг хамгаалалт ажиллана.
             </Text>
           </View>
 

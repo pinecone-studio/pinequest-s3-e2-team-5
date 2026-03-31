@@ -1,0 +1,17 @@
+{
+  "name": "secure-exam-guard",
+  "version": "1.0.0",
+  "description": "Local Expo native module that emits raw secure-exam device signals on iOS.",
+  "main": "index.ts",
+  "keywords": [
+    "expo",
+    "ios",
+    "secure-exam"
+  ],
+  "author": "Local",
+  "license": "MIT",
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*"
+  }
+}

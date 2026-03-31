@@ -11,7 +11,7 @@ function getInitials(fullName: string) {
       .filter(Boolean)
       .slice(0, 2)
       .map((part) => part[0]?.toUpperCase() ?? "")
-      .join("") || "SU"
+      .join("") || "СУ"
   );
 }
 
@@ -19,7 +19,7 @@ export default function ProfileScreen() {
   const { student, submissions, availableExams, resetData } = useAppData();
 
   const handleReset = () => {
-    Alert.alert("Өгөгдөл цэвэрлэх", "Өгсөн шалгалтын local үр дүнг цэвэрлэх үү?", [
+    Alert.alert("Өгөгдөл цэвэрлэх", "Өгсөн шалгалтын төхөөрөмж дээр хадгалсан үр дүнг цэвэрлэх үү?", [
       {
         text: "Болих",
         style: "cancel",
@@ -57,14 +57,14 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.infoCard}>
-          <InfoRow label="Role" value="Student" />
+          <InfoRow label="Төрөл" value="Сурагч" />
           <InfoRow label="Утас" value={student.phone} />
           <InfoRow label="Анги" value={student.inviteCode} />
         </View>
 
         <StatusCard
           tone="info"
-          message="Энэ profile хэсэг local prototype өгөгдөл дээр ажиллаж байна. Жинхэнэ auth холбогдоход энд Clerk/profile data орж ирнэ."
+          message="Энэ хэсэг одоогоор төхөөрөмж дээрх туршилтын өгөгдлөөр ажиллаж байна. Жинхэнэ нэвтрэлт холбогдоход энд профайлын бодит өгөгдөл орж ирнэ."
         />
 
         <PrimaryButton label="Үр дүн цэвэрлэх" onPress={handleReset} variant="secondary" />

@@ -20,7 +20,11 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Face presence monitoring is used only during secure exams on this device."
+      },
+      "bundleIdentifier": "com.tukki416.pinequest-student"
     },
     "android": {
       "adaptiveIcon": {

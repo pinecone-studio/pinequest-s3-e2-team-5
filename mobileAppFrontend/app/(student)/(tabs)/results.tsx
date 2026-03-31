@@ -20,7 +20,7 @@ export default function ResultsScreen() {
         {submissions.length === 0 ? (
           <EmptyState
             title="Үр дүн алга"
-            description="Шалгалт өгсний дараа үр дүн болон асуултын review энд харагдана."
+            description="Шалгалт өгсний дараа үр дүн болон асуултын задлан харах хэсэг энд гарна."
           />
         ) : (
           <View style={styles.cards}>

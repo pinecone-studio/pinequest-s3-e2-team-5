@@ -22,9 +22,19 @@ export type NativeRecordingEvent = {
   timestamp: number;
 };
 
+export type NativeCaptureStateEvent = {
+  state: "active" | "inactive";
+  ts: number;
+};
+
 export type NativeFaceEvent = {
   status: NativeFaceStatus;
   timestamp: number;
+};
+
+export type NativeFaceCountEvent = {
+  faceCount: number;
+  ts: number;
 };
 
 export type CaptureStateSnapshot = {

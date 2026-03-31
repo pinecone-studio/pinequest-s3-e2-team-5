@@ -12,7 +12,7 @@ export default function StudentTabsLayout() {
         <Icon sf="chart.bar.fill" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile">
-        <Label>Профайл</Label>
+        <Label>Хувийн</Label>
         <Icon sf="person.crop.circle.fill" />
       </NativeTabs.Trigger>
     </NativeTabs>

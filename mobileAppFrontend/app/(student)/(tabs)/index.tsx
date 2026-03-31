@@ -25,13 +25,13 @@ export default function StudentHomeScreen() {
 
         <StatusCard
           tone="info"
-          message="Шалгалтын үеэр reminder, screenshot alert, app switch warning, keep-awake хамгаалалт ажиллана."
+          message="Шалгалтын үеэр сануулга, дэлгэцийн зураг авах сэрэмжлүүлэг, аппаас гарах анхааруулга, дэлгэц унтраахгүй хамгаалалт ажиллана."
         />
 
         {availableExams.length === 0 ? (
           <EmptyState
             title="Нээлттэй шалгалт алга"
-            description="Шинэ шалгалт нэмэх бол `src/data/student-data.ts` дотор өгөгдлөө оруулна уу."
+            description="Шинэ шалгалт нэмэх бол өгөгдлийн файлдаа шинэ шалгалтын мэдээллээ оруулна уу."
           />
         ) : (
           <View style={styles.cards}>

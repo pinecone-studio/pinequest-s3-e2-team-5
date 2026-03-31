@@ -122,16 +122,16 @@ export async function scheduleExamReminder({
 }) {
   const reminderDate = getExamReminderDate(scheduledDate, startTime);
   if (!reminderDate) {
-    throw new Error("Шалгалтын тов тодорхойгүй тул reminder тохируулах боломжгүй байна.");
+    throw new Error("Шалгалтын тов тодорхойгүй тул сануулга тохируулах боломжгүй байна.");
   }
 
   if (reminderDate.getTime() <= Date.now()) {
-    throw new Error("Reminder тавихад хэтэрхий оройтсон байна.");
+    throw new Error("Сануулга тавихад хэтэрхий оройтсон байна.");
   }
 
   const permissionGranted = await ensureExamReminderPermission();
   if (!permissionGranted) {
-    throw new Error("Notification permission зөвшөөрөгдөөгүй байна.");
+    throw new Error("Мэдэгдлийн зөвшөөрөл олгогдоогүй байна.");
   }
 
   await cancelExamReminder(examId);

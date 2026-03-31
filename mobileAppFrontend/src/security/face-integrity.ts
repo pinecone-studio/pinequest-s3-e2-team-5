@@ -1,5 +1,5 @@
 import {
-  addNativeFaceListener,
+  subscribeFaceEvents,
   startNativeFaceMonitoring,
   stopNativeFaceMonitoring,
 } from "@/security/native-secure-exam";
@@ -71,15 +71,26 @@ export function createFaceIntegrityService({
 
   return {
     async startFaceMonitoring() {
-      await startNativeFaceMonitoring();
+      removeNativeListener?.();
+      removeNativeListener = null;
 
-      const subscription = addNativeFaceListener((event) => {
-        handleStatus(event.status, event.timestamp);
+      const subscription = subscribeFaceEvents((event) => {
+        const status =
+          event.faceCount < 0
+            ? "unsupported"
+            : event.faceCount === 0
+              ? "no_face"
+              : event.faceCount === 1
+                ? "single_face"
+                : "multiple_faces";
+        handleStatus(status, event.ts);
       });
 
       removeNativeListener = () => {
         subscription.remove();
       };
+
+      await startNativeFaceMonitoring();
     },
 
     async stopFaceMonitoring() {

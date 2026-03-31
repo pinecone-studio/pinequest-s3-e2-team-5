@@ -41,7 +41,7 @@ export default function ResultDetailScreen() {
             <Ionicons name="chevron-back" size={18} color={colors.textPrimary} />
             <Text style={styles.backText}>Буцах</Text>
           </Pressable>
-          <StatusCard tone="error" message="Review олдсонгүй." />
+          <StatusCard tone="error" message="Задлан харах мэдээлэл олдсонгүй." />
         </View>
       </SafeAreaView>
     );
@@ -84,7 +84,7 @@ export default function ResultDetailScreen() {
         </View>
 
         <View style={styles.paletteCard}>
-          <Text style={styles.paletteTitle}>Review палитр</Text>
+          <Text style={styles.paletteTitle}>Хариултын тэмдэглэгээ</Text>
           <View style={styles.paletteGrid}>
             {detail.answers.map((answer) => {
               const tone = getPaletteTone(answer);

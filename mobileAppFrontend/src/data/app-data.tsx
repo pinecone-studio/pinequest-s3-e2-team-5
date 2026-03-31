@@ -122,7 +122,7 @@ export function useAppData() {
   const context = useContext(AppDataContext);
 
   if (!context) {
-    throw new Error("useAppData must be used within AppDataProvider.");
+    throw new Error("useAppData-г AppDataProvider-ийн дотор ашиглах ёстой.");
   }
 
   return context;

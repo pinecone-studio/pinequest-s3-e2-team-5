@@ -3,7 +3,13 @@ import {
   enableAppSwitcherProtectionAsync,
 } from "expo-screen-capture";
 import { requireNativeModule } from "expo-modules-core";
-import type { CaptureStateSnapshot, NativeFaceEvent, NativeRecordingEvent } from "@/security/types";
+import type {
+  CaptureStateSnapshot,
+  NativeCaptureStateEvent,
+  NativeFaceCountEvent,
+  NativeFaceEvent,
+  NativeRecordingEvent,
+} from "@/security/types";
 
 type NativeSubscription = {
   remove(): void;
@@ -12,17 +18,17 @@ type NativeSubscription = {
 type SecureExamNativeModule = {
   startMonitoring?: (payload: { userId: string; examId: string }) => Promise<void>;
   stopMonitoring?: () => Promise<void>;
-  startFaceMonitoring?: () => Promise<void>;
-  stopFaceMonitoring?: () => Promise<void>;
+  startFaceStream?: () => Promise<void>;
+  stopFaceStream?: () => Promise<void>;
   setSensitiveBlurEnabled?: (enabled: boolean) => Promise<void>;
-  setPrivacyShieldEnabled?: (enabled: boolean) => Promise<void>;
-  getCurrentCaptureState?: () => Promise<boolean>;
+  enableSecureSnapshot?: () => Promise<void>;
+  disableSecureSnapshot?: () => Promise<void>;
+  getCurrentCaptureState?: () => Promise<NativeCaptureStateEvent> | NativeCaptureStateEvent;
   addListener?: (
-    eventName: "onRecordingChanged" | "onFaceStatusChanged" | "onCaptureStateChanged",
+    eventName: "onCaptureStateChanged" | "onFaceCountChanged",
     listener:
-      | ((event: NativeRecordingEvent) => void)
-      | ((event: NativeFaceEvent) => void)
-      | ((event: CaptureStateSnapshot) => void),
+      | ((event: NativeCaptureStateEvent) => void)
+      | ((event: NativeFaceCountEvent) => void),
   ) => NativeSubscription;
 };
 
@@ -45,11 +51,11 @@ export async function stopNativeSecureExamMonitoring() {
 }
 
 export async function startNativeFaceMonitoring() {
-  await nativeModule?.startFaceMonitoring?.();
+  await nativeModule?.startFaceStream?.();
 }
 
 export async function stopNativeFaceMonitoring() {
-  await nativeModule?.stopFaceMonitoring?.();
+  await nativeModule?.stopFaceStream?.();
 }
 
 export async function setNativeSensitiveBlurEnabled(enabled: boolean) {
@@ -62,10 +68,15 @@ export async function getCurrentCaptureState() {
   }
 
   try {
-    return await nativeModule.getCurrentCaptureState();
+    const snapshot = await nativeModule.getCurrentCaptureState();
+    return snapshot.state === "active";
   } catch {
     return false;
   }
+}
+
+function getEventTimestamp(event: { ts: number }) {
+  return typeof event.ts === "number" ? event.ts : Date.now();
 }
 
 export function subscribeCaptureState(listener: (event: CaptureStateSnapshot) => void): NativeSubscription {
@@ -75,7 +86,31 @@ export function subscribeCaptureState(listener: (event: CaptureStateSnapshot) =>
     };
   }
 
-  const subscription = nativeModule.addListener?.("onCaptureStateChanged", listener) ?? {
+  // Native code emits only raw device signals. Normalization stays in TypeScript.
+  const subscription =
+    nativeModule.addListener?.("onCaptureStateChanged", (event: NativeCaptureStateEvent) => {
+      listener({
+        isCaptured: event.state === "active",
+        timestamp: getEventTimestamp(event),
+      });
+    }) ?? {
+      remove() {},
+    };
+  return {
+    remove() {
+      subscription.remove();
+    },
+  };
+}
+
+export function subscribeFaceEvents(listener: (event: NativeFaceCountEvent) => void): NativeSubscription {
+  if (!nativeModule) {
+    return {
+      remove() {},
+    };
+  }
+
+  const subscription = nativeModule.addListener?.("onFaceCountChanged", listener) ?? {
     remove() {},
   };
   return {
@@ -97,25 +132,24 @@ export function addNativeRecordingListener(
 }
 
 export function addNativeFaceListener(listener: (event: NativeFaceEvent) => void): NativeSubscription {
-  if (!nativeModule) {
-    return {
-      remove() {},
-    };
-  }
-
-  const subscription = nativeModule.addListener?.("onFaceStatusChanged", listener) ?? {
-    remove() {},
-  };
-  return {
-    remove() {
-      subscription.remove();
-    },
-  };
+  return subscribeFaceEvents((event) => {
+    listener({
+      status:
+        event.faceCount < 0
+          ? "unsupported"
+          : event.faceCount === 0
+            ? "no_face"
+            : event.faceCount === 1
+              ? "single_face"
+              : "multiple_faces",
+      timestamp: getEventTimestamp(event),
+    });
+  });
 }
 
 export async function enableSecureSnapshot() {
-  if (nativeModule?.setPrivacyShieldEnabled) {
-    await nativeModule.setPrivacyShieldEnabled(true);
+  if (nativeModule?.enableSecureSnapshot) {
+    await nativeModule.enableSecureSnapshot();
     return;
   }
 
@@ -123,8 +157,8 @@ export async function enableSecureSnapshot() {
 }
 
 export async function disableSecureSnapshot() {
-  if (nativeModule?.setPrivacyShieldEnabled) {
-    await nativeModule.setPrivacyShieldEnabled(false);
+  if (nativeModule?.disableSecureSnapshot) {
+    await nativeModule.disableSecureSnapshot();
     return;
   }
 

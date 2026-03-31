@@ -176,9 +176,9 @@ export default function TakeExamScreen() {
         caughtError instanceof Error
           ? caughtError.message
           : source === "session_replaced"
-            ? "Өөр төхөөрөмжөөс session солигдсон тул auto-submit хийхэд алдаа гарлаа."
+            ? "Өөр төхөөрөмжөөс шалгалтын төлөв солигдсон тул автоматаар илгээхэд алдаа гарлаа."
           : source === "background"
-            ? "Та app-оос удаан гарсан тул auto-submit хийхэд алдаа гарлаа."
+            ? "Та аппаас удаан гарсан тул автоматаар илгээхэд алдаа гарлаа."
             : source === "auto"
               ? "Хугацаа дууссан ч шалгалтыг автоматаар илгээж чадсангүй."
               : "Шалгалт илгээхэд алдаа гарлаа.",
@@ -222,7 +222,7 @@ export default function TakeExamScreen() {
   };
 
   if (isRestoring) {
-    return <FullScreenLoader label="Шалгалтын session-ийг бэлдэж байна..." />;
+    return <FullScreenLoader label="Шалгалтын явцыг бэлдэж байна..." />;
   }
 
   if (!exam || !currentQuestion) {
@@ -249,7 +249,7 @@ export default function TakeExamScreen() {
           blurred={recordingBlurActive}
           message={
             recordingBlurActive
-              ? "Screen recording эсвэл mirroring илэрсэн тул sensitive контент нуусан."
+              ? "Дэлгэц бичлэг эсвэл дэлгэц толиндуулалт илэрсэн тул нууц агуулгыг халхаллаа."
               : warningMessage
           }
         />
@@ -257,7 +257,7 @@ export default function TakeExamScreen() {
 
       <View style={styles.header}>
         <View>
-          <SecureText style={styles.headerEyebrow}>Secure Exam Mode</SecureText>
+          <SecureText style={styles.headerEyebrow}>Хамгаалалттай шалгалт</SecureText>
           <SecureText style={styles.headerTitle}>Шалгалт явагдаж байна</SecureText>
         </View>
         <View style={[styles.timerChip, secondsLeft < 300 ? styles.timerChipDanger : null]}>
@@ -282,14 +282,14 @@ export default function TakeExamScreen() {
           tone="info"
           message={
             nativeMonitoringAvailable
-              ? "Screenshot, app switch, recording, face presence мониторинг идэвхтэй."
-              : "Screenshot болон app switch хамгаалалт идэвхтэй. Face / recording native мониторинг нь dev build дээр идэвхжинэ."
+              ? "Дэлгэцийн зураг, аппаас гарах, бичлэг, нүүр илрүүлэлт зэрэг хяналт идэвхтэй."
+              : "Дэлгэцийн зураг болон аппаас гарах хамгаалалт идэвхтэй. Нүүр болон бичлэгийн төхөөрөмжийн түвшний хяналт нь хөгжүүлэлтийн хувилбар дээр идэвхжинэ."
           }
         />
         {leaveCount > 0 ? (
           <StatusCard
             tone="warning"
-            message={`App switch ${leaveCount} удаа бүртгэгдсэн. 5 секундээс илүү гарвал auto-submit хийнэ.`}
+            message={`Аппаас ${leaveCount} удаа гарсан нь бүртгэгдсэн. 5 секундээс илүү гарвал автоматаар илгээнэ.`}
           />
         ) : null}
         {submitError ? <StatusCard tone="error" message={submitError} /> : null}
@@ -305,35 +305,35 @@ export default function TakeExamScreen() {
           </View>
           <View>
             <SecureText style={styles.progressValue}>{violationCount}</SecureText>
-            <SecureText style={styles.progressLabel}>Violation</SecureText>
+            <SecureText style={styles.progressLabel}>Зөрчил</SecureText>
           </View>
         </View>
 
         <View style={styles.securityMetaCard}>
           <View style={styles.securityMetaRow}>
-            <SecureText style={styles.securityMetaLabel}>Question</SecureText>
+            <SecureText style={styles.securityMetaLabel}>Асуулт</SecureText>
             <SecureText style={styles.securityMetaValue}>
               {currentQuestionIndex + 1} / {shuffledQuestions.length}
             </SecureText>
           </View>
           <View style={styles.securityMetaRow}>
-            <SecureText style={styles.securityMetaLabel}>Screenshots</SecureText>
+            <SecureText style={styles.securityMetaLabel}>Дэлгэцийн зураг</SecureText>
             <SecureText style={styles.securityMetaValue}>{screenshotCount}</SecureText>
           </View>
           <View style={styles.securityMetaRow}>
-            <SecureText style={styles.securityMetaLabel}>Recording</SecureText>
+            <SecureText style={styles.securityMetaLabel}>Бичлэг</SecureText>
             <SecureText style={styles.securityMetaValue}>{recordingCount}</SecureText>
           </View>
           <View style={styles.securityMetaRow}>
-            <SecureText style={styles.securityMetaLabel}>Face status</SecureText>
+            <SecureText style={styles.securityMetaLabel}>Нүүрний төлөв</SecureText>
             <SecureText style={styles.securityMetaValue}>
               {faceStatus === "unsupported"
-                ? "Unavailable"
+                ? "Боломжгүй"
                 : faceStatus === "single_face"
-                  ? "Single"
+                  ? "Нэг нүүр"
                   : faceStatus === "multiple_faces"
-                    ? "Multiple"
-                    : "No face"}
+                    ? "Олон нүүр"
+                    : "Нүүр алга"}
             </SecureText>
           </View>
         </View>

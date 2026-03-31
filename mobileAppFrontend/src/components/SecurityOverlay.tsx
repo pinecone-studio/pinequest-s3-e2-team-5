@@ -15,7 +15,7 @@ export function SecurityOverlay({
     <View pointerEvents={blockInteraction ? "auto" : "none"} style={styles.container}>
       {blurred ? <BlurView intensity={85} tint="light" style={StyleSheet.absoluteFill} /> : null}
       <View style={styles.card}>
-        <Text style={styles.label}>Secure Exam</Text>
+        <Text style={styles.label}>Хамгаалалттай шалгалт</Text>
         <Text style={styles.message}>{message}</Text>
       </View>
     </View>
