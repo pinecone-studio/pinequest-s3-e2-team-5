@@ -2,6 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "main": "./worker/index.ts",
   "name": "pinequest-s3-e2-team-5-web",
+  "account_id": "16de45fb5c0a9f2c9550077bb5878bf4",
   "compatibility_date": "2026-03-23",
   "compatibility_flags": [
     "nodejs_compat",
