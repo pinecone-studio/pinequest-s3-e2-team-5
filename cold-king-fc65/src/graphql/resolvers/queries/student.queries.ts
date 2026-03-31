@@ -2,13 +2,24 @@ import { and, eq } from 'drizzle-orm';
 import { exams } from '../../../db/schemas/exam.schema';
 import { studentExamAnswers } from '../../../db/schemas/student-exam-answer.schema';
 import { studentExamSubmissions } from '../../../db/schemas/student-exam-submission.schema';
+import { students } from '../../../db/schemas/student.schema';
 import type { GraphQLContext } from '../../../server';
 import { getAccessibleExamForStudent, loadQuestionsWithChoices, requireStudentRecord } from '../student-exam.helpers';
 import { announcedExamGrades } from '../../../db/schemas/announcedExamGrades.schema';
 import { announcedExams } from '../../../db/schemas/announcedExams.schema';
+import { notFoundError } from '../../errors';
 
 export const studentQuery = {
 	Query: {
+		studentById: async (_: unknown, args: { id?: string | null }, context: GraphQLContext) => {
+			const currentStudent = await requireStudentRecord(context);
+
+			if (!args.id || args.id === currentStudent.id) {
+				return currentStudent;
+			}
+
+			throw notFoundError("Student not found.");
+		},
 		availableExamsForStudent: async (_: unknown, _args: unknown, context: GraphQLContext) => {
 			const student = await requireStudentRecord(context);
 			const availableAnnouncements = await context.db
