@@ -1,6 +1,17 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { ConfigErrorScreen } from "@/components/ConfigErrorScreen";
+import { FullScreenLoader } from "@/components/FullScreenLoader";
 import { examCatalog, seedSubmissions, studentProfile } from "@/data/student-data";
 import type { Exam, StudentProfile, Submission } from "@/data/types";
+import {
+  fetchRemoteAvailableExamIds,
+  fetchRemoteExamById,
+  fetchRemoteStudentProfile,
+  fetchRemoteSubmissionById,
+  fetchRemoteSubmissionIds,
+  getMobileRemoteConfig,
+  submitRemoteStudentExam,
+} from "@/lib/mobile-graphql";
 
 type AppDataContextValue = {
   student: StudentProfile;
@@ -23,7 +34,15 @@ function buildSubmissionId(examId: string) {
 }
 
 export function AppDataProvider({ children }: { children: ReactNode }) {
+  const remoteConfig = getMobileRemoteConfig();
+  const useRemoteData = Boolean(remoteConfig);
+  const [student, setStudent] = useState<StudentProfile>(studentProfile);
   const [submissions, setSubmissions] = useState<Submission[]>(() => [...seedSubmissions]);
+  const [remoteAvailableExams, setRemoteAvailableExams] = useState<Exam[]>([]);
+  const [bootStatus, setBootStatus] = useState<"loading" | "ready" | "error">(
+    useRemoteData ? "loading" : "ready",
+  );
+  const [bootError, setBootError] = useState("");
 
   const submittedExamIds = useMemo(
     () => new Set(submissions.map((submission) => submission.examId)),
@@ -31,20 +50,91 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   );
 
   const availableExams = useMemo(
-    () => examCatalog.filter((exam) => !submittedExamIds.has(exam.id)),
-    [submittedExamIds],
+    () => (useRemoteData ? remoteAvailableExams : examCatalog.filter((exam) => !submittedExamIds.has(exam.id))),
+    [remoteAvailableExams, submittedExamIds, useRemoteData],
   );
 
-  const getExamById = useCallback((examId: string) => {
-    return examCatalog.find((exam) => exam.id === examId) ?? null;
+  const pullRemoteSnapshot = useCallback(async () => {
+    const [nextStudent, availableExamIds, submissionIds] = await Promise.all([
+      fetchRemoteStudentProfile(),
+      fetchRemoteAvailableExamIds(),
+      fetchRemoteSubmissionIds(),
+    ]);
+
+    const [nextAvailableExams, nextSubmissions] = await Promise.all([
+      Promise.all(availableExamIds.map((examId) => fetchRemoteExamById(examId))),
+      Promise.all(submissionIds.map((submissionId) => fetchRemoteSubmissionById(submissionId))),
+    ]);
+
+    return {
+      student: nextStudent,
+      availableExams: nextAvailableExams,
+      submissions: nextSubmissions.sort((left, right) => right.submittedAt - left.submittedAt),
+    };
   }, []);
+
+  const applyRemoteSnapshot = useCallback(
+    (snapshot: { student: StudentProfile; availableExams: Exam[]; submissions: Submission[] }) => {
+      setStudent(snapshot.student);
+      setRemoteAvailableExams(snapshot.availableExams);
+      setSubmissions(snapshot.submissions);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!useRemoteData) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      setBootStatus("loading");
+      setBootError("");
+
+      try {
+        const snapshot = await pullRemoteSnapshot();
+
+        if (!cancelled) {
+          applyRemoteSnapshot(snapshot);
+          setBootStatus("ready");
+        }
+      } catch (caughtError) {
+        if (!cancelled) {
+          setBootError(caughtError instanceof Error ? caughtError.message : "Өгөгдөл ачаалж чадсангүй.");
+          setBootStatus("error");
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [applyRemoteSnapshot, pullRemoteSnapshot, useRemoteData]);
+
+  const getExamById = useCallback((examId: string) => {
+    const source = useRemoteData ? remoteAvailableExams : examCatalog;
+    return source.find((exam) => exam.id === examId) ?? null;
+  }, [remoteAvailableExams, useRemoteData]);
 
   const getSubmissionById = useCallback(
     (submissionId: string) => submissions.find((submission) => submission.id === submissionId) ?? null,
     [submissions],
   );
 
-  const submitExam = useCallback<AppDataContextValue["submitExam"]>(async ({ examId, answers }) => {
+  const submitExam = useCallback<AppDataContextValue["submitExam"]>(async ({ examId, startedAt, answers }) => {
+    if (useRemoteData) {
+      const submission = await submitRemoteStudentExam({
+        examId,
+        startedAt,
+        answers,
+      });
+      const snapshot = await pullRemoteSnapshot();
+      applyRemoteSnapshot(snapshot);
+      return { id: submission.id };
+    }
+
     const exam = examCatalog.find((entry) => entry.id === examId);
 
     if (!exam) {
@@ -96,15 +186,27 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     ]);
 
     return { id: nextSubmission.id };
-  }, []);
+  }, [applyRemoteSnapshot, pullRemoteSnapshot, useRemoteData]);
 
   const resetData = useCallback(() => {
+    if (useRemoteData) {
+      void (async () => {
+        try {
+          const snapshot = await pullRemoteSnapshot();
+          applyRemoteSnapshot(snapshot);
+        } catch {
+          // Keep the current snapshot if refresh fails.
+        }
+      })();
+      return;
+    }
+
     setSubmissions([...seedSubmissions]);
-  }, []);
+  }, [applyRemoteSnapshot, pullRemoteSnapshot, useRemoteData]);
 
   const value = useMemo<AppDataContextValue>(
     () => ({
-      student: studentProfile,
+      student,
       availableExams,
       submissions,
       getExamById,
@@ -112,8 +214,21 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       submitExam,
       resetData,
     }),
-    [availableExams, getExamById, getSubmissionById, resetData, submitExam, submissions],
+    [availableExams, getExamById, getSubmissionById, resetData, student, submitExam, submissions],
   );
+
+  if (useRemoteData && bootStatus === "loading") {
+    return <FullScreenLoader label="Жинхэнэ өгөгдлийг ачаалж байна..." />;
+  }
+
+  if (useRemoteData && bootStatus === "error") {
+    return (
+      <ConfigErrorScreen
+        title="Өгөгдөл ачаалж чадсангүй"
+        message={bootError || "Mobile app-ийн GraphQL тохиргоог шалгана уу."}
+      />
+    );
+  }
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;
 }

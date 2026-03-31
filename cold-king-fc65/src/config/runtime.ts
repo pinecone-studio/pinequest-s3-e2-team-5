@@ -6,6 +6,7 @@ export type WorkerBindings = Env & {
 	NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?: string;
 	CLERK_JWT_KEY?: string;
 	CLERK_AUTHORIZED_PARTIES?: string;
+	MOBILE_DEMO_ACCESS_KEY?: string;
 	CORS_ORIGINS?: string;
 	exam_media?: R2Bucket;
 };
@@ -23,6 +24,10 @@ export function getAuthorizedParties(env: WorkerBindings) {
 		.split(",")
 		.map((party) => party.trim())
 		.filter(Boolean);
+}
+
+export function getMobileDemoAccessKey(env: Pick<WorkerBindings, "MOBILE_DEMO_ACCESS_KEY">) {
+	return env.MOBILE_DEMO_ACCESS_KEY?.trim() || null;
 }
 
 export function getCorsOrigins(env: Pick<WorkerBindings, "CORS_ORIGINS">) {
