@@ -158,6 +158,28 @@ function getReviewOptionClasses(state: "neutral" | "correct" | "wrong") {
   };
 }
 
+function formatClock(date: Date) {
+  return `${String(date.getHours()).padStart(2, "0")}:${String(
+    date.getMinutes(),
+  ).padStart(2, "0")}`;
+}
+
+function addMinutes(timeValue: string, minutesToAdd: number) {
+  const [hourRaw, minuteRaw] = timeValue.split(":");
+  const hour = Number(hourRaw);
+  const minute = Number(minuteRaw);
+
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) {
+    return timeValue;
+  }
+
+  const date = new Date();
+  date.setHours(hour, minute, 0, 0);
+  date.setMinutes(date.getMinutes() + minutesToAdd);
+
+  return formatClock(date);
+}
+
 export default function StudentResultPage() {
   const { user } = useUser();
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<
@@ -264,19 +286,20 @@ export default function StudentResultPage() {
   }
 
   if (selectedResult) {
-    const summaryRows = [
-      {
-        label: "Огноо",
-        value: formatStudentExamTimestamp(selectedResult.submittedAt),
-      },
-      {
-        label: "Оноо",
-        value: `${selectedResult.correctAnswers}/${selectedResult.questionCount}`,
-      },
-      { label: "Хувь", value: `${selectedResult.scorePercent}%` },
-      { label: "Хугацаа", value: `${selectedResult.duration} мин` },
-      { label: "Нийт дасгал", value: String(selectedResult.questionCount) },
-    ];
+    const fallbackStartTime = formatClock(
+      new Date(
+        selectedResult.submittedAt - selectedResult.duration * 60 * 1000,
+      ),
+    );
+    const maybeStartTime = (selectedResult as { startTime?: string | null })
+      .startTime;
+    const startTime =
+      typeof maybeStartTime === "string" && maybeStartTime.trim()
+        ? maybeStartTime.trim()
+        : fallbackStartTime;
+    const endTime = addMinutes(startTime, selectedResult.duration);
+    const gradeNumber = selectedResult.grade.match(/\d+/)?.[0];
+    const gradeLabel = gradeNumber ? `${gradeNumber}A` : selectedResult.grade;
 
     return (
       <section className="animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -293,30 +316,69 @@ export default function StudentResultPage() {
 
         <div className="grid gap-5 lg:grid-cols-[212px_minmax(0,1fr)]">
           <aside className="space-y-5">
-            <div className="rounded-[18px] border border-[#E6E1F2] bg-white p-4 shadow-[0_4px_12px_rgba(53,31,107,0.03)]">
-              <h2 className="text-[16px] font-semibold text-[#25222D]">
-                {displayName}
-              </h2>
-              <p className="mt-1 text-[14px] text-[#6B7280]">
-                {
-                  getStudentExamPresentation(selectedResult.subject)
-                    .subjectLabel
-                }{" "}
-                / {selectedResult.title}
-              </p>
+            <div className="rounded-[14px] border border-[#E3DEEF] bg-white px-4 py-3 shadow-[0_3px_10px_rgba(53,31,107,0.04)]">
+              <div className="flex items-center justify-between">
+                <h2 className="text-[16px] font-semibold leading-none text-[#2A2733]">
+                  {displayName}
+                </h2>
+                <span className="text-[16px] font-semibold leading-none text-[#2A2733]">
+                  {gradeLabel}
+                </span>
+              </div>
 
-              <div className="mt-4 space-y-2.5">
-                {summaryRows.map((row) => (
-                  <div
-                    key={row.label}
-                    className="flex items-center justify-between gap-3 text-[14px]"
-                  >
-                    <span className="font-semibold text-[#3A3643]">
-                      {row.label}
+              <div className="mt-3 grid grid-cols-2 divide-x divide-[#CDC2F2] border-l  border-[#CDC2F2]">
+                <div className="px-2 py-1">
+                  <p className="text-[14px] text-[#A2A0AB]">Эхэлсэн</p>
+                  <p className="text-[17px] leading-none font-medium text-[#2F2B39]">
+                    {startTime}
+                  </p>
+                </div>
+                <div className="px-2 py-1">
+                  <p className="text-[14px] text-[#A2A0AB]">Дууссан</p>
+                  <p className="text-[17px] leading-none font-medium text-[#2F2B39]">
+                    {endTime}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-3 flex items-end justify-between">
+                <div>
+                  <p className="text-[14px] text-[#2F2B39]">Нийт оноо</p>
+                  <p className="text-[17px] leading-none font-medium text-[#2F2B39]">
+                    {selectedResult.correctAnswers}
+                    <span className="text-[#8D8A98]">
+                      /{selectedResult.questionCount}
                     </span>
-                    <span className="text-[#54505E]">{row.value}</span>
-                  </div>
-                ))}
+                  </p>
+                </div>
+
+                <div className="relative h-[52px] w-[52px]">
+                  <svg className="h-full w-full -rotate-90" viewBox="0 0 36 36">
+                    <circle
+                      cx="18"
+                      cy="18"
+                      r="15.915"
+                      fill="none"
+                      stroke="#ECE7FB"
+                      strokeWidth="3"
+                    />
+                    <circle
+                      cx="18"
+                      cy="18"
+                      r="15.915"
+                      fill="none"
+                      stroke="#B8A6F6"
+                      strokeWidth="3"
+                      strokeDasharray={`${Math.max(
+                        0,
+                        Math.min(100, selectedResult.scorePercent),
+                      )},100`}
+                    />
+                  </svg>
+                  <span className="absolute inset-0 flex items-center justify-center text-[16px] font-semibold text-[#5B4C96]">
+                    {selectedResult.scorePercent}%
+                  </span>
+                </div>
               </div>
             </div>
 
