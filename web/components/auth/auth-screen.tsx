@@ -422,19 +422,19 @@ export function AuthScreen({ mode }: AuthScreenProps) {
     const unsafeMetadata =
       formValues.role === "student"
         ? {
-            role: "student" as const,
-            firstName,
-            lastName,
-            phone: normalizedPhone,
-            inviteCode: formValues.classCode.trim().toUpperCase(),
-            classCode: formValues.classCode.trim().toUpperCase(),
-          }
+          role: "student" as const,
+          firstName,
+          lastName,
+          phone: normalizedPhone,
+          inviteCode: formValues.classCode.trim().toUpperCase(),
+          classCode: formValues.classCode.trim().toUpperCase(),
+        }
         : {
-            role: "teacher" as const,
-            firstName,
-            lastName,
-            phone: normalizedPhone,
-          };
+          role: "teacher" as const,
+          firstName,
+          lastName,
+          phone: normalizedPhone,
+        };
 
     const { error } = await signUp.password({
       emailAddress: formValues.email.trim(),
@@ -584,11 +584,10 @@ export function AuthScreen({ mode }: AuthScreenProps) {
 
           {feedback ? (
             <div
-              className={`mt-6 rounded-[18px] border px-4 py-3 text-[14px] ${
-                feedback.tone === "success"
+              className={`mt-6 rounded-[18px] border px-4 py-3 text-[14px] ${feedback.tone === "success"
                   ? "border-[#D6F4DD] bg-[#F4FFF6] text-[#1E6E36]"
                   : "border-[#FFD8D8] bg-[#FFF7F7] text-[#B63B3B]"
-              }`}
+                }`}
             >
               {feedback.message}
             </div>

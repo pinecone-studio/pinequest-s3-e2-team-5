@@ -4,7 +4,12 @@ import { studentExamAnswers } from '../../../db/schemas/student-exam-answer.sche
 import { studentExamSubmissions } from '../../../db/schemas/student-exam-submission.schema';
 import { students } from '../../../db/schemas/student.schema';
 import type { GraphQLContext } from '../../../server';
-import { getAccessibleExamForStudent, loadQuestionsWithChoices, requireStudentRecord } from '../student-exam.helpers';
+import {
+	getAccessibleExamForStudent,
+	isExamOpenNow,
+	loadQuestionsWithChoices,
+	requireStudentRecord,
+} from '../student-exam.helpers';
 import { announcedExamGrades } from '../../../db/schemas/announcedExamGrades.schema';
 import { announcedExams } from '../../../db/schemas/announcedExams.schema';
 import { notFoundError } from '../../errors';
@@ -39,7 +44,16 @@ export const studentQuery = {
 
 			const examSummaries = await Promise.all(
 				availableAnnouncements
-					.filter(({ announced_exams, exams }) => announced_exams.openStatus && !submittedExamIds.has(exams.id))
+					.filter(
+						({ announced_exams, exams }) =>
+							!submittedExamIds.has(exams.id) &&
+							isExamOpenNow({
+								openStatus: announced_exams.openStatus,
+								scheduledDate: announced_exams.scheduledDate,
+								startTime: announced_exams.startTime,
+								duration: exams.duration,
+							}),
+					)
 					.map(async ({ exams: exam, announced_exams }) => {
 						const questionCount = (await loadQuestionsWithChoices(context, exam.id)).length;
 

@@ -10,7 +10,57 @@ import {
 	legacyChoices,
 	supportsChoiceMediaColumns,
 } from "./choices-table.helpers";
-import { notFoundError } from "../errors";
+import { badUserInputError, notFoundError } from "../errors";
+
+function parseScheduleDateTime(scheduledDate: string, startTime: string) {
+	const dateMatch = scheduledDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+	const timeMatch = startTime.match(/^(\d{2}):(\d{2})$/);
+
+	if (!dateMatch || !timeMatch) {
+		return null;
+	}
+
+	const [, year, month, day] = dateMatch;
+	const [, hour, minute] = timeMatch;
+
+	const startsAt = new Date(
+		Number(year),
+		Number(month) - 1,
+		Number(day),
+		Number(hour),
+		Number(minute),
+		0,
+		0,
+	);
+
+	if (Number.isNaN(startsAt.getTime())) {
+		return null;
+	}
+
+	return startsAt;
+}
+
+export function isExamOpenNow(params: {
+	openStatus: boolean;
+	scheduledDate: string;
+	startTime: string;
+	duration: number;
+}) {
+	const startsAt = parseScheduleDateTime(params.scheduledDate, params.startTime);
+	if (!startsAt) {
+		return false;
+	}
+
+	if (!params.openStatus) {
+		return false;
+	}
+
+	const durationMinutes = Math.max(0, params.duration);
+	const closesAt = new Date(startsAt.getTime() + durationMinutes * 60_000);
+	const currentTime = new Date();
+
+	return currentTime >= startsAt && currentTime < closesAt;
+}
 
 export async function requireStudentRecord(context: GraphQLContext) {
 	if (!context.auth.userId || !context.auth.isAuthenticated) {
@@ -51,6 +101,17 @@ export async function getAccessibleExamForStudent(
 
 	if (!examRecord) {
 		throw notFoundError("Exam not found.");
+	}
+
+	if (
+		!isExamOpenNow({
+			openStatus: examRecord.announced_exams.openStatus,
+			scheduledDate: examRecord.announced_exams.scheduledDate,
+			startTime: examRecord.announced_exams.startTime,
+			duration: examRecord.exams.duration,
+		})
+	) {
+		throw badUserInputError("Exam is not open at this time.");
 	}
 
 	return {
