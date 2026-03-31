@@ -111,11 +111,10 @@ export default function TeacherAnalyticsPage() {
           </span>
           <div>
             <h1 className="text-[30px] font-semibold tracking-tight text-[#111111]">
-              Шалгалтын analytics
+              Шалгалтын аналитик
             </h1>
             <p className="mt-1 text-[16px] text-[#7A7488]">
-              Дууссан шалгалт сонгоод тухайн шалгалтын нийт алдаа, асуулт бүрийн
-              analytics харах боломжтой.
+              Сурагчдын гүйцэтгэл
             </p>
           </div>
         </div>

@@ -165,8 +165,9 @@ export function TeacherSchoolRequests() {
   const [selectedGrade, setSelectedGrade] = useState("");
   const [section, setSection] = useState("");
 
-  const [createClassRoom] =
-    useMutation<createClassroomData>(createClassroomMutation);
+  const [createClassRoom] = useMutation<createClassroomData>(
+    createClassroomMutation,
+  );
 
   const {
     data: myClassroomData,
@@ -178,7 +179,6 @@ export function TeacherSchoolRequests() {
     fetchPolicy: "network-only",
   });
 
-<<<<<<< Updated upstream
   const resetCreateDialog = () => {
     setSelectedSubject("");
     setSelectedGrade("");
@@ -186,16 +186,14 @@ export function TeacherSchoolRequests() {
     setStatusMessage("");
   };
 
-=======
->>>>>>> Stashed changes
   useEffect(() => {
     if (!isLoaded || !isSignedIn) {
       return;
     }
 
-    const nextClassrooms = [...(myClassroomData?.classroomsByTeacher ?? [])].sort(
-      (left, right) => right.createdAt - left.createdAt,
-    );
+    const nextClassrooms = [
+      ...(myClassroomData?.classroomsByTeacher ?? []),
+    ].sort((left, right) => right.createdAt - left.createdAt);
     setClassrooms(nextClassrooms);
   }, [isLoaded, isSignedIn, myClassroomData]);
 

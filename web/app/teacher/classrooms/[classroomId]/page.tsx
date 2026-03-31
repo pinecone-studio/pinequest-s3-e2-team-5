@@ -222,7 +222,7 @@ export default function TeacherClassroomDetailPage() {
     { label: "Сурагчид", value: classroom.studentCount },
     { label: "Шалгалт", value: detail.examCount },
     { label: "Дундаж", value: `${detail.averagePercent}%` },
-    { label: "Урилгын код", value: classroom.classCode },
+    { label: "Ангийн код", value: classroom.classCode },
   ];
 
   const handleUpdateClassroom = async () => {
@@ -280,7 +280,7 @@ export default function TeacherClassroomDetailPage() {
   };
 
   return (
-    <section className="space-y-10">
+    <section className="mx-auto max-w-[1040px] space-y-10">
       <Link
         href="/teacher"
         className="inline-flex items-center gap-3 text-[18px] font-medium text-[#36313F] transition hover:text-[#7E66DC]"
@@ -291,9 +291,9 @@ export default function TeacherClassroomDetailPage() {
         <span>Буцах</span>
       </Link>
 
-      <div className="grid gap-6 xl:grid-cols-[236px_minmax(0,1fr)]">
+      <div className="grid gap-5 xl:grid-cols-[210px_minmax(0,1fr)]">
         <aside className="self-start xl:sticky xl:top-28">
-          <section className="rounded-[18px] border border-[#E8E2F1] bg-white p-4 shadow-[0_4px_12px_rgba(53,31,107,0.04)]">
+          <section className="rounded-[16px] border border-[#E8E2F1] bg-white p-4 shadow-[0_4px_12px_rgba(53,31,107,0.04)]">
             <div className="space-y-3">
               {detailRows.slice(0, 3).map((row, index) => (
                 <div
@@ -359,8 +359,8 @@ export default function TeacherClassroomDetailPage() {
           </section>
         </aside>
 
-        <section className="overflow-hidden rounded-[18px] border border-[#E8E2F1] bg-white shadow-[0_4px_12px_rgba(53,31,107,0.04)]">
-          <div className="grid grid-cols-[56px_minmax(180px,1.55fr)_120px_100px_120px_120px_40px] items-center border-b border-[#ECE6F3] px-4 py-4 text-[14px] font-semibold text-[#111111] md:px-6">
+        <section className="overflow-hidden rounded-[16px] border border-[#E8E2F1] bg-white shadow-[0_4px_12px_rgba(53,31,107,0.04)]">
+          <div className="grid grid-cols-[52px_minmax(150px,1.6fr)_108px_96px_108px_120px_40px] items-center border-b border-[#ECE6F3] bg-white px-5 py-4 text-[14px] font-semibold text-[#111111] md:px-6">
             <span>№</span>
             <span>Сурагч</span>
             <span>Оноо</span>
@@ -375,8 +375,8 @@ export default function TeacherClassroomDetailPage() {
               {detail.students.map((student, index) => (
                 <div
                   key={student.id}
-                  className={`grid grid-cols-[56px_minmax(180px,1.55fr)_120px_100px_120px_120px_40px] items-center px-4 py-5 text-[14px] text-[#1A1A1A] md:px-6 ${
-                    index % 2 === 0 ? "bg-[#F7F6FE]" : "bg-[#FCFCFE]"
+                  className={`grid grid-cols-[52px_minmax(150px,1.6fr)_108px_96px_108px_120px_40px] items-center px-5 py-5 text-[14px] text-[#1A1A1A] md:px-6 ${
+                    index % 2 === 0 ? "bg-[#F7F6FE]" : "bg-white"
                   }`}
                 >
                   <span>{index + 1}</span>

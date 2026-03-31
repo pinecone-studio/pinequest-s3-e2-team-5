@@ -22,7 +22,7 @@ const navItems = [
     icon: LayoutGrid,
   },
   {
-    label: "Analytics",
+    label: "Аналитик",
     href: "/teacher/analytics",
     icon: BarChart3,
   },
