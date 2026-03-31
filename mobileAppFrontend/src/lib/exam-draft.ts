@@ -4,10 +4,12 @@ import type { StudentAnswerDraft } from "@/lib/student-types";
 type StoredExamDraft = {
   startedAt: number;
   answers: Record<string, StudentAnswerDraft>;
+  currentQuestionIndex?: number;
 };
 
 function getDraftKey(examId: string) {
-  return `pinequest-exam-draft:${examId}`;
+  const normalizedExamId = examId.replace(/[^A-Za-z0-9._-]/g, "_") || "default";
+  return `pinequest-exam-draft_${normalizedExamId}`;
 }
 
 export async function getExamDraft(examId: string): Promise<StoredExamDraft | null> {
@@ -27,6 +29,8 @@ export async function getExamDraft(examId: string): Promise<StoredExamDraft | nu
     return {
       startedAt: parsed.startedAt,
       answers: parsed.answers ?? {},
+      currentQuestionIndex:
+        typeof parsed.currentQuestionIndex === "number" ? parsed.currentQuestionIndex : 0,
     };
   } catch {
     return null;
