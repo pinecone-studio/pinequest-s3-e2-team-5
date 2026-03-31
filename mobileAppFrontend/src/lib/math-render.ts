@@ -1,8 +1,8 @@
 import katex from "katex";
 import type { TextStyle } from "react-native";
+import { LOCAL_KATEX_CSS } from "@/lib/katex-local-css";
 
 const MATH_PATTERN = /\$\$([\s\S]+?)\$\$|\$([^$]+?)\$/g;
-const KATEX_STYLESHEET_URL = `https://cdn.jsdelivr.net/npm/katex@${katex.version}/dist/katex.min.css`;
 
 function escapeHtml(value: string) {
   return value
@@ -89,8 +89,9 @@ export function buildMathHtml(value: string, style?: TextStyle) {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-    <link rel="stylesheet" href="${KATEX_STYLESHEET_URL}" />
     <style>
+      ${LOCAL_KATEX_CSS}
+
       html, body {
         margin: 0;
         padding: 0;
