@@ -439,6 +439,8 @@ export function AuthScreen({ mode }: AuthScreenProps) {
     const { error } = await signUp.password({
       emailAddress: formValues.email.trim(),
       password: formValues.password,
+      firstName: formValues.firstName,
+      lastName: formValues.lastName,
       unsafeMetadata,
     });
 
@@ -466,6 +468,8 @@ export function AuthScreen({ mode }: AuthScreenProps) {
   const handleVerify = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setFeedback(null);
+
+    console.log(signUp.missingFields)
 
     const { error } = await signUp.verifications.verifyEmailCode({
       code,
@@ -585,8 +589,8 @@ export function AuthScreen({ mode }: AuthScreenProps) {
           {feedback ? (
             <div
               className={`mt-6 rounded-[18px] border px-4 py-3 text-[14px] ${feedback.tone === "success"
-                  ? "border-[#D6F4DD] bg-[#F4FFF6] text-[#1E6E36]"
-                  : "border-[#FFD8D8] bg-[#FFF7F7] text-[#B63B3B]"
+                ? "border-[#D6F4DD] bg-[#F4FFF6] text-[#1E6E36]"
+                : "border-[#FFD8D8] bg-[#FFF7F7] text-[#B63B3B]"
                 }`}
             >
               {feedback.message}
