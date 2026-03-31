@@ -39,7 +39,7 @@ app.post("/uploads/question-image", async (c) => {
 	if (!c.env.exam_media) {
 		return c.json({ error: "Question media bucket is not configured." }, 500);
 	}
-
+ 
 	const auth = await getRequestAuth(c.req.raw, c.env);
 	if (!auth.isAuthenticated || !auth.userId) {
 		return c.json({ error: "Unauthorized" }, 401);

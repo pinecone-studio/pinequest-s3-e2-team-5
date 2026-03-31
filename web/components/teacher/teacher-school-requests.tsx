@@ -245,9 +245,9 @@ export function TeacherSchoolRequests() {
   const classroomCards = classrooms.map(parseClassroomPresentation);
   const classroomErrorMessage = myClassroomError
     ? getApolloErrorMessage(
-        myClassroomError,
-        "Ангийн мэдээлэл ачаалж чадсангүй. Дахин оролдоно уу.",
-      )
+      myClassroomError,
+      "Ангийн мэдээлэл ачаалж чадсангүй. Дахин оролдоно уу.",
+    )
     : "";
 
   return (
@@ -300,9 +300,8 @@ export function TeacherSchoolRequests() {
                   <select
                     value={selectedSubject}
                     onChange={(event) => setSelectedSubject(event.target.value)}
-                    className={`${dialogFieldClassName} appearance-none pr-14 ${
-                      selectedSubject ? "" : "text-[#8E8A94]"
-                    }`}
+                    className={`${dialogFieldClassName} appearance-none pr-14 ${selectedSubject ? "" : "text-[#8E8A94]"
+                      }`}
                   >
                     <option value="" disabled>
                       Хичээл сонгох
@@ -325,9 +324,8 @@ export function TeacherSchoolRequests() {
                   <select
                     value={selectedGrade}
                     onChange={(event) => setSelectedGrade(event.target.value)}
-                    className={`${dialogFieldClassName} appearance-none pr-14 ${
-                      selectedGrade ? "" : "text-[#8E8A94]"
-                    }`}
+                    className={`${dialogFieldClassName} appearance-none pr-14 ${selectedGrade ? "" : "text-[#8E8A94]"
+                      }`}
                   >
                     <option value="" disabled>
                       Анги
