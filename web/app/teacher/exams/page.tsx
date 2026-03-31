@@ -20,6 +20,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { getApolloErrorMessage } from "@/lib/apollo-error";
+import { setExamPdfDraft } from "@/lib/exam-pdf-draft-store";
 
 type TeacherExamRecord = {
   id: string;
@@ -190,6 +191,7 @@ function mapExamToCard(exam: TeacherExamRecord): ExamCard {
 }
 
 export default function TeacherExamsPage() {
+
   const { isLoaded, isSignedIn } = useAuth();
   const [activeTab, setActiveTab] = useState<SubjectKey>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -198,6 +200,7 @@ export default function TeacherExamsPage() {
   const [duration, setDuration] = useState(60);
   const [selectedCreateClassroomId, setSelectedCreateClassroomId] =
     useState("");
+  const [uploadedPdfFile, setUploadedPdfFile] = useState<File | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState("");
   const [createError, setCreateError] = useState("");
   const [scheduleError, setScheduleError] = useState("");
@@ -312,9 +315,17 @@ export default function TeacherExamsPage() {
       const examId = res.data?.createExam.id;
 
       if (examId) {
+        if (uploadedPdfFile) {
+          setExamPdfDraft(examId, uploadedPdfFile);
+        }
+
         setIsCreateDialogOpen(false);
         await refetchExams();
-        router.push(`/teacher/exams/${examId}/edit`);
+        router.push(
+          uploadedPdfFile
+            ? `/teacher/exams/${examId}/edit?parsePdfDraft=1`
+            : `/teacher/exams/${examId}/edit`,
+        );
         return;
       }
 
@@ -422,9 +433,8 @@ export default function TeacherExamsPage() {
                     <select
                       value={subject}
                       onChange={(event) => setSubject(event.target.value)}
-                      className={`${fieldClassName} appearance-none pr-14 text-[#1A1623] ${
-                        subject ? "" : "text-[#8E8A94]"
-                      }`}
+                      className={`${fieldClassName} appearance-none pr-14 text-[#1A1623] ${subject ? "" : "text-[#8E8A94]"
+                        }`}
                     >
                       <option value="" disabled>
                         Хичээл сонгох
@@ -474,10 +484,13 @@ export default function TeacherExamsPage() {
                     <span>{uploadedFileName || "Файл оруулах"}</span>
                     <input
                       type="file"
+                      accept="application/pdf"
                       className="hidden"
-                      onChange={(event) =>
-                        setUploadedFileName(event.target.files?.[0]?.name ?? "")
-                      }
+                      onChange={(event) => {
+                        const selectedFile = event.target.files?.[0] ?? null;
+                        setUploadedPdfFile(selectedFile);
+                        setUploadedFileName(selectedFile?.name ?? "");
+                      }}
                     />
                   </label>
                 </div>
@@ -549,11 +562,10 @@ export default function TeacherExamsPage() {
                   key={tab.key}
                   type="button"
                   onClick={() => setActiveTab(tab.key)}
-                  className={`border-b-2 pb-3 transition-colors ${
-                    isActive
+                  className={`border-b-2 pb-3 transition-colors ${isActive
                       ? "border-[#9A7BFF] text-[#9A7BFF]"
                       : "border-transparent text-[#25232A]"
-                  }`}
+                    }`}
                 >
                   {tab.label}
                 </button>
@@ -605,9 +617,8 @@ export default function TeacherExamsPage() {
                     setSelectedCreateClassroomId(event.target.value)
                   }
                   disabled={!hasCreateClassroomOptions}
-                  className={`${fieldClassName} appearance-none pr-14 ${
-                    selectedCreateClassroomId ? "" : "text-[#8E8A94]"
-                  }`}
+                  className={`${fieldClassName} appearance-none pr-14 ${selectedCreateClassroomId ? "" : "text-[#8E8A94]"
+                    }`}
                 >
                   <option value="" disabled>
                     {hasCreateClassroomOptions

@@ -37,6 +37,7 @@ import { FormulaKeyboardDialog } from "@/components/math/formula-keyboard-dialog
 import { MathBlock, MathInline } from "@/components/math";
 import { getApolloErrorMessage } from "@/lib/apollo-error";
 import { getCloudflareGraphqlUrl } from "@/lib/cloudflare-sync";
+import { consumeExamPdfDraft } from "@/lib/exam-pdf-draft-store";
 
 type QuestionType = "mcq" | "open" | "short";
 
@@ -485,7 +486,12 @@ function renderPreviewContent(value: string) {
   );
 }
 
+
+
 export default function TeacherExamEditPage() {
+
+  const [pdfParsedText, setPdfParsedText] = useState<string | undefined>(undefined)
+
   const { getToken } = useAuth();
   const params = useParams<{ examId: string }>();
   const searchParams = useSearchParams();
@@ -528,6 +534,39 @@ export default function TeacherExamEditPage() {
   const typeMenuRef = useRef<HTMLDivElement | null>(null);
   const choiceInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const choiceIdToFocusRef = useRef<string | null>(null);
+  const parsedDraftExamIdRef = useRef<string | null>(null);
+
+  async function parsePdfDraftWithApi(file: File) {
+    const formData = new FormData();
+    formData.set("file", file);
+  
+    const response = await fetch("/api/pdf/parse", {
+      method: "POST",
+      body: formData,
+    });
+  
+    const payload = (await response.json()) as {
+      text?: string;
+      pageCount?: number;
+      error?: string;
+      stack?: string;
+    };
+  
+    if (!response.ok) {
+      throw new Error(
+        [payload.error || "PDF parse failed.", payload.stack]
+          .filter(Boolean)
+          .join("\n"),
+      );
+    }
+
+    setPdfParsedText(payload.text)
+  
+    return {
+      text: payload.text ?? "",
+      pageCount: payload.pageCount ?? 0,
+    };
+  }
 
   const { data: examData, loading: examLoading, error: examError } =
     useQuery<ExamByIdData>(GET_EXAM_BY_ID, {
@@ -538,6 +577,36 @@ export default function TeacherExamEditPage() {
   useEffect(() => {
     console.log(examData)
   }, [examData])
+
+  useEffect(() => {
+    if (!examId || parsedDraftExamIdRef.current === examId) {
+      return;
+    }
+
+    if (searchParams.get("parsePdfDraft") !== "1") {
+      return;
+    }
+
+    const draftFile = consumeExamPdfDraft(examId);
+    parsedDraftExamIdRef.current = examId;
+
+    if (!draftFile) {
+      console.warn("PDF draft not found for parsing.");
+      return;
+    }
+
+    void parsePdfDraftWithApi(draftFile)
+      .then(({ text, pageCount }) => {
+        console.log("PDF parse result", {
+          pageCount,
+          textLength: text.length,
+          textPreview: text.slice(0, 1000),
+        });
+      })
+      .catch((error) => {
+        console.error("Failed to parse PDF draft.", error);
+      });
+  }, [examId, searchParams]);
 
   const [createQuestionWithChoices, { loading: saveQuestionLoading }] =
     useMutation<CreateQuestionWithChoicesData>(CREATE_QUESTION_WITH_CHOICES);
@@ -2197,7 +2266,11 @@ export default function TeacherExamEditPage() {
             </div>
           )}
         </section>
+        
       </div>
+      <div className="border rounded-2xl w-full">
+          {pdfParsedText}
+        </div>
     </section>
   );
 }
