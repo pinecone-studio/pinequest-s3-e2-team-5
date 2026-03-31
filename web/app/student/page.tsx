@@ -175,7 +175,7 @@ function PasswordField({
   );
 }
 
-export function StudentIllustration() {
+function StudentIllustration() {
   return (
     <div
       style={{

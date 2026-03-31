@@ -6,7 +6,6 @@
  * directly in wrangler.jsonc: "main": "vinext/server/app-router-entry"
  */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
-import type { ImageConfig } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
 
 interface Env {
@@ -32,7 +31,7 @@ interface ExecutionContext {
 // dangerouslyAllowSVG: true in next.config.js and uncomment below:
 // const imageConfig: ImageConfig = { dangerouslyAllowSVG: true };
 
-export default {
+const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     // Expose wrangler vars to process.env for SDKs that read at request time.
     for (const [key, value] of Object.entries(env)) {
@@ -64,3 +63,5 @@ export default {
     return handler.fetch(request, env, ctx);
   },
 };
+
+export default worker;

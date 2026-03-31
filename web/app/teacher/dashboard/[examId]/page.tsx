@@ -63,7 +63,10 @@ export default function TeacherExamAnalysisPage() {
   const [section, setSection] = useState("all");
 
   const exam = data?.teacherExamAnalytics.exam;
-  const students = data?.teacherExamAnalytics.students ?? [];
+  const students = useMemo(
+    () => data?.teacherExamAnalytics.students ?? [],
+    [data?.teacherExamAnalytics.students],
+  );
   const sections = useMemo(() => {
     return Array.from(new Set(students.map((student) => student.section)));
   }, [students]);

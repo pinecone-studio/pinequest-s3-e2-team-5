@@ -101,7 +101,10 @@ export default function TeacherExamAnalyticsDetailPage() {
   );
 
   const analytics = data?.teacherExamAnalytics;
-  const insights = analytics?.questionInsights ?? [];
+  const insights = useMemo(
+    () => analytics?.questionInsights ?? [],
+    [analytics?.questionInsights],
+  );
   const topMistakes = useMemo(
     () =>
       [...insights]

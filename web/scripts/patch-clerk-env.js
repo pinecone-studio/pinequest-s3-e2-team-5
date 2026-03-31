@@ -18,7 +18,7 @@ const wranglerConfig = JSON.parse(
 const vars = wranglerConfig.vars || {};
 
 const envLines = Object.entries(vars)
-  .filter(([_, v]) => typeof v === "string")
+  .filter(([, v]) => typeof v === "string")
   .map(([k, v]) => `process.env[${JSON.stringify(k)}] ??= ${JSON.stringify(v)};`)
   .join(" ");
 

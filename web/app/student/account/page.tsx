@@ -117,19 +117,6 @@ function formatTime(totalSeconds: number) {
   )}`;
 }
 
-function formatScheduledDate(date: string | null | undefined) {
-  if (!date) {
-    return "Товлоогүй";
-  }
-
-  const [year, month, day] = date.split("-");
-  if (!year || !month || !day) {
-    return date;
-  }
-
-  return `${year}/${month}/${day}`;
-}
-
 function formatScheduledTime(time: string | null | undefined) {
   if (!time) {
     return "--:--";
