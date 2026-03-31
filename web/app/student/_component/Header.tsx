@@ -99,8 +99,8 @@ export default function Header() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-[#5B8DEF]/30 bg-white/95 backdrop-blur-sm">
-      <div className="mx-auto flex h-18 max-w-[1245px] items-center justify-between px-8">
+    <header className="sticky top-0 z-50 w-full border-b border-[#ECE8F6] bg-white/95 backdrop-blur-sm">
+      <div className="mx-auto flex h-[72px] max-w-[1245px] items-center justify-between px-8">
         <Link href="/" className="flex items-center gap-2.5">
           <Image
             src="/logo.png"
@@ -117,22 +117,22 @@ export default function Header() {
           </div>
         </Link>
 
-        {/* Nav */}
-        <nav className="flex items-center gap-1">
+        <nav className="flex items-center gap-7">
           {navItems.map(({ href, label, icon: Icon, key }) => {
             const active = isNavItemActive(pathname, key);
             return (
               <Link
                 key={href}
                 href={href}
-                className={`flex items-center gap-2 rounded-full px-5 py-2 text-[14px] font-medium transition-all duration-200 ${active
-                  ? "text-[#896FD4]"
-                  : "text-gray-500 hover:bg-gray-50 hover:text-gray-800"
-                  }`}
+                className={`flex items-center gap-2 px-1 py-2 text-[14px] font-medium transition ${
+                  active
+                    ? "text-[#8E75E3]"
+                    : "text-[#33313A] hover:text-[#8E75E3]"
+                }`}
               >
                 <Icon
-                  size={15}
-                  className={active ? "text-[#896FD4]" : "text-[#51475A]"}
+                  size={16}
+                  className={active ? "text-[#8E75E3]" : "text-[#51475A]"}
                 />
                 {label}
               </Link>
@@ -140,10 +140,9 @@ export default function Header() {
           })}
         </nav>
 
-        {/* User */}
         <div
           ref={profileMenuRef}
-          className="relative ml-4 border-l border-[#D8DAE3] pl-5"
+          className="relative ml-4 border-l border-[#ECE8F6] pl-6"
         >
           <button
             type="button"
@@ -210,8 +209,6 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Bottom accent line */}
-      <div className="h-[2px] w-full bg-gradient-to-r from-[#8B7FE8] via-[#5B8DEF] to-[#8B7FE8] opacity-60" />
     </header>
   );
 }

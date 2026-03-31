@@ -186,8 +186,8 @@ export default function StudentAccountPage() {
   } = useQuery<AvailableExamsData>(GET_AVAILABLE_EXAMS);
 
   useEffect(() => {
-    console.log(availableExamsData)
-  }, [availableExamsData])
+    console.log(availableExamsData);
+  }, [availableExamsData]);
 
   const {
     data: activeExamData,
@@ -527,8 +527,8 @@ export default function StudentAccountPage() {
 
   if (selectedExamId) {
     return (
-      <section className="animate-in fade-in slide-in-from-bottom-2 flex min-h-[calc(100vh-152px)] w-full items-start justify-center px-4 pt-28 duration-300 sm:pt-36">
-        <div className="flex w-full max-w-[586px] flex-col gap-7 rounded-[28px] border border-[#DED8FB] bg-[#FBFAFF] px-5 pb-5 pt-5 shadow-[0_8px_24px_rgba(132,112,222,0.06)] sm:px-5 sm:pb-6 sm:pt-6">
+      <section className="animate-in fade-in slide-in-from-bottom-2 flex min-h-[calc(100vh-148px)] w-full items-start justify-center px-4 pt-24 duration-300 sm:pt-32">
+        <div className="flex w-full max-w-[534px] flex-col gap-6 rounded-[30px] border border-[#E2DBFB] bg-[#FBFAFF] px-5 pb-5 pt-6 shadow-[0_10px_28px_rgba(132,112,222,0.06)]">
           {activeExamLoading || !activeExam ? (
             <div className="flex min-h-[240px] items-center justify-center text-[#6B7280]">
               <Loader2 className="mr-3 h-5 w-5 animate-spin" />
@@ -536,42 +536,52 @@ export default function StudentAccountPage() {
             </div>
           ) : (
             <>
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <h1 className="text-[19px] font-semibold text-[#17161C]">
+              <div className="space-y-5">
+                <div className="space-y-2.5">
+                  <h1 className="text-[18px] font-semibold leading-none text-[#1D1A24] sm:text-[19px]">
                     {
                       getStudentExamPresentation(activeExam.subject)
                         .subjectLabel
-                    }
+                    }{" "}
+                    <span className="font-medium text-[#7A7386]">
+                      /{activeExam.title}/
+                    </span>
                   </h1>
 
-                  <p className="text-[14px] leading-6 font-normal text-[#AAA5B3]">
+                  <p className="text-[14px] leading-6 font-normal text-[#A7A1B2]">
                     {activeExam.description || "Тайлбар оруулаагүй байна."}
                   </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-6 pt-1">
-                  <div className="inline-flex items-center gap-1.5 text-[14px] font-medium text-[#25222B]">
-                    <Clock3 className="h-[14px] w-[14px]" strokeWidth={2.1} />
+                <div className="flex flex-wrap items-center gap-3 pt-0.5">
+                  <div className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[14px] font-medium text-[#25222B] shadow-[0_2px_8px_rgba(79,56,145,0.04)]">
+                    <Clock3 className="h-[14px] w-[14px]" strokeWidth={2.15} />
                     <span>{activeExam.duration} мин</span>
                   </div>
 
-                  <div className="inline-flex items-center gap-1.5 text-[14px] font-medium text-[#25222B]">
-                    <PenLine className="h-[14px] w-[14px]" strokeWidth={2.1} />
+                  <div className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[14px] font-medium text-[#25222B] shadow-[0_2px_8px_rgba(79,56,145,0.04)]">
+                    <PenLine
+                      className="h-[14px] w-[14px] text-black"
+                      strokeWidth={2.15}
+                    />
                     <span>{activeExam.questionCount} дасгал</span>
                   </div>
                 </div>
 
-                <div className="max-w-[155px] space-y-2.5 pt-2">
-                  <div className="flex items-center justify-between gap-8 text-[15px] text-[#1D1C22]">
-                    <span className="font-medium">Эхлэх</span>
-                    <span className="font-normal text-[#34313A]">
+                <div className="grid grid-cols-2 gap-8 pt-2">
+                  <div className="border-l border-[#D8D1F6] pl-3">
+                    <p className="text-[12px] font-medium uppercase tracking-wide text-[#B1A9BF]">
+                      Эхлэх
+                    </p>
+                    <span className="mt-1 block text-[16px] font-semibold leading-none text-[#26222F] sm:text-[17px]">
                       {formatScheduledTime(activeExam.startTime)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between gap-8 text-[15px] text-[#1D1C22]">
-                    <span className="font-medium">Дуусах</span>
-                    <span className="font-normal text-[#34313A]">
+                  <div className="border-l border-[#D8D1F6] pl-3">
+                    <p className="text-[12px] font-medium uppercase tracking-wide text-[#B1A9BF]">
+                      Дуусах
+                    </p>
+                    <span className="mt-1 block text-[16px] font-semibold leading-none text-[#26222F] sm:text-[17px]">
                       {getExamEndTime(
                         activeExam.startTime,
                         activeExam.duration,
@@ -581,25 +591,25 @@ export default function StudentAccountPage() {
                 </div>
               </div>
 
-              <div className="w-full rounded-[11px] border border-[#DDD7F5] bg-[#F3F1FF] px-4 py-2.5">
+              <div className="w-full rounded-[14px] border border-[#DDD7F5] bg-[#F3F1FF] px-4 py-3">
                 <div className="flex items-start gap-3">
                   <Info
                     className="mt-0.5 h-4 w-4 shrink-0 text-[#16151B]"
                     strokeWidth={2.1}
                   />
-                  <p className="text-[12px] leading-5 font-normal text-[#2A2731]">
+                  <p className="text-[12px] leading-6 font-medium text-[#3A3645] sm:text-[13px]">
                     Шалгалтыг эхлүүлсэн тохиолдолд хугацаа зогсохгүй үргэлжлэн
                     тоологдож, дуусмагц автоматаар илгээгдэхийг анхаарна уу.
                   </p>
                 </div>
               </div>
 
-              <div className="mt-1">
-                <div className="flex w-full items-center justify-end gap-12 pr-1">
+              <div className="pt-1">
+                <div className="flex w-full items-center justify-end gap-10 pr-1">
                   <button
                     type="button"
                     onClick={() => setSelectedExamId(null)}
-                    className="cursor-pointer text-[15px] leading-none font-medium text-[#232028] transition hover:text-[#7C63E6]"
+                    className="cursor-pointer text-[15px] leading-none font-semibold text-[#232028] transition hover:text-[#7C63E6]"
                   >
                     Буцах
                   </button>
@@ -608,7 +618,7 @@ export default function StudentAccountPage() {
                     type="button"
                     onClick={handleStartExam}
                     disabled={activeExam.questionCount === 0}
-                    className="flex h-[34px] min-w-[113px] cursor-pointer items-center justify-center rounded-[13px] bg-[linear-gradient(180deg,#A789F4_0%,#8C6EE4_100%)] px-8 text-[15px] leading-none font-semibold text-white shadow-[inset_0_-4px_0_rgba(104,78,187,0.28),0_6px_14px_rgba(144,118,226,0.18)] transition hover:brightness-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="flex h-[36px] min-w-[102px] cursor-pointer items-center justify-center rounded-[13px] bg-[linear-gradient(180deg,#A789F4_0%,#8C6EE4_100%)] px-7 text-[15px] leading-none font-semibold text-white shadow-[inset_0_-4px_0_rgba(104,78,187,0.28),0_7px_14px_rgba(144,118,226,0.20)] transition hover:brightness-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     Эхлэх
                   </button>

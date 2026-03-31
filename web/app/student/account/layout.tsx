@@ -43,7 +43,7 @@ export default async function StudentLayout({
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F8FC]">
+    <div className="min-h-screen bg-white">
       <Header />
       <div className="mx-auto max-w-[1245px] px-8 pt-4">
         {hasStudentSyncMetadata ? (
