@@ -81,7 +81,24 @@ async function getMobileDemoRequestAuth(
 	const email = request.headers.get("x-mobile-student-email")?.trim().toLowerCase();
 	const inviteCode = request.headers.get("x-mobile-student-invite-code")?.trim().toUpperCase();
 
-	if (!requestAccessKey || requestAccessKey !== accessKey || !email || !inviteCode) {
+	if (!requestAccessKey || requestAccessKey !== accessKey || !email) {
+		return null;
+	}
+
+	const existingStudent = await db
+		.select({ id: students.id })
+		.from(students)
+		.where(eq(students.email, email))
+		.get();
+
+	if (existingStudent && !inviteCode) {
+		return {
+			userId: existingStudent.id,
+			isAuthenticated: true,
+		};
+	}
+
+	if (!inviteCode) {
 		return null;
 	}
 
@@ -97,7 +114,12 @@ async function getMobileDemoRequestAuth(
 		.get();
 
 	if (!classroom) {
-		return null;
+		return existingStudent
+			? {
+				userId: existingStudent.id,
+				isAuthenticated: true,
+			}
+			: null;
 	}
 
 	const matchedStudent = await db
@@ -116,11 +138,7 @@ async function getMobileDemoRequestAuth(
 	// Mobile demo access relies on a classroom code header. If a student row still
 	// points at an older classroom, repair the denormalized classroom fields so the
 	// rest of the student queries read the correct classroom immediately.
-	const staleStudent = await db
-		.select({ id: students.id })
-		.from(students)
-		.where(eq(students.email, email))
-		.get();
+	const staleStudent = existingStudent;
 
 	if (!staleStudent) {
 		return null;

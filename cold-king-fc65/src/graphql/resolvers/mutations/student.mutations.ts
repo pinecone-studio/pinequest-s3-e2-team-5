@@ -7,6 +7,7 @@ import type { GraphQLContext } from "../../../server";
 import {
 	getAccessibleExamForStudent,
 	loadQuestionsWithChoices,
+	requireStudentRecord,
 } from "../student-exam.helpers";
 import { assertAuthenticated, badUserInputError } from "../../errors";
 
@@ -94,6 +95,40 @@ export const studentMutation = {
 					id: userId,
 					...values,
 				})
+				.returning()
+				.get();
+		},
+		changeStudentClassroom: async (
+			_: unknown,
+			args: {
+				input: {
+					inviteCode: string;
+				};
+			},
+			context: GraphQLContext,
+		) => {
+			const student = await requireStudentRecord(context);
+			const normalizedCode = args.input.inviteCode.trim().toUpperCase();
+			const classroom = await context.db
+				.select()
+				.from(classrooms)
+				.where(eq(classrooms.classCode, normalizedCode))
+				.get();
+
+			if (!classroom) {
+				throw badUserInputError("Invalid class code.");
+			}
+
+			return context.db
+				.update(students)
+				.set({
+					grade: getGradeFromClassName(classroom.className),
+					className: classroom.className,
+					inviteCode: classroom.classCode,
+					classroomId: classroom.id,
+					teacherId: classroom.teacherId,
+				})
+				.where(eq(students.id, student.id))
 				.returning()
 				.get();
 		},

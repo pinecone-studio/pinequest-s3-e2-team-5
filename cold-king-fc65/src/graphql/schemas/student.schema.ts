@@ -119,6 +119,10 @@ export const studentTypeDefs = gql`
 		inviteCode: String!
 	}
 
+	input ChangeStudentClassroomInput {
+		inviteCode: String!
+	}
+
 	input StudentExamAnswerInput {
 		questionId: String!
 		selectedChoiceId: String
@@ -133,6 +137,7 @@ export const studentTypeDefs = gql`
 
 	type Mutation {
 		upsertStudent(input: upsertStudentInput!): Student
+		changeStudentClassroom(input: ChangeStudentClassroomInput!): Student!
 		submitStudentExam(input: SubmitStudentExamInput!): StudentExamSubmission!
 	}
 `;

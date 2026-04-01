@@ -105,7 +105,9 @@ function getSessionBackendConfig(): SessionBackendConfig | null {
       "Content-Type": "application/json",
       "x-mobile-demo-key": remoteConfig.accessKey,
       "x-mobile-student-email": remoteConfig.studentEmail,
-      "x-mobile-student-invite-code": remoteConfig.studentInviteCode,
+      ...(remoteConfig.studentInviteCode
+        ? { "x-mobile-student-invite-code": remoteConfig.studentInviteCode }
+        : {}),
     },
   };
 }

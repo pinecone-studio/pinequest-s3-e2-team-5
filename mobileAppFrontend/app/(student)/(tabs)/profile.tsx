@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { PrimaryButton } from "@/components/PrimaryButton";
@@ -68,7 +69,8 @@ export default function ProfileScreen() {
         <View style={styles.infoCard}>
           <InfoRow label="Төрөл" value="Сурагч" />
           <InfoRow label="Утас" value={student.phone} />
-          <InfoRow label="Анги" value={student.inviteCode} />
+          <InfoRow label="Анги" value={student.className} />
+          <InfoRow label="Ангийн код" value={student.inviteCode} />
         </View>
 
         <StatusCard
@@ -80,6 +82,13 @@ export default function ProfileScreen() {
           }
         />
 
+        <PrimaryButton
+          label="Анги солих"
+          onPress={() => {
+            router.push("/(student)/profile/classroom");
+          }}
+          variant="secondary"
+        />
         <PrimaryButton
           label={isRemoteData ? "Өгөгдөл шинэчлэх" : "Үр дүн цэвэрлэх"}
           onPress={handleReset}

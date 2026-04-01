@@ -13,6 +13,7 @@ import {
   saveRemoteSnapshot,
 } from "@/lib/app-storage";
 import {
+  changeRemoteStudentClassroom,
   fetchRemoteAvailableExams,
   fetchRemoteExamById,
   fetchRemoteStudentProfile,
@@ -38,6 +39,7 @@ type AppDataContextValue = {
   ensureExamLoaded: (examId: string) => Promise<Exam | null>;
   ensureSubmissionLoaded: (submissionId: string) => Promise<Submission | null>;
   refreshData: () => Promise<void>;
+  changeStudentClassroom: (inviteCode: string) => Promise<StudentProfile>;
   submitExam: (input: {
     examId: string;
     startedAt: number;
@@ -404,6 +406,21 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return { id: nextSubmission.id };
   }, [refreshRemoteSnapshot, submissions, useRemoteData]);
 
+  const changeStudentClassroom = useCallback<AppDataContextValue["changeStudentClassroom"]>(async (inviteCode) => {
+    if (!useRemoteData) {
+      throw new Error("Анги солих нь зөвхөн backend-тэй горимд ажиллана.");
+    }
+
+    const nextStudent = await changeRemoteStudentClassroom(inviteCode);
+    const snapshot = await pullRemoteSnapshot();
+    const mergedSnapshot = applyRemoteSnapshot({
+      ...snapshot,
+      student: nextStudent,
+    });
+    await saveRemoteSnapshot(mergedSnapshot);
+    return mergedSnapshot.student;
+  }, [applyRemoteSnapshot, pullRemoteSnapshot, useRemoteData]);
+
   const resetData = useCallback(() => {
     if (useRemoteData) {
       void (async () => {
@@ -431,6 +448,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       ensureExamLoaded,
       ensureSubmissionLoaded,
       refreshData,
+      changeStudentClassroom,
       submitExam,
       resetData,
     }),
@@ -438,6 +456,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       availableExams,
       ensureExamLoaded,
       ensureSubmissionLoaded,
+      changeStudentClassroom,
       getExamById,
       getSubmissionById,
       refreshData,

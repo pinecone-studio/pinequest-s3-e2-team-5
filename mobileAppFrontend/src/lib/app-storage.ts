@@ -86,6 +86,8 @@ function isStudentProfile(value: unknown): value is StudentProfile {
     typeof student.email === "string" &&
     student.role === "student" &&
     typeof student.phone === "string" &&
+    typeof student.grade === "string" &&
+    typeof student.className === "string" &&
     typeof student.inviteCode === "string"
   );
 }

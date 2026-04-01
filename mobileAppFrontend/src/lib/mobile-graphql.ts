@@ -4,7 +4,7 @@ type MobileRemoteConfig = {
   graphqlUrl: string;
   accessKey: string;
   studentEmail: string;
-  studentInviteCode: string;
+  studentInviteCode?: string;
 };
 
 type GraphqlError = {
@@ -120,6 +120,10 @@ type SubmitStudentExamResponse = {
   submitStudentExam: {
     id: string;
   };
+};
+
+type ChangeStudentClassroomResponse = {
+  changeStudentClassroom: RemoteStudentProfile["studentById"];
 };
 
 const GET_CURRENT_STUDENT = `
@@ -240,6 +244,21 @@ const SUBMIT_STUDENT_EXAM = `
   }
 `;
 
+const CHANGE_STUDENT_CLASSROOM = `
+  mutation ChangeStudentClassroom($input: ChangeStudentClassroomInput!) {
+    changeStudentClassroom(input: $input) {
+      id
+      firstName
+      lastName
+      email
+      phone
+      grade
+      className
+      inviteCode
+    }
+  }
+`;
+
 const NETWORK_TIMEOUT_MS = 8_000;
 
 function readEnv(name: string) {
@@ -252,7 +271,7 @@ export function getMobileRemoteConfig(): MobileRemoteConfig | null {
   const studentEmail = readEnv("EXPO_PUBLIC_MOBILE_STUDENT_EMAIL").toLowerCase();
   const studentInviteCode = readEnv("EXPO_PUBLIC_MOBILE_STUDENT_INVITE_CODE").toUpperCase();
 
-  if (!graphqlUrl || !accessKey || !studentEmail || !studentInviteCode) {
+  if (!graphqlUrl || !accessKey || !studentEmail) {
     return null;
   }
 
@@ -260,7 +279,7 @@ export function getMobileRemoteConfig(): MobileRemoteConfig | null {
     graphqlUrl,
     accessKey,
     studentEmail,
-    studentInviteCode,
+    studentInviteCode: studentInviteCode || undefined,
   };
 }
 
@@ -285,7 +304,9 @@ async function fetchGraphql<TData>(query: string, variables?: Record<string, unk
         "Content-Type": "application/json",
         "x-mobile-demo-key": config.accessKey,
         "x-mobile-student-email": config.studentEmail,
-        "x-mobile-student-invite-code": config.studentInviteCode,
+        ...(config.studentInviteCode
+          ? { "x-mobile-student-invite-code": config.studentInviteCode }
+          : {}),
       },
       body: JSON.stringify({
         query,
@@ -330,6 +351,8 @@ function mapStudentProfile(payload: RemoteStudentProfile["studentById"]): Studen
     email: payload.email,
     role: "student",
     phone: payload.phone,
+    grade: payload.grade,
+    className: payload.className,
     inviteCode: payload.inviteCode,
   };
 }
@@ -463,4 +486,14 @@ export async function submitRemoteStudentExam(input: {
 }) {
   const payload = await fetchGraphql<SubmitStudentExamResponse>(SUBMIT_STUDENT_EXAM, { input });
   return payload.submitStudentExam;
+}
+
+export async function changeRemoteStudentClassroom(inviteCode: string) {
+  const payload = await fetchGraphql<ChangeStudentClassroomResponse>(CHANGE_STUDENT_CLASSROOM, {
+    input: {
+      inviteCode: inviteCode.trim().toUpperCase(),
+    },
+  });
+
+  return mapStudentProfile(payload.changeStudentClassroom);
 }

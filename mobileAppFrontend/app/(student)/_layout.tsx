@@ -18,6 +18,7 @@ export default function StudentLayout() {
     <AppDataProvider>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="profile/classroom" />
         <Stack.Screen name="exam/[examId]" />
         <Stack.Screen name="exam/submitted" />
         <Stack.Screen name="exam/[examId]/take" />

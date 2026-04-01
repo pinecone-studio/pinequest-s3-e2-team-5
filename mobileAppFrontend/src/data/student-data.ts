@@ -8,6 +8,8 @@ export const studentProfile: StudentProfile = {
   email: "temuulen@school.mn",
   role: "student",
   phone: "99112233",
+  grade: "9",
+  className: "9А - Туршилтын анги",
   inviteCode: "9A-101",
 };
 

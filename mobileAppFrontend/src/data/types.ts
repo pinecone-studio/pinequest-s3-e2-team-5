@@ -66,5 +66,7 @@ export type StudentProfile = {
   email: string;
   role: "student";
   phone: string;
+  grade: string;
+  className: string;
   inviteCode: string;
 };
