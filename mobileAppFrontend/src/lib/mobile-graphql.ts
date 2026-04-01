@@ -240,6 +240,8 @@ const SUBMIT_STUDENT_EXAM = `
   }
 `;
 
+const NETWORK_TIMEOUT_MS = 8_000;
+
 function readEnv(name: string) {
   return process.env[name]?.trim() ?? "";
 }
@@ -269,19 +271,37 @@ async function fetchGraphql<TData>(query: string, variables?: Record<string, unk
     throw new Error("Mobile GraphQL тохиргоо дутуу байна.");
   }
 
-  const response = await fetch(config.graphqlUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-mobile-demo-key": config.accessKey,
-      "x-mobile-student-email": config.studentEmail,
-      "x-mobile-student-invite-code": config.studentInviteCode,
-    },
-    body: JSON.stringify({
-      query,
-      variables,
-    }),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => {
+    controller.abort();
+  }, NETWORK_TIMEOUT_MS);
+
+  let response: Response;
+
+  try {
+    response = await fetch(config.graphqlUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-mobile-demo-key": config.accessKey,
+        "x-mobile-student-email": config.studentEmail,
+        "x-mobile-student-invite-code": config.studentInviteCode,
+      },
+      body: JSON.stringify({
+        query,
+        variables,
+      }),
+      signal: controller.signal,
+    });
+  } catch (caughtError) {
+    if (caughtError instanceof Error && caughtError.name === "AbortError") {
+      throw new Error("Сервертэй холбогдох хугацаа хэтэрлээ. Backend ажиллаж байгаа эсэхийг шалгана уу.");
+    }
+
+    throw new Error("Сервертэй холбогдож чадсангүй. Backend болон утас нэг сүлжээнд байгаа эсэхийг шалгана уу.");
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!response.ok) {
     throw new Error(`GraphQL хүсэлт ${response.status} кодтой уналаа.`);

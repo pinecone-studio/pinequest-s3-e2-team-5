@@ -11,7 +11,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { FullScreenLoader } from "@/components/FullScreenLoader";
-import { AppDataProvider } from "@/data/app-data";
+import { LocalAuthProvider } from "@/lib/local-auth";
 import { colors } from "@/lib/theme";
 
 void SplashScreen.preventAutoHideAsync();
@@ -51,7 +51,7 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <AppDataProvider>
+      <LocalAuthProvider>
         <StatusBar style="dark" />
         <Stack
           screenOptions={{
@@ -61,7 +61,7 @@ export default function RootLayout() {
             },
           }}
         />
-      </AppDataProvider>
+      </LocalAuthProvider>
     </SafeAreaProvider>
   );
 }

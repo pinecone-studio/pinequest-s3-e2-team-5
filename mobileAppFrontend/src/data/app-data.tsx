@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { AppState } from "react-native";
 import { ConfigErrorScreen } from "@/components/ConfigErrorScreen";
 import { FullScreenLoader } from "@/components/FullScreenLoader";
+import { PrimaryButton } from "@/components/PrimaryButton";
 import { examCatalog, seedSubmissions, studentProfile } from "@/data/student-data";
 import type { Exam, StudentProfile, Submission } from "@/data/types";
 import {
@@ -95,6 +96,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [remoteAvailableExams, setRemoteAvailableExams] = useState<Exam[]>([]);
   const [bootStatus, setBootStatus] = useState<"loading" | "ready" | "error">("loading");
   const [bootError, setBootError] = useState("");
+  const [bootAttempt, setBootAttempt] = useState(0);
   const studentRef = useRef(studentProfile);
   const submissionsRef = useRef<Submission[]>([...seedSubmissions]);
   const remoteAvailableExamsRef = useRef<Exam[]>([]);
@@ -215,7 +217,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [applyRemoteSnapshot, pullRemoteSnapshot, useRemoteData]);
+  }, [applyRemoteSnapshot, bootAttempt, pullRemoteSnapshot, useRemoteData]);
 
   useEffect(() => {
     if (!useRemoteData || bootStatus !== "ready") {
@@ -460,6 +462,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       <ConfigErrorScreen
         title="Өгөгдөл ачаалж чадсангүй"
         message={bootError || "Mobile app-ийн GraphQL тохиргоог шалгана уу."}
+        action={
+          <PrimaryButton
+            label="Дахин оролдох"
+            onPress={() => {
+              setBootAttempt((current) => current + 1);
+            }}
+          />
+        }
       />
     );
   }

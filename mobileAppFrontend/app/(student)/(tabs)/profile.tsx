@@ -3,6 +3,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { StatusCard } from "@/components/StatusCard";
 import { useAppData } from "@/data/app-data";
+import { useLocalAuth } from "@/lib/local-auth";
 import { colors, fonts, shadows } from "@/lib/theme";
 
 function getInitials(fullName: string) {
@@ -18,6 +19,7 @@ function getInitials(fullName: string) {
 
 export default function ProfileScreen() {
   const { student, submissions, availableExams, isRemoteData, resetData } = useAppData();
+  const { signOut } = useLocalAuth();
 
   const handleReset = () => {
     Alert.alert(
@@ -73,7 +75,7 @@ export default function ProfileScreen() {
           tone="info"
           message={
             isRemoteData
-              ? "Энэ профайлын мэдээлэл одоогоор backend-ээс ачаалагдаж байна."
+              ? "Энэ app одоогоор .env дээр тохируулсан нэг сурагчийн account-аар backend-ээс өгөгдлөө авч байна."
               : "Энэ хэсэг одоогоор төхөөрөмж дээрх туршилтын өгөгдлөөр ажиллаж байна."
           }
         />
@@ -82,6 +84,12 @@ export default function ProfileScreen() {
           label={isRemoteData ? "Өгөгдөл шинэчлэх" : "Үр дүн цэвэрлэх"}
           onPress={handleReset}
           variant="secondary"
+        />
+        <PrimaryButton
+          label="Гарах"
+          onPress={() => {
+            void signOut();
+          }}
         />
       </ScrollView>
     </SafeAreaView>

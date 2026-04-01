@@ -1,8 +1,9 @@
 import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
+import { colors } from "@/lib/theme";
 
 export default function StudentTabsLayout() {
   return (
-    <NativeTabs>
+    <NativeTabs backgroundColor="#DCD9FF" tintColor={colors.primaryDark}>
       <NativeTabs.Trigger name="index">
         <Label>Шалгалт</Label>
         <Icon sf="list.bullet.clipboard.fill" />
