@@ -6,6 +6,7 @@ import { studentExamAnswers } from '../../../db/schemas/student-exam-answer.sche
 import { studentExamSubmissions } from '../../../db/schemas/student-exam-submission.schema';
 import { students } from '../../../db/schemas/student.schema';
 import { loadQuestionsWithChoices } from '../student-exam.helpers';
+import { generateIncorrectAnswerExplanation } from '../ai-explanation';
 import { getTeacherExam, getTeacherStudentSubmission, requireTeacherId } from '../teacher-exam.helpers';
 import { announcedExamGrades } from '../../../db/schemas/announcedExamGrades.schema';
 import { announcedExams } from '../../../db/schemas/announcedExams.schema';
@@ -237,9 +238,27 @@ export const examQuery = {
 				durationMinutes: Math.max(1, Math.round((submission.submittedAt - submission.startedAt) / 60000)),
 				startedAt: submission.startedAt,
 				submittedAt: submission.submittedAt,
-				answers: questions.map((question) => {
+				answers: await Promise.all(questions.map(async (question) => {
 					const answer = answerRows.find((row) => row.questionId === question.id);
 					const correctChoiceId = question.type === 'mcq' ? (question.choices.find((choice) => choice.isCorrect)?.id ?? null) : null;
+					const correctAnswerText =
+						question.type !== 'mcq'
+							? (question.choices.find((choice) => choice.isCorrect)?.text ?? null)
+							: null;
+					const selectedChoiceText =
+						question.type === 'mcq'
+							? (question.choices.find((choice) => choice.id === answer?.selectedChoiceId)?.text ?? null)
+							: answer?.answerText ?? null;
+					const shouldGenerateExplanation =
+						question.type === 'mcq' && Boolean(correctChoiceId) && answer?.isCorrect === false;
+					const aiExplanation = shouldGenerateExplanation
+						? await generateIncorrectAnswerExplanation(context, {
+							question: question.question,
+							correctAnswer:
+								question.choices.find((choice) => choice.id === correctChoiceId)?.text ?? 'Зөв хариулт олдсонгүй.',
+							studentAnswer: selectedChoiceText,
+						})
+						: null;
 
 					return {
 						questionId: question.id,
@@ -247,6 +266,8 @@ export const examQuery = {
 						question: question.question,
 						type: question.type,
 						submittedText: answer?.answerText ?? null,
+						correctAnswerText,
+						aiExplanation,
 						selectedChoiceId: answer?.selectedChoiceId ?? null,
 						correctChoiceId,
 						isCorrect: question.type === 'mcq' ? (answer?.isCorrect ?? false) : null,
@@ -257,7 +278,7 @@ export const examQuery = {
 							isCorrect: choice.isCorrect,
 						})),
 					};
-				}),
+				})),
 			};
 		},
 	},

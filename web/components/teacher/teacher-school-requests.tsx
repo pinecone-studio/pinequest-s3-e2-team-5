@@ -26,12 +26,6 @@ type myClassroomData = {
   classroomsByTeacher: ClassroomItem[];
 };
 
-type SubjectOption = {
-  label: string;
-  accentColor: string;
-  softAccentColor: string;
-};
-
 type ClassroomCardPresentation = {
   id: string;
   title: string;
@@ -43,38 +37,10 @@ type ClassroomCardPresentation = {
   softAccentColor: string;
 };
 
-const subjectOptions: SubjectOption[] = [
-  {
-    label: "Нийгэм",
-    accentColor: "#8B6FF7",
-    softAccentColor: "#F5F0FF",
-  },
-  {
-    label: "Иргэний боловсрол",
-    accentColor: "#73A5F4",
-    softAccentColor: "#EEF6FF",
-  },
-  {
-    label: "Математик",
-    accentColor: "#69B7D5",
-    softAccentColor: "#EDF8FB",
-  },
-  {
-    label: "Англи хэл",
-    accentColor: "#7CA970",
-    softAccentColor: "#F3FAEF",
-  },
-  {
-    label: "Хими",
-    accentColor: "#D98AEF",
-    softAccentColor: "#FCF1FF",
-  },
-  {
-    label: "Физик",
-    accentColor: "#6C95EA",
-    softAccentColor: "#EEF4FF",
-  },
-];
+const classroomCardAccent = {
+  accentColor: "#8B6FF7",
+  softAccentColor: "#F5F0FF",
+};
 
 const gradeOptions = ["9", "10", "11", "12"];
 
@@ -84,42 +50,32 @@ const dialogFieldClassName =
 function buildClassroomName({
   grade,
   section,
-  subjectLabel,
 }: {
   grade: string;
   section: string;
-  subjectLabel: string;
 }) {
-  return `${grade}${section} - ${subjectLabel}`;
-}
-
-function getSubjectOption(label?: string | null) {
-  return (
-    subjectOptions.find((option) => option.label === label) ?? subjectOptions[0]
-  );
+  return `${grade}${section}`;
 }
 
 function parseClassroomPresentation(
   classroom: ClassroomItem,
 ): ClassroomCardPresentation {
   const rawClassName = classroom.className.trim();
-  const [classroomKey, ...subjectParts] = rawClassName.split(" - ");
-  const subjectLabel = subjectParts.join(" - ").trim();
+  const [classroomKey] = rawClassName.split(" - ");
   const keyMatch = classroomKey?.match(/^(\d{1,2})(.*)$/);
   const gradeValue = keyMatch?.[1]?.trim() ?? "";
   const sectionValue = keyMatch?.[2]?.trim() ?? "";
-  const subjectOption = getSubjectOption(subjectLabel || null);
   const fallbackTitle = rawClassName || "Шинэ анги";
 
   return {
     id: classroom.id,
-    title: subjectLabel || fallbackTitle,
+    title: fallbackTitle,
     gradeLabel: gradeValue ? `${gradeValue}-р анги` : rawClassName,
     sectionLabel: sectionValue || "Тодорхойгүй",
     classCode: classroom.classCode,
     studentCount: classroom.studentCount ?? 0,
-    accentColor: subjectOption.accentColor,
-    softAccentColor: subjectOption.softAccentColor,
+    accentColor: classroomCardAccent.accentColor,
+    softAccentColor: classroomCardAccent.softAccentColor,
   };
 }
 
@@ -161,7 +117,6 @@ export function TeacherSchoolRequests() {
   const [statusMessage, setStatusMessage] = useState("");
   const [creatingClassroom, setCreatingClassroom] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [selectedSubject, setSelectedSubject] = useState("");
   const [selectedGrade, setSelectedGrade] = useState("");
   const [section, setSection] = useState("");
 
@@ -180,7 +135,6 @@ export function TeacherSchoolRequests() {
   });
 
   const resetCreateDialog = () => {
-    setSelectedSubject("");
     setSelectedGrade("");
     setSection("");
     setStatusMessage("");
@@ -200,8 +154,8 @@ export function TeacherSchoolRequests() {
   const handleCreateClassroom = async () => {
     try {
       const normalizedSection = section.trim().toUpperCase();
-      if (!selectedSubject || !selectedGrade || !normalizedSection) {
-        throw new Error("Хичээл, анги, бүлгээ бүрэн бөглөнө үү.");
+      if (!selectedGrade || !normalizedSection) {
+        throw new Error("Анги, бүлгээ бүрэн бөглөнө үү.");
       }
 
       setCreatingClassroom(true);
@@ -213,7 +167,6 @@ export function TeacherSchoolRequests() {
             className: buildClassroomName({
               grade: selectedGrade,
               section: normalizedSection,
-              subjectLabel: selectedSubject,
             }),
           },
         },
@@ -292,30 +245,6 @@ export function TeacherSchoolRequests() {
             </DialogHeader>
 
             <div className="mt-8 space-y-8">
-              <div className="space-y-3">
-                <label className="block text-[16px] font-semibold text-[#111111]">
-                  Хичээл
-                </label>
-                <div className="relative">
-                  <select
-                    value={selectedSubject}
-                    onChange={(event) => setSelectedSubject(event.target.value)}
-                    className={`${dialogFieldClassName} appearance-none pr-14 ${selectedSubject ? "" : "text-[#8E8A94]"
-                      }`}
-                  >
-                    <option value="" disabled>
-                      Хичээл сонгох
-                    </option>
-                    {subjectOptions.map((option) => (
-                      <option key={option.label} value={option.label}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8E8A94]" />
-                </div>
-              </div>
-
               <div className="space-y-3">
                 <label className="block text-[16px] font-semibold text-[#111111]">
                   Анги

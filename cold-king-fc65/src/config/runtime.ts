@@ -9,6 +9,7 @@ export type WorkerBindings = Env & {
 	MOBILE_DEMO_ACCESS_KEY?: string;
 	CORS_ORIGINS?: string;
 	exam_media?: R2Bucket;
+	AI?: Ai;
 };
 
 export function getPublishableKey(env: WorkerBindings) {

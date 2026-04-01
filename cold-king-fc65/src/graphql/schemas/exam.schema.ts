@@ -96,6 +96,8 @@ export const examTypeDefs = gql`
         question: String!
         type: QuestionType!
         submittedText: String
+        correctAnswerText: String
+        aiExplanation: String
         selectedChoiceId: String
         correctChoiceId: String
         isCorrect: Boolean

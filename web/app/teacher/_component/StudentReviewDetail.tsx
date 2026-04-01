@@ -31,6 +31,8 @@ type TeacherStudentSubmissionDetailData = {
       question: string;
       type: "mcq" | "open" | "short";
       submittedText: string | null;
+      correctAnswerText: string | null;
+      aiExplanation: string | null;
       selectedChoiceId: string | null;
       correctChoiceId: string | null;
       isCorrect: boolean | null;
@@ -66,6 +68,8 @@ const GET_TEACHER_STUDENT_SUBMISSION_DETAIL = gql`
         question
         type
         submittedText
+        correctAnswerText
+        aiExplanation
         selectedChoiceId
         correctChoiceId
         isCorrect
@@ -342,6 +346,20 @@ export function StudentReviewDetail({
                   {question.submittedText || "Хариулаагүй байна."}
                 </div>
               )}
+
+              {question.type === "mcq" &&
+              question.isCorrect === false &&
+              question.aiExplanation ? (
+                <div className="mt-4 rounded-[14px] border-l-[3px] border-[#74BE7B] bg-[#F6F7F8] px-4 py-3.5 text-[15px] leading-7 text-[#35303F]">
+                  {question.aiExplanation}
+                </div>
+              ) : null}
+
+              {question.type !== "mcq" && question.correctAnswerText ? (
+                <div className="mt-4 rounded-[14px] border-l-[3px] border-[#74BE7B] bg-[#F6F7F8] px-4 py-3.5 text-[15px] leading-7 text-[#35303F]">
+                  {question.correctAnswerText}
+                </div>
+              ) : null}
             </article>
           ))}
         </div>

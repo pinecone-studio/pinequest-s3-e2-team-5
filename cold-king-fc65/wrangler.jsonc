@@ -45,7 +45,11 @@
 			"binding": "exam_media",
 			"remote": true
 		}
-	]
+	],
+	"ai": {
+		"binding": "AI",
+		"remote": true
+	}
 	/**
 	 * Smart Placement
 	 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
