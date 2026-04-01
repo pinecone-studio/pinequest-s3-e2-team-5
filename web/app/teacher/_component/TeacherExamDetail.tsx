@@ -165,7 +165,7 @@ function formatScheduledDate(date: string | null) {
     return date;
   }
 
-  return `${month}.${day}.${year}`;
+  return `${day}.${month}.${year}`;
 }
 
 function hasMathContent(value: string) {

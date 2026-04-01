@@ -63,7 +63,38 @@ function formatScheduledDate(date: string | null) {
     return date;
   }
 
-  return `${month}.${day}.${year}`;
+  return `${day}.${month}.${year}`;
+}
+
+function parseScheduleDateTime(
+  scheduledDate: string | null,
+  startTime: string | null,
+) {
+  if (!scheduledDate || !startTime) {
+    return null;
+  }
+
+  const dateMatch = scheduledDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const timeMatch = startTime.match(/^(\d{2}):(\d{2})$/);
+
+  if (!dateMatch || !timeMatch) {
+    return null;
+  }
+
+  const [, year, month, day] = dateMatch;
+  const [, hour, minute] = timeMatch;
+
+  const startsAt = new Date(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hour),
+    Number(minute),
+    0,
+    0,
+  );
+
+  return Number.isNaN(startsAt.getTime()) ? null : startsAt;
 }
 
 function getExamCategory(exam: TeacherExamRecord): DashboardCategoryKey {
@@ -71,17 +102,24 @@ function getExamCategory(exam: TeacherExamRecord): DashboardCategoryKey {
     return "closed";
   }
 
-  if (!exam.scheduledDate || !exam.startTime) {
+  const scheduledAt = parseScheduleDateTime(exam.scheduledDate, exam.startTime);
+  if (!scheduledAt) {
     return "scheduled";
   }
 
-  const scheduledAt = new Date(`${exam.scheduledDate}T${exam.startTime}`);
+  const startsAt = scheduledAt.getTime();
+  const closesAt = startsAt + Math.max(0, exam.duration) * 60 * 1000;
+  const now = Date.now();
 
-  if (Number.isNaN(scheduledAt.getTime())) {
+  if (startsAt > now) {
     return "scheduled";
   }
 
-  return scheduledAt.getTime() > Date.now() ? "scheduled" : "active";
+  if (now >= closesAt) {
+    return "closed";
+  }
+
+  return "active";
 }
 
 function mapExamToCard(exam: TeacherExamRecord): ExamCard {

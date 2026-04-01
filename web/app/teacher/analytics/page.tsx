@@ -100,18 +100,44 @@ const GET_TEACHER_ANALYTICS_DETAIL = gql`
   }
 `;
 
+function parseScheduleDateTime(
+  scheduledDate: string | null,
+  startTime: string | null,
+) {
+  if (!scheduledDate || !startTime) {
+    return null;
+  }
+
+  const dateMatch = scheduledDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const timeMatch = startTime.match(/^(\d{2}):(\d{2})$/);
+
+  if (!dateMatch || !timeMatch) {
+    return null;
+  }
+
+  const [, year, month, day] = dateMatch;
+  const [, hour, minute] = timeMatch;
+
+  const startsAt = new Date(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hour),
+    Number(minute),
+    0,
+    0,
+  );
+
+  return Number.isNaN(startsAt.getTime()) ? null : startsAt;
+}
+
 function isCompletedExam(exam: TeacherAnalyticsExamRecord) {
   if (!exam.openStatus) {
     return true;
   }
 
-  if (!exam.scheduledDate || !exam.startTime) {
-    return false;
-  }
-
-  const scheduledAt = new Date(`${exam.scheduledDate}T${exam.startTime}`);
-
-  if (Number.isNaN(scheduledAt.getTime())) {
+  const scheduledAt = parseScheduleDateTime(exam.scheduledDate, exam.startTime);
+  if (!scheduledAt) {
     return false;
   }
 
@@ -120,12 +146,12 @@ function isCompletedExam(exam: TeacherAnalyticsExamRecord) {
 }
 
 function getCompletedExamSortValue(exam: TeacherAnalyticsExamRecord) {
-  if (!exam.scheduledDate || !exam.startTime) {
+  const scheduledAt = parseScheduleDateTime(exam.scheduledDate, exam.startTime);
+  if (!scheduledAt) {
     return 0;
   }
 
-  const scheduledAt = new Date(`${exam.scheduledDate}T${exam.startTime}`);
-  return Number.isNaN(scheduledAt.getTime()) ? 0 : scheduledAt.getTime();
+  return scheduledAt.getTime();
 }
 
 function parseClassroomMeta(
