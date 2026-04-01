@@ -14,6 +14,8 @@ import {
 } from "react";
 import { Button } from "@/components/ui/button";
 import { getRoleHomePath, isUserRole, type UserRole } from "@/lib/auth-role";
+import teacherHome from "/public/teacherHome.png";
+
 
 type AuthScreenProps = {
   mode: "sign-in" | "sign-up";
@@ -219,101 +221,90 @@ function PasswordField({
   );
 }
 
-function StudentIllustration() {
+
+export default function StudentIllustration() {
   return (
-    <div
-      style={{
-        position: "relative",
-        width: "100%",
-        maxWidth: "720px",
-        aspectRatio: "679 / 642.86",
-        margin: "0 auto",
-      }}
-    >
+    <div className="relative w-[413px] h-[428px] mx-auto">
+      
+      {/* Blur Ellipse (Figma background) */}
       <div
+        className="
+          absolute
+          w-[642px]
+          h-[642px]
+          left-1/2
+          top-1/2
+          -translate-x-1/2
+          -translate-y-1/2
+          rounded-[100%]
+          opacity-400
+          blur-[30px]
+        "
         style={{
-          position: "absolute",
-          inset: "-6%",
-          borderRadius: "80px",
-          background: "linear-gradient(180deg, #E9D0F7 0%, #B8CBF7 100%)",
-          opacity: 0.45,
-          filter: "blur(90px)",
-          pointerEvents: "none",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          inset: "3%",
-          borderRadius: "60px",
-          background: "linear-gradient(180deg, #E9D0F7 0%, #B8CBF7 100%)",
-          opacity: 0.72,
-          filter: "blur(30px)",
-          pointerEvents: "none",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          inset: "6%",
-          borderRadius: "48px",
-          background: "linear-gradient(180deg, #EDE0FA 0%, #C5D4F8 100%)",
-          pointerEvents: "none",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          inset: "6%",
-          borderRadius: "48px",
           background:
-            "radial-gradient(circle at 50% 0%, rgba(255,255,255,0.55) 0%, transparent 62%)",
-          pointerEvents: "none",
+            "linear-gradient(180deg, #E9D0F7 10%, #B8CBF7 100%)",
         }}
       />
-      <div
-        style={{
-          position: "absolute",
-          inset: "6%",
-          borderRadius: "48px",
-          border: "transparent",
-          pointerEvents: "none",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          bottom: "6%",
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: "70%",
-          height: "60px",
-          borderRadius: "9999px",
-          background: "rgba(214, 204, 255, 0.5)",
-          filter: "blur(32px)",
-          pointerEvents: "none",
-        }}
-      />
+
+      {/* Image */}
       <Image
         src="/studentHome.png"
-        alt="Auth illustration"
-        width={560}
-        height={560}
-        style={{
-          position: "relative",
-          zIndex: 10,
-          width: "78%",
-          height: "auto",
-          maxWidth: "none",
-          left: "50%",
-          top: "50%",
-          transform: "translate(-50%, -50%)",
-          display: "block",
-        }}
+        alt="Student illustration"
+        width={413}
+        height={428}
+        className="
+          relative
+          z-10
+          w-full
+          h-full
+          object-contain
+        "
       />
     </div>
   );
 }
+export function TeacherIllustration() {
+  return (
+    <div className="relative w-[413px] h-[428px] mx-auto">
+          
+          {/* Blur Ellipse (Figma background) */}
+          <div
+            className="
+              absolute
+              w-[642px]
+              h-[600px]
+              left-1/2
+              top-1/2
+              -translate-x-1/2
+              -translate-y-1/2
+              rounded-[70%]
+              opacity-400
+              blur-[40px]
+            "
+            style={{
+              background:
+                "linear-gradient(180deg, #E9D0F7 10%, #B8CBF7 100%)",
+            }}
+          />
+    
+          {/* Image */}
+          <Image
+            src={teacherHome}
+            alt="Student illustration"
+            width={413}
+            height={428}
+            className="
+              relative
+              z-10
+              w-full
+              h-full
+              object-contain
+            "
+          />
+        </div>
+  );
+}
+
 
 export function AuthScreen({ mode }: AuthScreenProps) {
   const router = useRouter();
@@ -572,7 +563,7 @@ export function AuthScreen({ mode }: AuthScreenProps) {
       <section className="mx-auto grid min-h-screen w-full max-w-[1320px] items-center gap-10 px-6 py-8 lg:grid-cols-[minmax(0,1.08fr)_420px] lg:gap-16 lg:px-10 lg:py-12">
         <div className="order-2 lg:order-1">
           <div className="relative flex min-h-[380px] items-center justify-center overflow-hidden rounded-[42px] px-4 py-8 lg:min-h-[720px] lg:px-8">
-            <StudentIllustration />
+            {isTeacherRole ? <TeacherIllustration /> : <StudentIllustration />}
           </div>
         </div>
 

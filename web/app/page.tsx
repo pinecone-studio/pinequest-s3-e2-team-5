@@ -1,99 +1,47 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-function StudentIllustration() {
+import teacherHome from "/public/teacherHome.png";
+
+export function TeacherIllustration() {
   return (
-    <div
-      style={{
-        position: "relative",
-        width: "100%",
-        maxWidth: "720px",
-        aspectRatio: "679 / 642.86",
-        margin: "0 auto",
-      }}
-    >
-      <div
-        style={{
-          position: "absolute",
-          inset: "-6%",
-          borderRadius: "80px",
-          background: "linear-gradient(180deg, #E9D0F7 0%, #B8CBF7 100%)",
-          opacity: 0.45,
-          filter: "blur(90px)",
-          pointerEvents: "none",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          inset: "3%",
-          borderRadius: "60px",
-          background: "linear-gradient(180deg, #E9D0F7 0%, #B8CBF7 100%)",
-          opacity: 0.72,
-          filter: "blur(30px)",
-          pointerEvents: "none",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          inset: "6%",
-          borderRadius: "48px",
-          background: "linear-gradient(180deg, #EDE0FA 0%, #C5D4F8 100%)",
-          pointerEvents: "none",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          inset: "6%",
-          borderRadius: "48px",
-          background:
-            "radial-gradient(circle at 50% 0%, rgba(255,255,255,0.55) 0%, transparent 62%)",
-          pointerEvents: "none",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          inset: "6%",
-          borderRadius: "48px",
-          border: "transparent",
-          pointerEvents: "none",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          bottom: "6%",
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: "70%",
-          height: "60px",
-          borderRadius: "9999px",
-          background: "rgba(214, 204, 255, 0.5)",
-          filter: "blur(32px)",
-          pointerEvents: "none",
-        }}
-      />
-      <Image
-        src="/studentHome.png"
-        alt="Auth illustration"
-        width={560}
-        height={560}
-        style={{
-          position: "relative",
-          zIndex: 10,
-          width: "78%",
-          height: "auto",
-          maxWidth: "none",
-          left: "50%",
-          top: "50%",
-          transform: "translate(-50%, -50%)",
-          display: "block",
-        }}
-      />
-    </div>
+    <div className="relative w-[413px] h-[428px] mx-auto">
+          
+          {/* Blur Ellipse (Figma background) */}
+          <div
+            className="
+              absolute
+              w-[642px]
+              h-[600px]
+              left-1/2
+              top-1/2
+              -translate-x-1/2
+              -translate-y-1/2
+              rounded-[70%]
+              opacity-400
+              blur-[40px]
+            "
+            style={{
+              background:
+                "linear-gradient(180deg, #E9D0F7 10%, #B8CBF7 100%)",
+            }}
+          />
+    
+          {/* Image */}
+          <Image
+            src={teacherHome}
+            alt="Student illustration"
+            width={413}
+            height={428}
+            className="
+              relative
+              z-10
+              w-full
+              h-full
+              object-contain
+            "
+          />
+        </div>
   );
 }
 
@@ -101,7 +49,7 @@ export default function Home() {
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-white px-6 py-12">
       <div className="absolute inset-0 -z-30 bg-white" />
-      <div className="absolute inset-0 -z-20 flex items-center justify-center">
+      {/* <div className="absolute inset-0 -z-20 flex items-center justify-center">
         <div
           className="h-[62vh] w-[72vw] max-w-[1020px] rounded-[72px] opacity-55"
           style={{
@@ -109,13 +57,13 @@ export default function Home() {
               "linear-gradient(211.38deg, #E9D0F7 18.64%, #B8CBF7 83.45%)",
           }}
         />
-      </div>
+      </div> */}
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0)_18%,rgba(255,255,255,0.84)_72%,#ffffff_100%)]" />
 
-      <section className="mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-[1.15fr_0.85fr]">
+      <section className="mx-auto grid w-full max-w-6xl items-center gap-70 lg:grid-cols-[1.15fr_0.85fr]">
         <div className="flex items-center justify-center">
           <div className="relative flex w-full max-w-[540px] items-center justify-center">
-            <StudentIllustration />
+            <TeacherIllustration />
           </div>
         </div>
 
