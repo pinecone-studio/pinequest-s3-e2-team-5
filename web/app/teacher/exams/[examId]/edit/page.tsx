@@ -560,8 +560,6 @@ export default function TeacherExamEditPage() {
       );
     }
 
-    setPdfParsedText(payload.text)
-  
     return {
       text: payload.text ?? "",
       pageCount: payload.pageCount ?? 0,
@@ -573,10 +571,6 @@ export default function TeacherExamEditPage() {
       variables: { examId },
       skip: !examId,
     });
-
-  useEffect(() => {
-    console.log(examData)
-  }, [examData])
 
   useEffect(() => {
     if (!examId || parsedDraftExamIdRef.current === examId) {
@@ -602,10 +596,13 @@ export default function TeacherExamEditPage() {
           textLength: text.length,
           textPreview: text.slice(0, 1000),
         });
+        setPdfParsedText(text);
       })
       .catch((error) => {
         console.error("Failed to parse PDF draft.", error);
+        setPdfParsedText(undefined);
       });
+
   }, [examId, searchParams]);
 
   const [createQuestionWithChoices, { loading: saveQuestionLoading }] =
