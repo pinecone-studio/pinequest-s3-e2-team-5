@@ -33,8 +33,8 @@ export function getStudentExamPresentation(subject: string): {
     return {
       subjectLabel: "Англи",
       iconName: "book-education-outline",
-      background: "#F2F6D8",
-      iconBackground: "#E4EEB8",
+      background: "#E3F5E8",
+      iconBackground: "#C9EBD3",
     };
   }
 
@@ -51,8 +51,8 @@ export function getStudentExamPresentation(subject: string): {
     return {
       subjectLabel: "Иргэний боловсрол",
       iconName: "account-school-outline",
-      background: "#F7EBDA",
-      iconBackground: "#F1D8B2",
+      background: "#F8E2EF",
+      iconBackground: "#F1CBE2",
     };
   }
 
