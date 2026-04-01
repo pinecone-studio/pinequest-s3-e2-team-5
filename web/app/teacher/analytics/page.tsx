@@ -395,7 +395,7 @@ export default function TeacherAnalyticsPage() {
     <section className="mx-auto max-w-[1080px] space-y-8">
       <Link
         href="/teacher/dashboard"
-        className="inline-flex items-center gap-3 text-[18px] font-medium text-[#36313F] transition hover:text-[#7E66DC]"
+        className="inline-flex cursor-pointer items-center gap-3 text-[18px] font-medium text-[#36313F] transition hover:text-[#7E66DC]"
       >
         <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F3F0FA]">
           <ChevronLeft className="h-5 w-5" />
@@ -414,7 +414,7 @@ export default function TeacherAnalyticsPage() {
                   key={item.cardKey}
                   type="button"
                   onClick={() => setSelectedExamCardKey(item.cardKey)}
-                  className={`w-full rounded-[16px] border bg-white p-4 text-left shadow-[0_4px_12px_rgba(53,31,107,0.04)] transition ${
+                  className={`w-full cursor-pointer rounded-[16px] border bg-white p-4 text-left shadow-[0_4px_12px_rgba(53,31,107,0.04)] transition ${
                     isActive
                       ? "border-[#CFC2F3] ring-2 ring-[#CFC2F3]/50"
                       : "border-[#E8E2F1] hover:border-[#D8CCFB]"

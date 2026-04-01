@@ -126,6 +126,19 @@
   * {
     @apply border-border outline-ring/50;
   }
+
+  :where(
+      a[href],
+      button:not(:disabled),
+      [role="button"]:not([aria-disabled="true"]),
+      summary,
+      input[type="button"]:not(:disabled),
+      input[type="submit"]:not(:disabled),
+      input[type="reset"]:not(:disabled)
+    ) {
+    cursor: pointer;
+  }
+
   body {
     @apply bg-background text-foreground;
   }
