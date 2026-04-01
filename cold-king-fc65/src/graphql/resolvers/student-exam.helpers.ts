@@ -62,6 +62,23 @@ export function isExamOpenNow(params: {
 	return currentTime >= startsAt && currentTime < closesAt;
 }
 
+export function isExamScheduledForFuture(params: {
+	openStatus: boolean;
+	scheduledDate: string;
+	startTime: string;
+}) {
+	const startsAt = parseScheduleDateTime(params.scheduledDate, params.startTime);
+	if (!startsAt) {
+		return false;
+	}
+
+	if (!params.openStatus) {
+		return false;
+	}
+
+	return startsAt > new Date();
+}
+
 export async function requireStudentRecord(context: GraphQLContext) {
 	if (!context.auth.userId || !context.auth.isAuthenticated) {
 		throw unauthorizedError();

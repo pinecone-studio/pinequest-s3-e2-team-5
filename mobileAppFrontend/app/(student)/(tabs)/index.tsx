@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { SvgUri } from "react-native-svg";
 import { EmptyState } from "@/components/EmptyState";
 import { useAppData } from "@/data/app-data";
 import {
@@ -14,13 +15,13 @@ import {
 import { colors, fonts, shadows } from "@/lib/theme";
 
 const learningMsLogo = require("../../../assets/learning-ms-logo.png");
+const simplificationIllustration = Image.resolveAssetSource(require("../../../Simplification.svg"));
 
 export default function StudentHomeScreen() {
-  const { availableExams, refreshData } = useAppData();
+  const { availableExams, scheduledExams, refreshData } = useAppData();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedTab, setSelectedTab] = useState<"active" | "scheduled">("active");
 
-  const scheduledExams = useMemo(() => [] as typeof availableExams, []);
   const visibleExams = selectedTab === "active" ? availableExams : scheduledExams;
   const subjectOrder = useMemo(() => buildStudentExamSubjectOrder(visibleExams), [visibleExams]);
 
@@ -74,11 +75,17 @@ export default function StudentHomeScreen() {
       >
         {visibleExams.length === 0 ? (
           <EmptyState
-            title={selectedTab === "active" ? "Идэвхтэй шалгалт алга" : "Товлосон шалгалт алга"}
-            description={
+            illustration={
+              <SvgUri
+                uri={simplificationIllustration.uri}
+                width={232}
+                height={232}
+              />
+            }
+            title={
               selectedTab === "active"
-                ? "Доош татаж шинэчлээд үзээрэй. Шалгалт эхлэх цагтаа хүрмэгц энд орж ирнэ."
-                : "Товлосон шалгалтын жагсаалтыг дараагийн алхмаар backend-ээс тусад нь холбоно."
+                ? "Одоогоор идэвхтэй шалгалт алга."
+                : "Одоогоор товлогдсон шалгалт алга."
             }
           />
         ) : (
@@ -142,8 +149,6 @@ const styles = StyleSheet.create({
   segmentWrap: {
     flexDirection: "row",
     alignItems: "flex-end",
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
     paddingHorizontal: 16,
     paddingTop: 8,
     backgroundColor: "#FFFFFF",
@@ -170,6 +175,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   content: {
+    flexGrow: 1,
     paddingHorizontal: 20,
     paddingTop: 18,
     paddingBottom: 136,

@@ -1,6 +1,5 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { MathText } from "@/components/MathText";
 import { getStudentExamPresentation } from "@/lib/student-exam";
 import { colors, fonts, shadows } from "@/lib/theme";
 
@@ -41,91 +40,139 @@ export function StudentExamCard({
       ]}
       onPress={onPress}
     >
-      <View style={[styles.iconWrap, { backgroundColor: presentation.iconBackground }]}>
-        <MaterialCommunityIcons
-          name={presentation.iconName}
-          size={24}
-          color={colors.textPrimary}
-        />
-      </View>
-
-      <View style={styles.titleBlock}>
-        <Text style={styles.subject}>{presentation.subjectLabel}</Text>
-        <MathText value={`/${title}/`} style={styles.topic} />
-      </View>
-      <Text style={styles.grade}>{grade}</Text>
-
-      <View style={styles.metaRow}>
-        <View style={styles.metaChip}>
-          <Text style={styles.metaChipText}>{duration} мин</Text>
+      <View style={styles.cardTop}>
+        <View
+          style={[
+            styles.iconWrap,
+            { backgroundColor: presentation.iconBackground },
+          ]}
+        >
+          <MaterialCommunityIcons
+            name={presentation.iconName}
+            size={22}
+            color={colors.textPrimary}
+          />
         </View>
-        <View style={styles.metaChip}>
-          <Text style={styles.metaChipText}>{questionCount} даалгавар</Text>
+
+        <View style={styles.titleBlock}>
+          <Text
+            style={styles.titleText}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            <Text style={styles.subject}>{presentation.subjectLabel}</Text>
+            <Text style={styles.topic}> /{title}/</Text>
+          </Text>
+        </View>
+
+        <Text style={styles.grade}>{grade}</Text>
+
+        <View style={styles.metaRow}>
+          <View style={[styles.metaChip, styles.metaChipDuration]}>
+            <MaterialCommunityIcons
+              name="clock-outline"
+              size={16}
+              color={colors.textPrimary}
+            />
+            <Text style={styles.metaChipText}>{duration} мин</Text>
+          </View>
+
+          <View style={[styles.metaChip, styles.metaChipQuestions]}>
+            <MaterialCommunityIcons
+              name="pencil-outline"
+              size={16}
+              color={colors.textPrimary}
+            />
+            <Text style={styles.metaChipText}>{questionCount} дасгал</Text>
+          </View>
         </View>
       </View>
 
-      <View style={styles.footer}>
-        <Text style={styles.footerLabel}>{footerLabel}</Text>
-        <Text style={styles.footerValue}>{startTime || "--:--"}</Text>
+      <View style={styles.cardBottom}>
+        <Text style={styles.footer}>
+          {footerLabel} -{" "}
+          <Text style={styles.footerAccent}>/{startTime || "--"}/</Text>
+        </Text>
+        <Text style={styles.date}>{scheduledDate || "Товлоогүй"}</Text>
       </View>
-      <Text style={styles.date}>{scheduledDate || "Товлоогүй"}</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 28,
-    padding: 18,
+    alignSelf: "center",
+    width: 350,
+    height: 263,
+    justifyContent: "space-between",
+    borderRadius: 34,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.6)",
+    paddingHorizontal: 22,
+    paddingVertical: 20,
     ...shadows.card,
   },
   pressed: {
     opacity: 0.95,
   },
+  cardTop: {
+    alignItems: "flex-start",
+  },
+  cardBottom: {
+    alignItems: "flex-start",
+  },
   iconWrap: {
-    height: 48,
-    width: 48,
+    height: 43,
+    width: 43,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 18,
+    borderRadius: 12,
   },
   titleBlock: {
-    marginTop: 14,
+    marginTop: 18,
+    width: "100%",
+  },
+  titleText: {
+    fontFamily: fonts.display.semibold,
+    fontSize: 22,
+    color: colors.textPrimary,
   },
   subject: {
     fontFamily: fonts.display.semibold,
-    fontSize: 21,
-    lineHeight: 28,
+    fontSize: 20,
     color: colors.textPrimary,
   },
   topic: {
-    marginTop: 2,
     fontFamily: fonts.sans.regular,
-    fontSize: 21,
-    lineHeight: 28,
+    fontSize: 18,
     color: colors.textMuted,
   },
   grade: {
-    marginTop: 4,
+    marginTop: 14,
     fontFamily: fonts.sans.medium,
-    fontSize: 15,
-    color: colors.textSecondary,
+    fontSize: 16,
+    color: colors.textPrimary,
   },
   metaRow: {
-    marginTop: 16,
+    marginTop: 14,
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: 12,
   },
   metaChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
     borderRadius: 999,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: "#E7E1F3",
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+  },
+  metaChipDuration: {
+    width: 85,
+    height: 28,
+  },
+  metaChipQuestions: {
+    width: 101,
+    height: 28,
   },
   metaChipText: {
     fontFamily: fonts.sans.medium,
@@ -133,25 +180,18 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   footer: {
-    marginTop: 18,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  footerLabel: {
     fontFamily: fonts.sans.medium,
-    fontSize: 12,
-    color: colors.textSecondary,
+    fontSize: 14,
+    color: colors.textPrimary,
   },
-  footerValue: {
+  footerAccent: {
     fontFamily: fonts.sans.semibold,
-    fontSize: 13,
     color: colors.textPrimary,
   },
   date: {
     marginTop: 6,
     fontFamily: fonts.sans.regular,
-    fontSize: 12,
+    fontSize: 13,
     color: colors.textMuted,
   },
 });

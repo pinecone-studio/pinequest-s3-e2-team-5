@@ -65,6 +65,8 @@ export const studentTypeDefs = gql`
 		title: String!
 		subject: String!
 		grade: String!
+		scheduledDate: String
+		startTime: String
 		duration: Int!
 		questionCount: Int!
 		correctAnswers: Int!
@@ -106,6 +108,7 @@ export const studentTypeDefs = gql`
 		students: [Student]!
 		studentById(id: String): Student!
 		availableExamsForStudent: [StudentAvailableExam!]!
+		scheduledExamsForStudent: [StudentAvailableExam!]!
 		studentExamDetail(examId: String!): StudentExamDetail!
 		myExamSubmissions: [StudentExamSubmission!]!
 		studentExamSubmissionDetail(submissionId: String!): StudentExamSubmissionDetail!

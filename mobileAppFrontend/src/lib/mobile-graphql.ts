@@ -76,11 +76,28 @@ type RemoteSubmissionSummaries = {
     title: string;
     subject: string;
     grade: string;
+    scheduledDate: string | null;
+    startTime: string | null;
     duration: number;
     questionCount: number;
     correctAnswers: number;
     scorePercent: number;
     submittedAt: number;
+  }[];
+};
+
+type RemoteScheduledExams = {
+  scheduledExamsForStudent: {
+    id: string;
+    examId: string;
+    title: string;
+    subject: string;
+    description: string | null;
+    grade: string;
+    scheduledDate: string | null;
+    startTime: string | null;
+    duration: number;
+    questionCount: number;
   }[];
 };
 
@@ -195,11 +212,30 @@ const GET_MY_EXAM_SUBMISSIONS = `
       title
       subject
       grade
+      scheduledDate
+      startTime
       duration
       questionCount
       correctAnswers
       scorePercent
       submittedAt
+    }
+  }
+`;
+
+const GET_SCHEDULED_EXAMS = `
+  query GetScheduledExamsForStudent {
+    scheduledExamsForStudent {
+      id
+      examId
+      title
+      subject
+      description
+      grade
+      scheduledDate
+      startTime
+      duration
+      questionCount
     }
   }
 `;
@@ -413,13 +449,13 @@ function mapSubmissionSummary(
     title: payload.title,
     subject: payload.subject,
     grade: payload.grade,
+    scheduledDate: payload.scheduledDate,
+    startTime: payload.startTime,
     duration: payload.duration,
     questionCount: payload.questionCount,
     correctAnswers: payload.correctAnswers,
     scorePercent: payload.scorePercent,
     submittedAt: payload.submittedAt,
-    scheduledDate: null,
-    startTime: null,
     answers: [],
   };
 }
@@ -466,6 +502,11 @@ export async function fetchRemoteStudentProfile() {
 export async function fetchRemoteAvailableExams() {
   const payload = await fetchGraphql<RemoteAvailableExams>(GET_AVAILABLE_EXAMS);
   return payload.availableExamsForStudent.map(mapAvailableExamSummary);
+}
+
+export async function fetchRemoteScheduledExams() {
+  const payload = await fetchGraphql<RemoteScheduledExams>(GET_SCHEDULED_EXAMS);
+  return payload.scheduledExamsForStudent.map(mapAvailableExamSummary);
 }
 
 export async function fetchRemoteExamById(examId: string) {
