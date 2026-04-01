@@ -32,6 +32,7 @@ export const studentMutation = {
 		) => {
 			const userId = assertAuthenticated(context);
 			const normalizedCode = args.input.inviteCode.trim().toUpperCase();
+			const normalizedEmail = args.input.email.trim().toLowerCase();
 			const classroom = await context.db
 				.select()
 				.from(classrooms)
@@ -45,7 +46,7 @@ export const studentMutation = {
 			const values = {
 				firstName: args.input.firstName,
 				lastName: args.input.lastName,
-				email: args.input.email,
+				email: normalizedEmail,
 				phone: args.input.phone,
 				grade: getGradeFromClassName(classroom.className),
 				className: classroom.className,
@@ -55,7 +56,7 @@ export const studentMutation = {
 			};
 
 			const existing = await context.db
-				.select({ id: students.id })
+				.select({ id: students.id, email: students.email })
 				.from(students)
 				.where(eq(students.id, userId))
 				.get();
@@ -65,6 +66,24 @@ export const studentMutation = {
 					.update(students)
 					.set(values)
 					.where(eq(students.id, userId))
+					.returning()
+					.get();
+			}
+
+			const existingByEmail = await context.db
+				.select({ id: students.id })
+				.from(students)
+				.where(eq(students.email, normalizedEmail))
+				.get();
+
+			if (existingByEmail) {
+				return context.db
+					.update(students)
+					.set({
+						id: userId,
+						...values,
+					})
+					.where(eq(students.id, existingByEmail.id))
 					.returning()
 					.get();
 			}

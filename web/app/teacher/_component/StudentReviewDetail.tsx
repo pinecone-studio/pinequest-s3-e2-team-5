@@ -46,6 +46,7 @@ type TeacherStudentSubmissionDetailData = {
 };
 
 type ReviewPaletteStatus = "pending" | "correct" | "wrong";
+type ReviewOptionState = "neutral" | "correct" | "wrong" | "selected-correct";
 
 const GET_TEACHER_STUDENT_SUBMISSION_DETAIL = gql`
   query GetTeacherStudentSubmissionDetail($examId: String!, $studentId: String!) {
@@ -98,32 +99,47 @@ function getPaletteClasses(status: ReviewPaletteStatus) {
 function getReviewOptionState(
   question: TeacherStudentSubmissionDetailData["teacherStudentSubmissionDetail"]["answers"][number],
   optionId: string,
-): "neutral" | "correct" | "wrong" {
-  if (question.correctChoiceId === optionId) {
+): ReviewOptionState {
+  const isSelected = question.selectedChoiceId === optionId;
+  const isCorrect = question.correctChoiceId === optionId;
+
+  if (isSelected && isCorrect) {
+    return "selected-correct";
+  }
+
+  if (isCorrect) {
     return "correct";
   }
 
-  if (question.selectedChoiceId === optionId) {
+  if (isSelected) {
     return "wrong";
   }
 
   return "neutral";
 }
 
-function getReviewOptionClasses(state: "neutral" | "correct" | "wrong") {
+function getReviewOptionClasses(state: ReviewOptionState) {
+  if (state === "selected-correct") {
+    return {
+      row: "border-[#CFE7D0] bg-[#E8F6E8]",
+      radio: "border-[#63B56B]",
+      dot: "bg-[#63B56B]",
+    };
+  }
+
   if (state === "correct") {
     return {
-      row: "border-[#CFEED1] bg-[#E3F6E5]",
-      radio: "border-[#62BC69]",
-      dot: "bg-[#76B779]",
+      row: "border-[#CFE7D0] bg-[#E8F6E8]",
+      radio: "border-[#63B56B]",
+      dot: "bg-[#63B56B]",
     };
   }
 
   if (state === "wrong") {
     return {
-      row: "border-[#F3D0CC] bg-[#F8E4E3]",
-      radio: "border-[#D66F68]",
-      dot: "bg-[#D66F68]",
+      row: "border-[#EDD7D7] bg-[#F5E7E7]",
+      radio: "border-[#D96563]",
+      dot: "bg-[#D96563]",
     };
   }
 
@@ -142,6 +158,14 @@ function formatTimestamp(timestamp: number) {
   )}.${String(date.getDate()).padStart(2, "0")} ${String(
     date.getHours(),
   ).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+function getPercentRingStyle(percent: number) {
+  const safePercent = Math.min(100, Math.max(0, percent));
+
+  return {
+    background: `conic-gradient(#8E76F6 0% ${safePercent}%, #ECE8F7 ${safePercent}% 100%)`,
+  };
 }
 
 export function StudentReviewDetail({
@@ -163,9 +187,11 @@ export function StudentReviewDetail({
         order: answer.order,
         status:
           answer.type === "mcq"
-            ? answer.isCorrect
-              ? "correct"
-              : "wrong"
+            ? answer.selectedChoiceId
+              ? answer.isCorrect
+                ? "correct"
+                : "wrong"
+              : "pending"
             : "pending",
       })) ?? [],
     [detail],
@@ -182,21 +208,6 @@ export function StudentReviewDetail({
       </div>
     );
   }
-
-  const summaryRows = [
-    [
-      { label: "Эхэлсэн", value: formatTimestamp(detail.startedAt) },
-      { label: "Дууссан", value: formatTimestamp(detail.submittedAt) },
-    ],
-    [
-      { label: "Нийт даалгал", value: String(detail.answers.length) },
-      { label: "Хугацаа", value: `${detail.durationMinutes} мин` },
-    ],
-    [
-      { label: "Оноо", value: detail.score },
-      { label: "Хувь", value: `${detail.percent}%` },
-    ],
-  ];
 
   const handleFocusQuestion = (order: number) => {
     setFocusedQuestion(order);
@@ -223,39 +234,54 @@ export function StudentReviewDetail({
             </div>
 
             <div className="rounded-[18px] border border-[#E8E2F1] bg-white p-4 shadow-[0_4px_12px_rgba(53,31,107,0.04)]">
-              <div className="flex items-center justify-between rounded-[14px] bg-[#F2F0FF] px-4 py-2.5">
-                <h2 className="text-[17px] font-semibold text-[#25222D]">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-[18px] font-semibold leading-tight text-[#25222D]">
                   {detail.studentName}
                 </h2>
-                <span className="text-[17px] font-medium text-[#25222D]">
+                <span className="text-[17px] font-medium text-[#4C465A]">
                   {detail.section}
                 </span>
               </div>
 
-              <div className="mt-4 space-y-3">
-                {summaryRows.map((group, index) => (
-                  <div key={`summary-group-${index}`}>
-                    <div className="space-y-2.5">
-                      {group.map((row) => (
-                        <div
-                          key={row.label}
-                          className="flex items-center justify-between gap-3 text-[14px]"
-                        >
-                          <span className="font-semibold text-[#23202A]">
-                            {row.label}
-                          </span>
-                          <span className="text-right text-[14px] text-[#23202A]">
-                            {row.value}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+              <div className="mt-4 grid grid-cols-2 gap-4 rounded-[14px] border border-[#EAE5F2] p-3">
+                <div className="border-r border-[#EAE5F2] pr-2">
+                  <p className="text-[14px] text-[#9993A7]">Эхэлсэн</p>
+                  <p className="mt-1 text-[16px] font-semibold text-[#2B2734]">
+                    {formatTimestamp(detail.startedAt).split(" ")[1]}
+                  </p>
+                </div>
+                <div className="pl-2">
+                  <p className="text-[14px] text-[#9993A7]">Дууссан</p>
+                  <p className="mt-1 text-[16px] font-semibold text-[#2B2734]">
+                    {formatTimestamp(detail.submittedAt).split(" ")[1]}
+                  </p>
+                </div>
+              </div>
 
-                    {index < summaryRows.length - 1 ? (
-                      <div className="mt-3 h-px bg-[#EAE5F2]" />
-                    ) : null}
+              <div className="mt-4 flex items-end justify-between gap-4">
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-[14px] text-[#6E687C]">Нийт оноо</p>
+                    <p className="text-[33px] leading-none font-semibold text-[#272231]">
+                      {detail.score}
+                    </p>
                   </div>
-                ))}
+                  <div>
+                    <p className="text-[14px] text-[#6E687C]">Хугацаа</p>
+                    <p className="text-[16px] font-medium text-[#272231]">
+                      {detail.durationMinutes} мин
+                    </p>
+                  </div>
+                </div>
+
+                <div
+                  className="flex h-14 w-14 items-center justify-center rounded-full"
+                  style={getPercentRingStyle(detail.percent)}
+                >
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-[18px] font-semibold text-[#4B4265]">
+                    {detail.percent}%
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -291,7 +317,7 @@ export function StudentReviewDetail({
             <article
               key={question.questionId}
               id={`review-question-${question.order}`}
-              className="scroll-mt-24 rounded-[18px] border border-[#E8E2F1] bg-white p-5 shadow-[0_4px_12px_rgba(53,31,107,0.04)]"
+              className="scroll-mt-24 rounded-[18px] border border-[#E8E2F1] bg-white px-5 py-4 shadow-[0_4px_12px_rgba(53,31,107,0.04)]"
             >
               <div className="flex items-start justify-between gap-4">
                 <h2 className="text-[18px] font-semibold text-[#1F1B27]">
@@ -307,7 +333,7 @@ export function StudentReviewDetail({
               </div>
 
               {question.type === "mcq" ? (
-                <div className="mt-5 space-y-3.5">
+                <div className="mt-5 space-y-2.5">
                   {question.choices.map((option) => {
                     const state = getReviewOptionState(question, option.id);
                     const optionClasses = getReviewOptionClasses(state);
@@ -329,20 +355,18 @@ export function StudentReviewDetail({
 
                         <div
                           className={[
-                            "flex-1 rounded-[14px] border px-4 py-3.5 text-left",
+                            "flex-1 rounded-[14px] border px-4 py-3 text-left text-[15px] font-medium text-[#3A3447]",
                             optionClasses.row,
                           ].join(" ")}
                         >
-                          <span className="text-[15px] font-medium text-[#27242F]">
-                            {option.label}. {option.text}
-                          </span>
+                          {option.label}. {option.text}
                         </div>
                       </div>
                     );
                   })}
                 </div>
               ) : (
-                <div className="mt-5 rounded-[14px] bg-[#F8E4E3] px-4 py-3.5 text-[15px] text-[#27242F]">
+                <div className="mt-5 rounded-[14px] bg-[#F4E6E6] px-4 py-3.5 text-[15px] font-medium text-[#4A414E]">
                   {question.submittedText || "Хариулаагүй байна."}
                 </div>
               )}
@@ -350,13 +374,13 @@ export function StudentReviewDetail({
               {question.type === "mcq" &&
               question.isCorrect === false &&
               question.aiExplanation ? (
-                <div className="mt-4 rounded-[14px] border-l-[3px] border-[#74BE7B] bg-[#F6F7F8] px-4 py-3.5 text-[15px] leading-7 text-[#35303F]">
+                <div className="mt-4 rounded-[12px] border-l-[3px] border-[#74BE7B] bg-[#F5F5F5] px-4 py-3.5 text-[15px] leading-7 text-[#4A4455]">
                   {question.aiExplanation}
                 </div>
               ) : null}
 
               {question.type !== "mcq" && question.correctAnswerText ? (
-                <div className="mt-4 rounded-[14px] border-l-[3px] border-[#74BE7B] bg-[#F6F7F8] px-4 py-3.5 text-[15px] leading-7 text-[#35303F]">
+                <div className="mt-4 rounded-[12px] border-l-[3px] border-[#74BE7B] bg-[#F5F5F5] px-4 py-3.5 text-[15px] leading-7 text-[#4A4455]">
                   {question.correctAnswerText}
                 </div>
               ) : null}

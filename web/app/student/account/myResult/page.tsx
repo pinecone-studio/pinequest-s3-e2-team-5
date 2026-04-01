@@ -32,6 +32,8 @@ type SubmissionAnswerReview = {
   question: string;
   type: "mcq" | "open" | "short";
   answerText: string | null;
+  correctAnswerText: string | null;
+  aiExplanation: string | null;
   selectedChoiceId: string | null;
   correctChoiceId: string | null;
   isCorrect: boolean | null;
@@ -94,6 +96,8 @@ const GET_STUDENT_EXAM_SUBMISSION_DETAIL = gql`
         question
         type
         answerText
+        correctAnswerText
+        aiExplanation
         selectedChoiceId
         correctChoiceId
         isCorrect
@@ -462,11 +466,25 @@ export default function StudentResultPage() {
                       );
                     })}
                   </div>
-                ) : (
+              ) : (
                   <div className="mt-4 rounded-[12px] border border-[#E9E4F6] bg-white px-4 py-3 text-[15px] leading-7 text-[#5C5964]">
                     {question.answerText?.trim() || "Хариулаагүй байна."}
                   </div>
                 )}
+
+                {question.type === "mcq" &&
+                question.isCorrect === false &&
+                question.aiExplanation ? (
+                  <div className="mt-4 rounded-[12px] border-l-[3px] border-[#74BE7B] bg-[#F5F5F5] px-4 py-3.5 text-[15px] leading-7 text-[#4A4455]">
+                    {question.aiExplanation}
+                  </div>
+                ) : null}
+
+                {question.type !== "mcq" && question.correctAnswerText ? (
+                  <div className="mt-4 rounded-[12px] border-l-[3px] border-[#74BE7B] bg-[#F5F5F5] px-4 py-3.5 text-[15px] leading-7 text-[#4A4455]">
+                    {question.correctAnswerText}
+                  </div>
+                ) : null}
               </article>
             ))}
           </div>

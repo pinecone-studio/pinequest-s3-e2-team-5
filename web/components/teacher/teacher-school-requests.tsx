@@ -43,6 +43,7 @@ const classroomCardAccent = {
 };
 
 const gradeOptions = ["9", "10", "11", "12"];
+const sectionOptions = ["А", "Б", "В", "Г", "Д", "Е", "Ё"];
 
 const dialogFieldClassName =
   "h-[58px] w-full rounded-[16px] border border-[#E9E0F7] bg-white px-4 text-[16px] text-[#1A1623] outline-none transition placeholder:text-[#8E8A94] focus:border-[#B59AF8] focus:ring-4 focus:ring-[#B59AF8]/12";
@@ -198,9 +199,9 @@ export function TeacherSchoolRequests() {
   const classroomCards = classrooms.map(parseClassroomPresentation);
   const classroomErrorMessage = myClassroomError
     ? getApolloErrorMessage(
-      myClassroomError,
-      "Ангийн мэдээлэл ачаалж чадсангүй. Дахин оролдоно уу.",
-    )
+        myClassroomError,
+        "Ангийн мэдээлэл ачаалж чадсангүй. Дахин оролдоно уу.",
+      )
     : "";
 
   return (
@@ -253,8 +254,9 @@ export function TeacherSchoolRequests() {
                   <select
                     value={selectedGrade}
                     onChange={(event) => setSelectedGrade(event.target.value)}
-                    className={`${dialogFieldClassName} appearance-none pr-14 ${selectedGrade ? "" : "text-[#8E8A94]"
-                      }`}
+                    className={`${dialogFieldClassName} appearance-none pr-14 ${
+                      selectedGrade ? "" : "text-[#8E8A94]"
+                    }`}
                   >
                     <option value="" disabled>
                       Анги
@@ -273,13 +275,23 @@ export function TeacherSchoolRequests() {
                 <label className="block text-[16px] font-semibold text-[#111111]">
                   Бүлэг
                 </label>
-                <input
-                  value={section}
-                  onChange={(event) => setSection(event.target.value)}
-                  placeholder="Бүлэг"
-                  className={dialogFieldClassName}
-                  maxLength={4}
-                />
+                <div className="relative">
+                  <select
+                    value={section}
+                    onChange={(event) => setSection(event.target.value)}
+                    className={`${dialogFieldClassName} appearance-none pr-14 ${section ? "" : "text-[#8E8A94]"}`}
+                  >
+                    <option value="" disabled>
+                      Бүлэг
+                    </option>
+                    {sectionOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8E8A94]" />
+                </div>
               </div>
             </div>
 

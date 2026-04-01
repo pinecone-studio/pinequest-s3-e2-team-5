@@ -78,6 +78,8 @@ export const studentTypeDefs = gql`
 		question: String!
 		type: QuestionType!
 		answerText: String
+		correctAnswerText: String
+		aiExplanation: String
 		selectedChoiceId: String
 		correctChoiceId: String
 		isCorrect: Boolean

@@ -1,4 +1,4 @@
-import type { GraphQLContext } from "../../server";
+import type { GraphQLContext } from '../../server';
 
 type ExplanationParams = {
 	question: string;
@@ -8,54 +8,91 @@ type ExplanationParams = {
 
 function normalizeExplanation(text: string) {
 	return text
-		.replace(/\s+/g, " ")
-		.replace(/^["'\s]+|["'\s]+$/g, "")
+		.replace(/\s+/g, ' ')
+		.replace(/^["'\s]+|["'\s]+$/g, '')
 		.trim();
 }
 
-export async function generateIncorrectAnswerExplanation(
-	context: GraphQLContext,
-	params: ExplanationParams,
-) {
-	if (!context.env.AI) {
+function hasCompleteSentenceEnding(text: string) {
+	return /[.!?։。]$/.test(text.trim());
+}
+
+function buildFallbackExplanation(params: ExplanationParams) {
+	const studentAnswer = params.studentAnswer?.trim();
+
+	if (studentAnswer) {
+		return `${params.correctAnswer} нь энэ асуултын зөв хариулт юм. ${studentAnswer} нь асуултын гол утгатай бүрэн нийцэхгүй тул буруу болсон.`;
+	}
+
+	return `${params.correctAnswer} нь энэ асуултын зөв хариулт юм. Асуултын утгыг зөв ойлгохын тулд гол ойлголт болон түлхүүр үгийг анхаарч сонгоорой.`;
+}
+
+function extractUsableExplanation(text: string, params: ExplanationParams) {
+	const normalized = normalizeExplanation(text);
+
+	if (!normalized) {
 		return null;
 	}
 
-	const studentAnswer = params.studentAnswer?.trim() || "Хариулт сонгоогүй.";
-	const prompt = [
-		"Чи сурагчид зориулсан богино, ойлгомжтой тайлбар бичдэг багшийн туслах.",
-		"Доорх буруу хариулсан асуултад зөв хариултыг тайлбарла.",
-		"Яг 2 өгүүлбэрээр, Монгол хэлээр, энгийн үгээр хариул.",
-		"Эхний өгүүлбэрт зөв хариулт яагаад зөв болохыг тайлбарла.",
-		"Хоёр дахь өгүүлбэрт сурагчийн сонголт яагаад тохирохгүйг богино дурд.",
-		"Bullet, жагсаалт, markdown бүү ашигла.",
-		`Асуулт: ${params.question}`,
-		`Сурагчийн хариулт: ${studentAnswer}`,
-		`Зөв хариулт: ${params.correctAnswer}`,
-	].join("\n");
+	const lower = normalized.toLowerCase();
+	const looksLikePromptEcho =
+		lower.includes('асуулт:') ||
+		lower.includes('сурагчийн хариулт:') ||
+		lower.includes('зөв хариулт:') ||
+		lower.startsWith('чи ');
+
+	if (looksLikePromptEcho) {
+		return null;
+	}
+
+	if (!hasCompleteSentenceEnding(normalized)) {
+		return null;
+	}
+
+	return normalized;
+}
+
+export async function generateIncorrectAnswerExplanation(context: GraphQLContext, params: ExplanationParams) {
+	if (!context.env.AI) {
+		return buildFallbackExplanation(params);
+	}
+
+	const studentAnswer = params.studentAnswer?.trim() || 'Хариулт сонгоогүй.';
 
 	try {
-		const result = await context.env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
-			prompt,
-			max_tokens: 180,
-			temperature: 0.3,
+		const result = await context.env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
+			messages: [
+				{
+					role: 'system',
+					content:
+						'Чи сурагчдад зориулсан тайлбар бичдэг туслах. Зөвхөн Монгол хэлээр, яг 2 богино өгүүлбэрээр, markdown болон жагсаалтгүй хариул. Prompt-ийг бүү давт.',
+				},
+				{
+					role: 'user',
+					content: [
+						'Доорх асуултын зөв хариултыг товч тайлбарла.',
+						'Эхний өгүүлбэрт зөв хариулт яагаад зөв болохыг хэл.',
+						'Хоёр дахь өгүүлбэрт сурагчийн сонголт яагаад тохирохгүйг товч хэл.',
+						`Асуулт: ${params.question}`,
+						`Сурагчийн хариулт: ${studentAnswer}`,
+						`Зөв хариулт: ${params.correctAnswer}`,
+					].join('\n'),
+				},
+			],
+			max_tokens: 120,
+			temperature: 0.2,
 		});
 
 		const response =
-			typeof result === "object" &&
-			result !== null &&
-			"response" in result &&
-			typeof result.response === "string"
-				? result.response
-				: null;
+			typeof result === 'object' && result !== null && 'response' in result && typeof result.response === 'string' ? result.response : null;
 
 		if (!response) {
-			return null;
+			return buildFallbackExplanation(params);
 		}
 
-		return normalizeExplanation(response);
+		return extractUsableExplanation(response, params) ?? buildFallbackExplanation(params);
 	} catch (error) {
-		console.error("Failed to generate AI explanation", error);
-		return null;
+		console.error('Failed to generate AI explanation', error);
+		return buildFallbackExplanation(params);
 	}
 }

@@ -113,6 +113,9 @@ const subjectOptions = [
   { value: "physics", label: "Физик" },
 ] as const;
 
+const gradeOptions = Array.from({ length: 12 }, (_, index) =>
+  String(index + 1),
+);
 const durationOptions = [30, 45, 60, 90, 120] as const;
 
 const fieldClassName =
@@ -415,13 +418,24 @@ export default function TeacherExamsPage() {
                   <label className="block text-[16px] font-medium text-[#111111]">
                     Анги
                   </label>
-                  <div>
-                    <input
-                      className="border w-full h-10 rounded-lg"
-                      placeholder="angi"
+                  <div className="relative">
+                    <select
                       value={examGrade}
-                      onChange={(e) => setExamGrade(e.target.value)}
-                    />
+                      onChange={(event) => setExamGrade(event.target.value)}
+                      className={`${fieldClassName} appearance-none pr-14 ${
+                        examGrade ? "" : "text-[#8E8A94]"
+                      }`}
+                    >
+                      <option value="" disabled>
+                        Анги сонгох
+                      </option>
+                      {gradeOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}-р анги
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8E8A94]" />
                   </div>
                 </div>
 
