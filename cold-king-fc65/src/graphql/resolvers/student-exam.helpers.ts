@@ -14,6 +14,8 @@ import { badUserInputError, notFoundError, unauthorizedError } from "../errors";
 
 const ULAANBAATAR_UTC_OFFSET_HOURS = 8;
 
+console.log("ULAANBAATAR_UTC_OFFSET_HOURS", ULAANBAATAR_UTC_OFFSET_HOURS);
+
 function parseScheduleDateTime(scheduledDate: string, startTime: string) {
 	const dateMatch = scheduledDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
 	const timeMatch = startTime.match(/^(\d{2}):(\d{2})$/);
