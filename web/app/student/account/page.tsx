@@ -3,7 +3,8 @@
 import { gql } from "@apollo/client";
 import { useMutation, useQuery } from "@apollo/client/react";
 import { CheckCheck, Clock3, Info, Loader2, PenLine } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cloudflareProfileSyncedEvent } from "@/components/auth/cloudflare-student-sync";
 import ExamCard from "../_component/ExamCard";
 import {
@@ -60,7 +61,14 @@ type StudentAnswerDraft = {
   answerText?: string;
 };
 
+type PersistedExamSession = {
+  startedAt: number;
+  answers: Record<string, StudentAnswerDraft>;
+  focusedQuestion: number;
+};
+
 const PRE_START_LOCK_WINDOW_MS = 10 * 60_000;
+const EXAM_SESSION_STORAGE_PREFIX = "student-active-exam:";
 
 const GET_AVAILABLE_EXAMS = gql`
   query GetAvailableExamsForStudent {
@@ -196,9 +204,14 @@ function getPreStartLockState(
   };
 }
 
+function getExamSessionStorageKey(examId: string) {
+  return `${EXAM_SESSION_STORAGE_PREFIX}${examId}`;
+}
+
 export default function StudentAccountPage() {
-  const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
-  const [startedExamId, setStartedExamId] = useState<string | null>(null);
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now());
   const [submittedExamName, setSubmittedExamName] = useState<string | null>(
     null,
@@ -210,8 +223,38 @@ export default function StudentAccountPage() {
   );
   const [examStartedAt, setExamStartedAt] = useState<number | null>(null);
   const [submitError, setSubmitError] = useState("");
+  const tabSwitchCountRef = useRef(0);
 
+  const routeExamId = searchParams.get("exam");
+  const isStartedMode = searchParams.get("mode") === "active";
+  const selectedExamId = routeExamId;
+  const startedExamId = isStartedMode ? routeExamId : null;
   const activeExamId = startedExamId ?? selectedExamId;
+
+  const navigateToExam = useCallback((
+    examId: string | null,
+    mode: "preview" | "active" = "preview",
+    replace = false,
+  ) => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (!examId) {
+      params.delete("exam");
+      params.delete("mode");
+    } else {
+      params.set("exam", examId);
+      params.set("mode", mode);
+    }
+
+    const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+    if (replace) {
+      router.replace(nextUrl);
+      return;
+    }
+
+    router.push(nextUrl);
+  }, [pathname, router, searchParams]);
+
   const {
     data: availableExamsData,
     loading: availableExamsLoading,
@@ -219,11 +262,10 @@ export default function StudentAccountPage() {
     refetch: refetchAvailableExams,
   } = useQuery<AvailableExamsData>(GET_AVAILABLE_EXAMS);
 
-  useEffect(() => {
-    console.log(availableExamsData);
-  }, [availableExamsData]);
-
-  const availableExams = availableExamsData?.availableExamsForStudent ?? [];
+  const availableExams = useMemo(
+    () => availableExamsData?.availableExamsForStudent ?? [],
+    [availableExamsData?.availableExamsForStudent],
+  );
   const selectedExamSummary = useMemo(
     () =>
       selectedExamId
@@ -236,7 +278,7 @@ export default function StudentAccountPage() {
     [currentTimeMs, selectedExamSummary],
   );
   const shouldSkipExamDetailQuery =
-    !activeExamId || (!startedExamId && selectedExamLockState.locked);
+    !activeExamId || (!isStartedMode && selectedExamLockState.locked);
 
   const {
     data: activeExamData,
@@ -257,6 +299,27 @@ export default function StudentAccountPage() {
   );
 
   useEffect(() => {
+    if (
+      !routeExamId ||
+      availableExamsLoading ||
+      activeExamLoading ||
+      activeExamError ||
+      activeExam
+    ) {
+      return;
+    }
+
+    navigateToExam(null, "preview", true);
+  }, [
+    activeExam,
+    activeExamError,
+      activeExamLoading,
+      availableExamsLoading,
+      routeExamId,
+      navigateToExam,
+    ]);
+
+  useEffect(() => {
     const timer = window.setInterval(() => {
       setCurrentTimeMs(Date.now());
     }, 1000);
@@ -267,16 +330,68 @@ export default function StudentAccountPage() {
   }, []);
 
   useEffect(() => {
-    if (!startedExamId) {
+    if (!startedExamId || !activeExamDetail) {
       return;
     }
 
-    const timer = window.setInterval(() => {
-      setSecondsLeft((previous) => (previous > 0 ? previous - 1 : 0));
-    }, 1000);
+    const sessionKey = getExamSessionStorageKey(startedExamId);
+    const rawSession = window.sessionStorage.getItem(sessionKey);
+
+    if (!rawSession) {
+      navigateToExam(startedExamId, "preview", true);
+      return;
+    }
+
+    try {
+      const persistedSession = JSON.parse(rawSession) as PersistedExamSession;
+      const nextFocusedQuestion =
+        persistedSession.focusedQuestion ??
+        activeExamDetail.questions[0]?.order ??
+        1;
+      const nextStartedAt = persistedSession.startedAt;
+      const elapsedSeconds = Math.max(
+        0,
+        Math.floor((Date.now() - nextStartedAt) / 1000),
+      );
+      const remainingSeconds = Math.max(
+        activeExamDetail.duration * 60 - elapsedSeconds,
+        0,
+      );
+
+      const stateSyncTimer = window.setTimeout(() => {
+        setExamStartedAt(nextStartedAt);
+        setAnswers(persistedSession.answers ?? {});
+        setFocusedQuestion(nextFocusedQuestion);
+        setSecondsLeft(remainingSeconds);
+      }, 0);
+
+      return () => window.clearTimeout(stateSyncTimer);
+    } catch {
+      window.sessionStorage.removeItem(sessionKey);
+      navigateToExam(startedExamId, "preview", true);
+    }
+  }, [activeExamDetail, navigateToExam, startedExamId]);
+
+  useEffect(() => {
+    if (!startedExamId || !activeExamDetail || examStartedAt === null) {
+      return;
+    }
+
+    const syncSecondsLeft = () => {
+      const elapsedSeconds = Math.max(
+        0,
+        Math.floor((Date.now() - examStartedAt) / 1000),
+      );
+      setSecondsLeft(
+        Math.max(activeExamDetail.duration * 60 - elapsedSeconds, 0),
+      );
+    };
+
+    syncSecondsLeft();
+    const timer = window.setInterval(syncSecondsLeft, 1000);
 
     return () => window.clearInterval(timer);
-  }, [startedExamId]);
+  }, [activeExamDetail, examStartedAt, startedExamId]);
 
   useEffect(() => {
     const handleProfileSynced = () => {
@@ -292,6 +407,46 @@ export default function StudentAccountPage() {
       );
     };
   }, [refetchAvailableExams]);
+
+  useEffect(() => {
+    if (!startedExamId || examStartedAt === null) {
+      return;
+    }
+
+    const session: PersistedExamSession = {
+      startedAt: examStartedAt,
+      answers,
+      focusedQuestion,
+    };
+    window.sessionStorage.setItem(
+      getExamSessionStorageKey(startedExamId),
+      JSON.stringify(session),
+    );
+  }, [answers, examStartedAt, focusedQuestion, startedExamId]);
+
+  useEffect(() => {
+    if (!startedExamId) {
+      tabSwitchCountRef.current = 0;
+      return;
+    }
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        return;
+      }
+
+      tabSwitchCountRef.current += 1;
+      console.log(
+        `[Exam Tab Switch] examId=${startedExamId} count=${tabSwitchCountRef.current}`,
+      );
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [startedExamId]);
 
   const handleFocusQuestion = (order: number) => {
     setFocusedQuestion(order);
@@ -344,11 +499,24 @@ export default function StudentAccountPage() {
 
     setSubmitError("");
     setSubmittedExamName(null);
-    setStartedExamId(activeExam.id);
-    setExamStartedAt(Date.now());
+    const startedAt = Date.now();
+    const initialFocusedQuestion = activeExamDetail.questions[0]?.order ?? 1;
+    const initialAnswers = {};
+    const session: PersistedExamSession = {
+      startedAt,
+      answers: initialAnswers,
+      focusedQuestion: initialFocusedQuestion,
+    };
+
+    window.sessionStorage.setItem(
+      getExamSessionStorageKey(activeExam.id),
+      JSON.stringify(session),
+    );
+    setExamStartedAt(startedAt);
     setSecondsLeft(activeExamDetail.duration * 60);
-    setFocusedQuestion(activeExamDetail.questions[0]?.order ?? 1);
-    setAnswers({});
+    setFocusedQuestion(initialFocusedQuestion);
+    setAnswers(initialAnswers);
+    navigateToExam(activeExam.id, "active");
   };
 
   const handleSubmitExam = async () => {
@@ -374,15 +542,17 @@ export default function StudentAccountPage() {
       });
 
       await refetchAvailableExams();
+      window.sessionStorage.removeItem(
+        getExamSessionStorageKey(activeExamDetail.id),
+      );
       setSubmittedExamName(
         getStudentExamHeader(activeExamDetail.subject, activeExamDetail.title),
       );
-      setStartedExamId(null);
-      setSelectedExamId(null);
       setExamStartedAt(null);
       setSecondsLeft(0);
       setFocusedQuestion(1);
       setAnswers({});
+      navigateToExam(null, "preview", true);
     } catch (error) {
       setSubmitError(
         error instanceof Error
@@ -450,6 +620,11 @@ export default function StudentAccountPage() {
             <p className="mb-4 text-[14px] font-semibold text-[#2A2733]">
               Асуулт
             </p>
+            {tabSwitchCountRef.current > 0 ? (
+              <div className="mb-4 text-[14px] font-semibold text-[#2A2733]">
+                {tabSwitchCountRef.current}
+              </div>
+            ) : null}
 
             <div className="mx-auto grid w-fit grid-cols-5 gap-2.5">
               {questionPalette.map((order) => {
@@ -693,7 +868,7 @@ export default function StudentAccountPage() {
                 <div className="flex w-full items-center justify-end gap-10 pr-1">
                   <button
                     type="button"
-                    onClick={() => setSelectedExamId(null)}
+                    onClick={() => navigateToExam(null, "preview")}
                     className="cursor-pointer text-[15px] leading-none font-semibold text-[#232028] transition hover:text-[#7C63E6]"
                   >
                     Буцах
@@ -764,7 +939,7 @@ export default function StudentAccountPage() {
                     ? undefined
                     : () => {
                         setSubmittedExamName(null);
-                        setSelectedExamId(exam.id);
+                        navigateToExam(exam.id, "preview");
                       }
                 }
               />

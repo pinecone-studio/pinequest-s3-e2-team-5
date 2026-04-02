@@ -320,6 +320,8 @@ export function AuthScreen({ mode }: AuthScreenProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [pendingVerification, setPendingVerification] = useState(false);
+  const [pendingSignInVerification, setPendingSignInVerification] =
+    useState(false);
   const [code, setCode] = useState("");
   const [feedback, setFeedback] = useState<{
     tone: "error" | "success";
@@ -499,6 +501,7 @@ export function AuthScreen({ mode }: AuthScreenProps) {
   const handleSignIn = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setFeedback(null);
+    setPendingSignInVerification(false);
 
     const { error } = await signIn.password({
       emailAddress: formValues.email.trim(),
@@ -539,10 +542,88 @@ export function AuthScreen({ mode }: AuthScreenProps) {
       return;
     }
 
+    if (signIn.status === "needs_second_factor") {
+      const supportsEmailCode = (signIn.supportedSecondFactors ?? []).some(
+        (factor) => factor.strategy === "email_code",
+      );
+
+      if (!supportsEmailCode) {
+        setFeedback({
+          tone: "error",
+          message:
+            "Энэ бүртгэлд нэмэлт баталгаажуулалт шаардлагатай байна. И-мэйл кодын баталгаажуулалт идэвхгүй байна.",
+        });
+        return;
+      }
+
+      const sendCodeResult = await signIn.mfa.sendEmailCode();
+      if (sendCodeResult.error) {
+        const requestErrors = getErrorMessages(sendCodeResult.error);
+        if (requestErrors.length > 0) {
+          setFeedback({
+            tone: "error",
+            message: requestErrors[0],
+          });
+        }
+        return;
+      }
+
+      setCode("");
+      setPendingSignInVerification(true);
+      setFeedback({
+        tone: "success",
+        message:
+          "Нэмэлт баталгаажуулах код таны и-мэйл рүү илгээгдлээ.",
+      });
+      return;
+    }
+
     setFeedback({
       tone: "error",
       message: "Нэмэлт баталгаажуулалт шаардлагатай байна.",
     });
+  };
+
+  const handleVerifySignIn = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setFeedback(null);
+
+    const { error } = await signIn.mfa.verifyEmailCode({
+      code,
+    });
+
+    if (error) {
+      const requestErrors = getErrorMessages(error);
+      if (requestErrors.length > 0) {
+        setFeedback({
+          tone: "error",
+          message: requestErrors[0],
+        });
+      }
+      return;
+    }
+
+    if (signIn.status === "complete") {
+      await signIn.finalize({
+        navigate: ({ session, decorateUrl }) => {
+          if (session?.currentTask) {
+            return;
+          }
+
+          const rawRole = session?.user?.unsafeMetadata?.role;
+          const targetUrl = isUserRole(rawRole)
+            ? getRoleHomePath(rawRole)
+            : "/dashboard";
+          const url = decorateUrl(targetUrl);
+
+          if (url.startsWith("http")) {
+            window.location.href = url;
+          } else {
+            router.push(url);
+          }
+        },
+      });
+    }
   };
 
   const errorMessages = getErrorMessages(errors);
@@ -635,6 +716,56 @@ export function AuthScreen({ mode }: AuthScreenProps) {
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? "Шалгаж байна..." : "Нэвтрэх"}
+                </Button>
+              </div>
+            </form>
+          ) : !isSignUpMode && pendingSignInVerification ? (
+            <form className="mt-8 space-y-5" onSubmit={handleVerifySignIn}>
+              <div className="space-y-2.5">
+                <label
+                  htmlFor="code"
+                  className="block text-[15px] font-semibold tracking-tight text-[#292235]"
+                >
+                  Баталгаажуулах код
+                </label>
+                <input
+                  id="code"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  className={inputClassName}
+                  placeholder="И-мэйл дээр ирсэн кодоо оруулна уу"
+                  value={code}
+                  onChange={(event) => setCode(event.target.value)}
+                  required
+                />
+              </div>
+
+              {signInErrorMessages.length > 0 ? (
+                <div className="rounded-[18px] border border-[#FFD8D8] bg-[#FFF7F7] px-4 py-3 text-[14px] text-[#B63B3B]">
+                  {signInErrorMessages.map((message) => (
+                    <p key={message}>{message}</p>
+                  ))}
+                </div>
+              ) : null}
+
+              <div className="flex justify-between gap-3 pt-4">
+                <button
+                  type="button"
+                  className="h-12 rounded-[16px] px-5 text-[15px] font-semibold text-[#6F5AD8] transition hover:bg-[#F6F3FF]"
+                  onClick={() => {
+                    setPendingSignInVerification(false);
+                    setCode("");
+                  }}
+                >
+                  Буцах
+                </button>
+                <Button
+                  type="submit"
+                  className="h-12 min-w-[140px] cursor-pointer rounded-[16px] bg-[#201A2F] px-7 text-[15px] font-semibold text-white shadow-[0_16px_30px_rgba(32,26,47,0.24)] hover:bg-[#181326]"
+                  disabled={isSigningIn}
+                >
+                  {isSigningIn ? "Шалгаж байна..." : "Баталгаажуулах"}
                 </Button>
               </div>
             </form>
