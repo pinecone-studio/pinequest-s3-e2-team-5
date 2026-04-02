@@ -12,6 +12,8 @@ import {
 } from "./choices-table.helpers";
 import { badUserInputError, notFoundError, unauthorizedError } from "../errors";
 
+const ULAANBAATAR_UTC_OFFSET_HOURS = 8;
+
 function parseScheduleDateTime(scheduledDate: string, startTime: string) {
 	const dateMatch = scheduledDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
 	const timeMatch = startTime.match(/^(\d{2}):(\d{2})$/);
@@ -23,14 +25,18 @@ function parseScheduleDateTime(scheduledDate: string, startTime: string) {
 	const [, year, month, day] = dateMatch;
 	const [, hour, minute] = timeMatch;
 
+	// Announced exam times are entered for Ulaanbaatar local time, while the
+	// runtime may be in UTC. Convert the local wall time to a real timestamp.
 	const startsAt = new Date(
-		Number(year),
-		Number(month) - 1,
-		Number(day),
-		Number(hour),
-		Number(minute),
-		0,
-		0,
+		Date.UTC(
+			Number(year),
+			Number(month) - 1,
+			Number(day),
+			Number(hour) - ULAANBAATAR_UTC_OFFSET_HOURS,
+			Number(minute),
+			0,
+			0,
+		),
 	);
 
 	if (Number.isNaN(startsAt.getTime())) {
