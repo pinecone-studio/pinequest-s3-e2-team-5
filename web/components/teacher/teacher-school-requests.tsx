@@ -228,7 +228,7 @@ export function TeacherSchoolRequests() {
           <button
             type="button"
             onClick={() => setIsCreateDialogOpen(true)}
-            className="inline-flex w-[168px] h-[44px] justify-center items-center gap-3 rounded-[22px] bg-[#9E81F0] text-[16px] font-semibold text-white shadow-[inset_0_-5px_0_rgba(103,79,184,0.38),0_12px_22px_rgba(158,129,240,0.28)] transition hover:translate-y-[-1px] hover:opacity-95"
+            className="inline-flex w-[168px] h-[44px] justify-center items-center gap-3 rounded-[22px] bg-[#9E81F0] text-[16px] font-semibold text-white shadow-[inset_0_-4px_0_rgba(103,79,184,0.26),0_8px_16px_rgba(158,129,240,0.18)] transition hover:translate-y-[-1px] hover:opacity-95"
           >
             <Plus className="h-4 w-4" />
             Анги нэмэх

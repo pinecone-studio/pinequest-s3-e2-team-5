@@ -55,8 +55,8 @@ const purplePalette: SubjectCardPalette = {
   borderColor: "#C8C2FF99",
   iconBackground: "#CDC7FF99",
   actionButtonBackground: "#9E81F0",
-  actionButtonInsetShadow: "rgba(103, 79, 184, 0.38)",
-  actionButtonDropShadow: "rgba(158, 129, 240, 0.22)",
+  actionButtonInsetShadow: "rgba(103, 79, 184, 0.24)",
+  actionButtonDropShadow: "rgba(158, 129, 240, 0.16)",
 };
 
 const bluePalette: SubjectCardPalette = {
@@ -64,8 +64,8 @@ const bluePalette: SubjectCardPalette = {
   borderColor: "#B9DEFF99",
   iconBackground: "#BFE0FF99",
   actionButtonBackground: "#6C95EA",
-  actionButtonInsetShadow: "rgba(66, 105, 185, 0.38)",
-  actionButtonDropShadow: "rgba(108, 149, 234, 0.24)",
+  actionButtonInsetShadow: "rgba(66, 105, 185, 0.24)",
+  actionButtonDropShadow: "rgba(108, 149, 234, 0.16)",
 };
 
 const pinkPalette: SubjectCardPalette = {
@@ -73,8 +73,8 @@ const pinkPalette: SubjectCardPalette = {
   borderColor: "#F1C2FB99",
   iconBackground: "#F2C8FA99",
   actionButtonBackground: "#D98AEF",
-  actionButtonInsetShadow: "rgba(170, 93, 191, 0.38)",
-  actionButtonDropShadow: "rgba(217, 138, 239, 0.24)",
+  actionButtonInsetShadow: "rgba(170, 93, 191, 0.24)",
+  actionButtonDropShadow: "rgba(217, 138, 239, 0.16)",
 };
 
 const cyanPalette: SubjectCardPalette = {
@@ -82,8 +82,8 @@ const cyanPalette: SubjectCardPalette = {
   borderColor: "#C6E5EE99",
   iconBackground: "#CFEAF299",
   actionButtonBackground: "#69B7D5",
-  actionButtonInsetShadow: "rgba(66, 126, 149, 0.34)",
-  actionButtonDropShadow: "rgba(105, 183, 213, 0.22)",
+  actionButtonInsetShadow: "rgba(66, 126, 149, 0.22)",
+  actionButtonDropShadow: "rgba(105, 183, 213, 0.14)",
 };
 
 const subjectCardPaletteSequence: Record<

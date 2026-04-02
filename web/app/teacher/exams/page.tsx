@@ -404,7 +404,7 @@ export default function TeacherExamsPage() {
             }}
           >
             <DialogTrigger asChild>
-              <button className="inline-flex h-11 w-33 items-center justify-center gap-[6px] rounded-[18px] bg-[#9E81F0] text-[16px] font-medium text-white shadow-[inset_0_-5px_0_rgba(103,79,184,0.38),0_12px_22px_rgba(158,129,240,0.28)] transition hover:translate-y-[-1px] hover:opacity-95">
+              <button className="inline-flex h-11 w-33 items-center justify-center gap-[6px] rounded-[18px] bg-[#9E81F0] text-[16px] font-medium text-white shadow-[inset_0_-4px_0_rgba(103,79,184,0.26),0_8px_16px_rgba(158,129,240,0.18)] transition hover:translate-y-[-1px] hover:opacity-95">
                 <Plus className="h-5 w-5" />
                 Материал
               </button>
