@@ -626,9 +626,9 @@ export default function StudentAccountPage() {
 
   if (startedExamId && activeExamDetail) {
     return (
-      <section className="relative left-1/2 -mt-10 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#FCFCFF]">
-        <div className="sticky top-0 z-30 border-b border-[#ECE8F6] bg-white">
-          <div className="mx-auto flex h-[72px] w-full max-w-[1245px] items-center justify-between px-8">
+      <section className="min-h-screen bg-[#FCFCFF]">
+        <div className="border-b border-[#ECE8F6] bg-white">
+          <div className="mx-auto flex h-[72px] w-full max-w-[1128px] items-center justify-between">
             <p className="text-[18px] font-semibold tracking-tight text-[#161616]">
               {getStudentExamHeader(
                 activeExamDetail.subject,
@@ -959,9 +959,9 @@ export default function StudentAccountPage() {
                   locked
                     ? undefined
                     : () => {
-                      setSubmittedExamName(null);
-                      navigateToExam(exam.id, "preview");
-                    }
+                        setSubmittedExamName(null);
+                        navigateToExam(exam.id, "preview");
+                      }
                 }
               />
             );
