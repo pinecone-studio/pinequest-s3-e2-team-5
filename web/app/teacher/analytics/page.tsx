@@ -38,7 +38,6 @@ type TeacherAnalyticsDetailData = {
       grade: string;
       classroomName: string | null;
     };
-    totalStudents: number;
     students: {
       id: string;
       percent: number;
@@ -51,6 +50,26 @@ type TeacherAnalyticsDetailData = {
       wrongRate: number | null;
       submissionCount: number;
       incorrectCount: number;
+    }[];
+  };
+};
+
+type TeacherExamDetailForAnalyticsData = {
+  teacherExamDetail: {
+    exam: {
+      id: string;
+    };
+    questions: {
+      id: string;
+      type: "mcq" | "open" | "short";
+      question: string;
+      order: number;
+      correctChoiceId: string | null;
+      choices: {
+        id: string;
+        label: string;
+        text: string;
+      }[];
     }[];
   };
 };
@@ -75,7 +94,6 @@ const GET_TEACHER_ANALYTICS_EXAMS = gql`
 const GET_TEACHER_ANALYTICS_DETAIL = gql`
   query GetTeacherAnalyticsDetail($examId: String!) {
     teacherExamAnalytics(examId: $examId) {
-      totalStudents
       exam {
         id
         title
@@ -95,6 +113,28 @@ const GET_TEACHER_ANALYTICS_DETAIL = gql`
         wrongRate
         submissionCount
         incorrectCount
+      }
+    }
+  }
+`;
+
+const GET_TEACHER_EXAM_DETAIL_FOR_ANALYTICS = gql`
+  query GetTeacherExamDetailForAnalytics($examId: String!) {
+    teacherExamDetail(examId: $examId) {
+      exam {
+        id
+      }
+      questions {
+        id
+        type
+        question
+        order
+        correctChoiceId
+        choices {
+          id
+          label
+          text
+        }
       }
     }
   }
@@ -228,12 +268,16 @@ export default function TeacherAnalyticsPage() {
       fetchPolicy: "network-only",
     },
   );
+
   const [detailRecords, setDetailRecords] = useState<
     TeacherAnalyticsDetailData["teacherExamAnalytics"][]
   >([]);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState("");
   const [selectedExamCardKey, setSelectedExamCardKey] = useState("");
+  const [highlightedQuestionId, setHighlightedQuestionId] = useState<
+    string | null
+  >(null);
 
   const completedExams = useMemo(
     () =>
@@ -272,16 +316,15 @@ export default function TeacherAnalyticsPage() {
         );
 
         if (!cancelled) {
-          setDetailRecords(
-            responses
-              .map((response) => response.data?.teacherExamAnalytics)
-              .filter(
-                (
-                  record,
-                ): record is TeacherAnalyticsDetailData["teacherExamAnalytics"] =>
-                  Boolean(record),
-              ),
-          );
+          const safeRecords = responses
+            .map((response) => response.data?.teacherExamAnalytics)
+            .filter(
+              (
+                record,
+              ): record is TeacherAnalyticsDetailData["teacherExamAnalytics"] =>
+                Boolean(record),
+            );
+          setDetailRecords(safeRecords);
         }
       } catch (caughtError) {
         if (!cancelled) {
@@ -313,6 +356,7 @@ export default function TeacherAnalyticsPage() {
           record.exam.classroomName,
           record.exam.grade,
         );
+
         return {
           cardKey: [
             sourceExam?.id ?? record.exam.id,
@@ -337,10 +381,11 @@ export default function TeacherAnalyticsPage() {
             : 0,
           questionInsights: record.questionInsights
             .filter((item) => item.type === "mcq")
-            .sort((left, right) => left.order - right.order)
+            .filter((item) => item.incorrectCount > 0)
             .map((item) => ({
-              label: `Асуулт-${item.order}`,
+              questionId: item.questionId,
               order: item.order,
+              question: item.question,
               wrongRate: item.wrongRate ?? 0,
               incorrectCount: item.incorrectCount,
               submissionCount: item.submissionCount,
@@ -372,29 +417,105 @@ export default function TeacherAnalyticsPage() {
     [examSummaries, selectedExamCardKey],
   );
 
+  useEffect(() => {
+    setHighlightedQuestionId(null);
+  }, [selectedExamSummary?.examId]);
+
+  const { data: selectedExamDetailData, loading: selectedExamDetailLoading } =
+    useQuery<TeacherExamDetailForAnalyticsData>(
+      GET_TEACHER_EXAM_DETAIL_FOR_ANALYTICS,
+      {
+        variables: { examId: selectedExamSummary?.examId ?? "" },
+        skip: !selectedExamSummary?.examId,
+        fetchPolicy: "network-only",
+      },
+    );
+
   const chartPoints = useMemo(
-    () => [...(selectedExamSummary?.questionInsights ?? [])].sort(
-      (left, right) => left.order - right.order,
-    ),
+    () =>
+      [...(selectedExamSummary?.questionInsights ?? [])].sort(
+        (left, right) => left.order - right.order,
+      ),
     [selectedExamSummary],
   );
 
   const chartData = useMemo<ChartData<"bar">>(
     () => ({
-      labels: chartPoints.map((item) => item.label),
+      labels: chartPoints.map((item) => String(item.order)),
       datasets: [
         {
           data: chartPoints.map((item) => item.wrongRate),
-          backgroundColor: "rgba(216, 202, 251, 0.88)",
-          borderRadius: 0,
+          backgroundColor: "rgba(214,126,126,0.9)",
+          hoverBackgroundColor: "rgba(214,126,126,0.95)",
+          borderRadius: 2,
           borderSkipped: false,
-          maxBarThickness: 32,
-          categoryPercentage: 0.78,
-          barPercentage: 0.84,
+          maxBarThickness: 40,
+          categoryPercentage: 0.8,
+          barPercentage: 0.85,
         },
       ],
     }),
     [chartPoints],
+  );
+
+  const interactiveChartOptions = useMemo<ChartOptions<"bar">>(
+    () => ({
+      ...chartOptions,
+      onClick: (_event, elements) => {
+        if (!elements.length) {
+          return;
+        }
+
+        const point = chartPoints[elements[0].index];
+        if (!point) {
+          return;
+        }
+
+        setHighlightedQuestionId(point.questionId);
+
+        const questionElement = document.getElementById(
+          `analytics-question-${point.questionId}`,
+        );
+
+        questionElement?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      },
+    }),
+    [chartPoints],
+  );
+
+  const selectedExamQuestions = useMemo(
+    () => selectedExamDetailData?.teacherExamDetail.questions ?? [],
+    [selectedExamDetailData],
+  );
+
+  const questionDetailById = useMemo(
+    () =>
+      new Map(
+        selectedExamQuestions.map((question) => [question.id, question] as const),
+      ),
+    [selectedExamQuestions],
+  );
+
+  const mostIncorrectQuestions = useMemo(
+    () =>
+      [...(selectedExamSummary?.questionInsights ?? [])]
+        .sort((left, right) => {
+          const wrongRateDiff = right.wrongRate - left.wrongRate;
+          if (wrongRateDiff !== 0) {
+            return wrongRateDiff;
+          }
+
+          return right.incorrectCount - left.incorrectCount;
+        })
+        .slice(0, 8)
+        .map((item) => ({
+          ...item,
+          questionDetail: questionDetailById.get(item.questionId) ?? null,
+        })),
+    [questionDetailById, selectedExamSummary],
   );
 
   if (loading) {
@@ -492,45 +613,116 @@ export default function TeacherAnalyticsPage() {
           </div>
         </aside>
 
-        <section className="self-start rounded-[16px] border border-[#E8E2F1] bg-white px-6 py-6 shadow-[0_4px_12px_rgba(53,31,107,0.04)] xl:sticky xl:top-6">
-          <div className="space-y-1">
-            <h1 className="text-[18px] font-semibold text-[#1D1A24]">
-              {selectedExamSummary
-                ? `${selectedExamSummary.title} - Асуултуудын алдааны хувь`
-                : "Асуултуудын алдааны хувь"}
-            </h1>
-            <p className="text-[14px] text-[#8A8397]">
-              Шалгалтын дарааллаар
-            </p>
-          </div>
+        <section className="space-y-6">
+          <section className="rounded-[16px] border border-[#E5E7EE] bg-white px-6 py-6 shadow-[0_4px_12px_rgba(53,31,107,0.04)]">
+            <div className="space-y-1">
+              <h1 className="text-[18px] font-semibold text-[#1D1A24]">
+                Хамгийн их алдаатай асуултууд
+              </h1>
+              <p className="text-[14px] text-[#7E889D]">Алдааны давтамж өндөртэй</p>
+            </div>
 
-          <div className="mt-5 border-t border-[#ECE6F3] pt-5">
-            {detailsLoading ? (
-              <div className="flex h-[300px] items-center justify-center text-[#6F687D]">
-                <Loader2 className="mr-3 h-5 w-5 animate-spin" />
-                Chart ачаалж байна...
-              </div>
-            ) : detailsError ? (
-              <div className="rounded-[16px] border border-[#F0C2BD] bg-[#FFF4F2] px-4 py-3 text-[#B63B3B]">
-                {detailsError}
-              </div>
-            ) : chartPoints.length > 0 ? (
-              <>
-                <BarChart
-                  data={chartData}
-                  options={chartOptions}
-                  className="h-[270px]"
-                />
-                <div className="mt-2 flex justify-end text-[14px] text-[#8A8397]">
-                  Асуултууд
+            <div className="mt-5 border-t border-[#ECEFF5] pt-5">
+              {detailsLoading ? (
+                <div className="flex h-[300px] items-center justify-center text-[#6F687D]">
+                  <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                  Chart ачаалж байна...
                 </div>
-              </>
-            ) : (
-              <div className="flex h-[300px] items-center justify-center text-[#6F687D]">
-                Auto-graded analytics хараахан алга байна.
-              </div>
-            )}
-          </div>
+              ) : detailsError ? (
+                <div className="rounded-[16px] border border-[#F0C2BD] bg-[#FFF4F2] px-4 py-3 text-[#B63B3B]">
+                  {detailsError}
+                </div>
+              ) : chartPoints.length > 0 ? (
+                <>
+                  <BarChart
+                    data={chartData}
+                    options={interactiveChartOptions}
+                    className="h-[270px]"
+                  />
+                  <div className="mt-2 flex justify-end text-[14px] text-[#8A8397]">Асуултууд</div>
+                </>
+              ) : (
+                <div className="flex h-[300px] items-center justify-center text-[#6F687D]">
+                  Алдаатай MCQ асуулт одоогоор алга байна.
+                </div>
+              )}
+            </div>
+          </section>
+
+          {selectedExamDetailLoading ? (
+            <div className="flex h-[140px] items-center justify-center rounded-[16px] border border-[#E8E2F1] bg-white text-[#6F687D]">
+              <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+              Асуултуудыг уншиж байна...
+            </div>
+          ) : mostIncorrectQuestions.length === 0 ? (
+            <div className="rounded-[16px] border border-[#E8E2F1] bg-white px-5 py-6 text-[#6F687D]">
+              Алдаа гарсан асуулт одоогоор алга байна.
+            </div>
+          ) : (
+            mostIncorrectQuestions.map((item) => {
+              const detail = item.questionDetail;
+              const choices = detail?.choices ?? [];
+              const emphasizedWrongChoiceId =
+                detail?.choices.find((choice) => choice.id !== detail.correctChoiceId)?.id ?? null;
+
+              return (
+                <article
+                  key={item.questionId}
+                  id={`analytics-question-${item.questionId}`}
+                  className={`rounded-[16px] border bg-white px-5 py-4 shadow-[0_4px_10px_rgba(45,35,74,0.04)] transition ${
+                    highlightedQuestionId === item.questionId
+                      ? "border-[#D06B6B] ring-2 ring-[#D06B6B]/20"
+                      : "border-[#E4E7EF]"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <h2 className="text-[18px] leading-tight font-semibold text-[#1D1A24]">
+                      {item.order}. {detail?.question ?? item.question}
+                    </h2>
+                    <span className="shrink-0 pt-1 text-[18px] font-medium text-[#2B2C34]">
+                      {item.incorrectCount}/{Math.max(item.submissionCount, 1)} алдаа
+                    </span>
+                  </div>
+
+                  {choices.length ? (
+                    <div className="mt-5 space-y-3">
+                      {choices.map((choice) => {
+                        const isEmphasized = choice.id === emphasizedWrongChoiceId;
+
+                        return (
+                          <div key={choice.id} className="flex items-center gap-3.5">
+                            <span
+                              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
+                                isEmphasized ? "border-[#CB6A68]" : "border-[#D5D9E5]"
+                              }`}
+                            >
+                              {isEmphasized ? (
+                                <span className="h-3.5 w-3.5 rounded-full bg-[#CB6A68]" />
+                              ) : null}
+                            </span>
+
+                            <div
+                              className={`flex-1 rounded-[12px] border px-4 py-3 text-[15px] ${
+                                isEmphasized
+                                  ? "border-[#E6C6C3] bg-[#F3E6E6] text-[#2D2D34]"
+                                  : "border-[#E3E7F1] bg-white text-[#2D2D34]"
+                              }`}
+                            >
+                              {choice.label}. {choice.text}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="mt-5 rounded-[12px] border border-[#E8E2F1] bg-white px-4 py-3 text-[16px] text-[#555061]">
+                      Нээлттэй асуулт
+                    </div>
+                  )}
+                </article>
+              );
+            })
+          )}
         </section>
       </div>
     </section>

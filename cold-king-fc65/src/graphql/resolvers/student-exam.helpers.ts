@@ -34,7 +34,15 @@ function parseScheduleDateTime(scheduledDate: string, startTime: string) {
 
 	// Announced exam times are entered for Ulaanbaatar local time, while the
 	// runtime may be in UTC. Convert the local wall time to a real timestamp.
-	const startsAt = new Date(Number(year), Number(month) - 1, Number(day), Number(hour) - ULAANBAATAR_UTC_OFFSET_HOURS, Number(minute), Number(second ?? '0'), 0);
+	const startsAt = new Date(
+		Number(year),
+		Number(month) - 1,
+		Number(day),
+		Number(hour) - ULAANBAATAR_UTC_OFFSET_HOURS,
+		Number(minute),
+		Number(second ?? '0'),
+		0,
+	);
 
 	if (Number.isNaN(startsAt.getTime())) {
 		return null;
@@ -185,10 +193,10 @@ export async function loadQuestionsWithChoices(context: GraphQLContext, examId: 
 	const questionChoices = mediaColumnsSupported
 		? await context.db.select().from(choices).where(inArray(choices.questionId, questionIds)).all()
 		: (await context.db.select().from(legacyChoices).where(inArray(legacyChoices.questionId, questionIds)).all()).map((choice) => ({
-			...choice,
-			imageUrl: null,
-			videoUrl: null,
-		}));
+				...choice,
+				imageUrl: null,
+				videoUrl: null,
+			}));
 
 	return sortedQuestions.map((question, index) => ({
 		...question,
