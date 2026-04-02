@@ -259,7 +259,12 @@ public final class SecureExamGuardModule: Module {
   private func startFaceStreamInternal() {
     if faceStream == nil {
       faceStream = SecureExamFaceStream { [weak self] faceCount, ts in
-        self?.sendEvent(self?.faceEventName ?? "onFaceCountChanged", self?.makeFacePayload(faceCount: faceCount, ts: ts) ?? [:])
+        guard let self = self else {
+          return
+        }
+
+        let payload = self.makeFacePayload(faceCount: faceCount, ts: ts)
+        self.sendEvent(self.faceEventName, payload)
       }
     }
 

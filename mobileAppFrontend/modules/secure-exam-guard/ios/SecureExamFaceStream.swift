@@ -38,8 +38,8 @@ final class SecureExamFaceStream: NSObject, AVCaptureVideoDataOutputSampleBuffer
       case .authorized:
         self.startAuthorizedSession()
       case .notDetermined:
-        AVCaptureDevice.requestAccess(for: .video) { granted in
-          guard let self else {
+        AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
+          guard let self = self else {
             return
           }
 
