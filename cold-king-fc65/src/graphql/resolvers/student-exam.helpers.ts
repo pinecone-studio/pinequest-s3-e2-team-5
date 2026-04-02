@@ -11,6 +11,8 @@ import { badUserInputError, notFoundError, unauthorizedError } from '../errors';
 
 const PRE_START_VISIBLE_WINDOW_MS = 10 * 60_000;
 
+console.log("ULAANBAATAR_UTC_OFFSET_HOURS", ULAANBAATAR_UTC_OFFSET_HOURS);
+
 function parseScheduleDateTime(scheduledDate: string, startTime: string) {
 	const normalizedDate = scheduledDate.trim().split('T')[0]?.replaceAll('/', '-');
 	const normalizedTime = startTime
