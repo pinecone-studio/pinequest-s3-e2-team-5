@@ -224,7 +224,6 @@ export default function StudentAccountPage() {
   const [examStartedAt, setExamStartedAt] = useState<number | null>(null);
   const [submitError, setSubmitError] = useState("");
   const tabSwitchCountRef = useRef(0);
-  const [tabSwitchCount, setTabSwitchCount] = useState(0);
 
   const routeExamId = searchParams.get("exam");
   const isStartedMode = searchParams.get("mode") === "active";
@@ -454,7 +453,6 @@ export default function StudentAccountPage() {
   useEffect(() => {
     if (!startedExamId) {
       tabSwitchCountRef.current = 0;
-      setTabSwitchCount(0);
       return;
     }
 
@@ -464,7 +462,6 @@ export default function StudentAccountPage() {
       }
 
       tabSwitchCountRef.current += 1;
-      setTabSwitchCount(tabSwitchCountRef.current);
       console.log(
         `[Exam Tab Switch] examId=${startedExamId} count=${tabSwitchCountRef.current}`,
       );
