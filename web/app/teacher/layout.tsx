@@ -1,4 +1,8 @@
+import { currentUser } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
+import { CloudflareStudentSync } from "@/components/auth/cloudflare-student-sync";
+import { isUserRole } from "@/lib/auth-role";
 import { TeacherHeader } from "./_component/TeacherHeader";
 
 export default async function TeacherLayout({
@@ -50,7 +54,6 @@ export default async function TeacherLayout({
         </div>
       ) : null}
 
-      <main className="mx-auto w-full max-w-[1128px]">{children}</main>
       <main className="mx-auto w-full max-w-[1360px] px-6 py-10 lg:px-8">
         {children}
       </main>
