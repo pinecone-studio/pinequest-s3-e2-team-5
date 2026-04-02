@@ -1,15 +1,5 @@
 import { NextResponse } from "next/server";
-
-export const runtime = "nodejs";
-
-function extractTextValue(item: unknown) {
-  if (!item || typeof item !== "object") {
-    return "";
-  }
-
-  const maybeText = (item as { str?: unknown }).str;
-  return typeof maybeText === "string" ? maybeText : "";
-}
+import { extractText, getDocumentProxy } from "unpdf";
 
 export async function POST(request: Request) {
   try {
@@ -27,37 +17,15 @@ export async function POST(request: Request) {
       );
     }
 
-    const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
     const bytes = new Uint8Array(await file.arrayBuffer());
-    const loadingTask = getDocument({
-      data: bytes,
-      isEvalSupported: false,
-      isOffscreenCanvasSupported: false,
-      isImageDecoderSupported: false,
-      useWorkerFetch: false,
-    });
-    const pdf = await loadingTask.promise;
+    const pdf = await getDocumentProxy(bytes);
 
     try {
-      const pageTexts: string[] = [];
-
-      for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
-        const page = await pdf.getPage(pageNumber);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items
-          .map(extractTextValue)
-          .join(" ")
-          .replace(/\s+/g, " ")
-          .trim();
-
-        if (pageText) {
-          pageTexts.push(pageText);
-        }
-      }
+      const { totalPages, text } = await extractText(pdf, { mergePages: true });
 
       return NextResponse.json({
-        text: pageTexts.join("\n"),
-        pageCount: pdf.numPages,
+        text,
+        pageCount: totalPages,
       });
     } finally {
       await pdf.destroy();
