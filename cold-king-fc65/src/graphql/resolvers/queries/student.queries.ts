@@ -18,6 +18,20 @@ import { announcedExamGrades } from '../../../db/schemas/announcedExamGrades.sch
 import { announcedExams } from '../../../db/schemas/announcedExams.schema';
 import { badUserInputError, notFoundError } from '../../errors';
 
+function shuffleChoices<T>(items: T[]) {
+	const shuffled = [...items];
+
+	for (let index = shuffled.length - 1; index > 0; index -= 1) {
+		const randomIndex = Math.floor(Math.random() * (index + 1));
+		[shuffled[index], shuffled[randomIndex]] = [
+			shuffled[randomIndex],
+			shuffled[index],
+		];
+	}
+
+	return shuffled;
+}
+
 export const studentQuery = {
 	Query: {
 		studentById: async (_: unknown, args: { id?: string | null }, context: GraphQLContext) => {
@@ -167,7 +181,7 @@ export const studentQuery = {
 					videoUrl: question.videoUrl,
 					topic: question.topic,
 					difficulty: question.difficulty,
-					choices: question.choices.map((choice) => ({
+					choices: shuffleChoices(question.choices).map((choice) => ({
 						id: choice.id,
 						label: choice.label,
 						text: choice.text,

@@ -435,8 +435,31 @@ function getQuestionTypeLabel(type: QuestionType) {
   return "Бичих";
 }
 
+function hasDelimitedMath(value: string) {
+  return /\$[^$]+\$/.test(value);
+}
+
+function isStandaloneMathExpression(value: string) {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return false;
+  }
+
+  if (trimmed.includes("$")) {
+    return false;
+  }
+
+  const proseWordMatches = trimmed.match(/[A-Za-zА-Яа-я]{3,}/g) ?? [];
+  if (proseWordMatches.length > 1) {
+    return false;
+  }
+
+  return /(\\[a-zA-Z]+)|\^|_/.test(trimmed);
+}
+
 function hasMathPreview(value: string) {
-  return /\$[^$]+\$|(\\[a-zA-Z]+)|\^|_/.test(value);
+  return hasDelimitedMath(value) || isStandaloneMathExpression(value);
 }
 
 function splitLegacyFormulaText(value: string) {
@@ -525,7 +548,7 @@ function renderPreviewContent(value: string) {
     );
   }
 
-  if (hasMathPreview(value)) {
+  if (isStandaloneMathExpression(value)) {
     return <MathBlock math={value} className="text-[20px] text-[#1A1623]" />;
   }
 

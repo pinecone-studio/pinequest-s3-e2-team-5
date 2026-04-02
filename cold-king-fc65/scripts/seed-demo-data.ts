@@ -1,139 +1,151 @@
-import { mkdir, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { spawnSync } from "node:child_process";
+import dotenv from "dotenv";
 
-const teacherId = "user_3BkRu7sUOCzK9XnUI9pl6hmmK3w";
-const outputPath = resolve("scripts/generated/seed-demo-data.sql");
+dotenv.config({ path: join(process.cwd(), ".env") });
+
+const DATABASE_NAME = "shalgalt_db";
+const TEACHER_ID = "user_3BohHuZygYCwVhf10Uir6tsu8NQ";
+const EXISTING_CLASSROOM_ID = "04b63621-0515-47de-92bf-ff342730990f";
+const EXISTING_CLASSROOM_NAME = "10А";
+const EXISTING_STUDENT_ID = "user_3BohRrVB3gqmg67PaCUycXKei6S";
+const TERMINATION_REASON =
+  "Шалгалтыг орхин 5 секунд болсон тул автоматаар илгээгдэв.";
 
 type ClassroomSeed = {
   id: string;
   className: string;
   classCode: string;
-  grade: string;
   createdAt: number;
+};
+
+type StudentSeed = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  grade: string;
+  className: string;
+  inviteCode: string;
+  classroomId: string;
+  teacherId: string;
+  isExisting?: boolean;
+};
+
+type ChoiceSeed = {
+  id: string;
+  label: string;
+  text: string;
+  isCorrect: boolean;
+};
+
+type QuestionSeed = {
+  id: string;
+  examId: string;
+  type: "mcq";
+  question: string;
+  indexOnExam: number;
+  topic: string;
+  difficulty: string;
+  choices: ChoiceSeed[];
 };
 
 type ExamSeed = {
   id: string;
+  announcedExamId: string;
   title: string;
   subject: string;
   description: string;
   duration: number;
   grade: string;
+  createdBy: string;
   scheduledDate: string;
   startTime: string;
+  questions: QuestionSeed[];
 };
 
-const classrooms: ClassroomSeed[] = [
-  {
-    id: "seed_demo_classroom_9a",
-    className: "9A Demo",
-    classCode: "SEED-9A-2026",
-    grade: "9-р анги",
-    createdAt: Date.UTC(2026, 0, 3, 8, 0, 0),
-  },
-  {
-    id: "seed_demo_classroom_10b",
-    className: "10B Demo",
-    classCode: "SEED-10B-2026",
-    grade: "10-р анги",
-    createdAt: Date.UTC(2026, 0, 4, 8, 0, 0),
-  },
-  {
-    id: "seed_demo_classroom_11c",
-    className: "11C Demo",
-    classCode: "SEED-11C-2026",
-    grade: "11-р анги",
-    createdAt: Date.UTC(2026, 0, 5, 8, 0, 0),
-  },
-];
+type SubmissionSeed = {
+  id: string;
+  studentId: string;
+  examId: string;
+  startedAt: number;
+  submittedAt: number;
+  totalQuestions: number;
+  correctAnswers: number;
+  scorePercent: number;
+  tabSwitchCount: number;
+  reasonForTermination: string | null;
+};
 
-const exams: ExamSeed[] = [
-  {
-    id: "seed_demo_exam_1",
-    title: "Иргэний нийгэм ба оролцоо",
-    subject: "social",
-    description: "Seed demo exam 1",
-    duration: 45,
-    grade: "9-р анги",
-    scheduledDate: "2026-01-15",
-    startTime: "09:00",
-  },
-  {
-    id: "seed_demo_exam_2",
-    title: "Монгол Улсын Үндсэн хуулийн ойлголт",
-    subject: "civics",
-    description: "Seed demo exam 2",
-    duration: 60,
-    grade: "10-р анги",
-    scheduledDate: "2026-01-29",
-    startTime: "10:15",
-  },
-  {
-    id: "seed_demo_exam_3",
-    title: "Өгөгдлийн дундаж ба магадлал",
-    subject: "math",
-    description: "Seed demo exam 3",
-    duration: 60,
-    grade: "11-р анги",
-    scheduledDate: "2026-02-12",
-    startTime: "11:30",
-  },
-  {
-    id: "seed_demo_exam_4",
-    title: "Reading Comprehension Review",
-    subject: "english",
-    description: "Seed demo exam 4",
-    duration: 45,
-    grade: "10-р анги",
-    scheduledDate: "2026-02-26",
-    startTime: "09:45",
-  },
-  {
-    id: "seed_demo_exam_5",
-    title: "Химийн урвал ба тэнцвэр",
-    subject: "chemistry",
-    description: "Seed demo exam 5",
-    duration: 60,
-    grade: "11-р анги",
-    scheduledDate: "2026-03-12",
-    startTime: "13:00",
-  },
-];
+type AnswerSeed = {
+  id: string;
+  submissionId: string;
+  questionId: string;
+  selectedChoiceId: string;
+  answerText: string | null;
+  isCorrect: boolean;
+};
 
-const studentFirstNames = [
+const firstNames = [
   "Anu",
   "Bilguun",
-  "Cecilia",
+  "Chinguun",
   "Dulguun",
-  "Enkhjin",
-  "Fiona",
-  "Ganzorig",
+  "Enebish",
+  "Gantsetseg",
   "Hulan",
   "Ider",
-  "Javkhaa",
-  "Khulan",
+  "Jargal",
+  "Khaliun",
   "Lkhagva",
-];
-
-const studentLastNames = [
-  "Bat",
-  "Dorj",
-  "Erdene",
-  "Gan",
   "Munkh",
-  "Naran",
-  "Otgon",
+  "Nandia",
+  "Ochir",
   "Purev",
-  "Saruul",
+  "Sarnai",
   "Temuulen",
   "Uyanga",
-  "Zol",
+  "Vanchin",
+  "Yalguun",
+  "Zolboo",
+  "Ariunaa",
+  "Batsaikhan",
+  "Cecgee",
+  "Delger",
+  "Enkhjin",
+  "Gerel",
+  "Huslen",
+  "Itgel",
+  "Javkhlan",
 ];
 
-const performanceBands = [0.35, 0.45, 0.55, 0.65, 0.78, 0.9];
-const choiceLabels = ["A", "B", "C", "D"] as const;
+const lastNames = [
+  "Batbold",
+  "Dorj",
+  "Enkhbayar",
+  "Ganbaatar",
+  "Khurelbaatar",
+  "Lkhagvasuren",
+  "Munkhzul",
+  "Nyambayar",
+  "Otgon",
+  "Purevdorj",
+  "Sukhbaatar",
+  "Temuujin",
+  "Uuganbayar",
+  "Byambaa",
+  "Ganzorig",
+  "Altansukh",
+  "Erdene",
+  "Tsolmon",
+  "Amarsaikhan",
+  "Bayarmaa",
+];
 
-function sqlString(value: string | null) {
+function escapeSql(value: string | null) {
   if (value === null) {
     return "NULL";
   }
@@ -141,154 +153,226 @@ function sqlString(value: string | null) {
   return `'${value.replace(/'/g, "''")}'`;
 }
 
-function insertRows(
-  tableName: string,
-  columns: string[],
-  rows: string[][],
-  chunkSize = 50,
-) {
-  if (rows.length === 0) {
-    return "";
-  }
-
-  const statements: string[] = [];
-
-  for (let start = 0; start < rows.length; start += chunkSize) {
-    const chunk = rows.slice(start, start + chunkSize);
-    const values = chunk.map((row) => `(${row.join(", ")})`).join(",\n");
-
-    statements.push(
-      `INSERT INTO ${tableName} (${columns.join(", ")}) VALUES\n${values};`,
-    );
-  }
-
-  return statements.join("\n\n");
+function boolToInt(value: boolean) {
+  return value ? 1 : 0;
 }
 
-function buildStudents() {
-  return classrooms.flatMap((classroom, classroomIndex) =>
-    Array.from({ length: 12 }, (_, studentIndex) => {
-      const ordinal = classroomIndex * 12 + studentIndex + 1;
-      const firstName = studentFirstNames[studentIndex % studentFirstNames.length];
-      const lastName = studentLastNames[(studentIndex + classroomIndex) % studentLastNames.length];
+function makeId(parts: Array<string | number>) {
+  return parts.join("-");
+}
 
-      return {
-        id: `seed_demo_student_${classroomIndex + 1}_${studentIndex + 1}`,
+function makeInviteCode(index: number) {
+  return `INV${String(index).padStart(4, "0")}`;
+}
+
+function makePhone(index: number) {
+  return `9900${String(1000 + index).slice(-4)}`;
+}
+
+function makeStudentName(index: number) {
+  return {
+    firstName: firstNames[index % firstNames.length],
+    lastName: lastNames[Math.floor(index / firstNames.length) % lastNames.length],
+  };
+}
+
+function buildClassrooms() {
+  const createdAt = Date.UTC(2026, 0, 10, 8, 0, 0);
+
+  return [
+    {
+      id: EXISTING_CLASSROOM_ID,
+      className: EXISTING_CLASSROOM_NAME,
+      classCode: "9NGR2V",
+      createdAt,
+    },
+    {
+      id: "seed-demo-classroom-10b",
+      className: "10Б",
+      classCode: "SEED10B",
+      createdAt: createdAt + 1,
+    },
+    {
+      id: "seed-demo-classroom-10v",
+      className: "10В",
+      classCode: "SEED10V",
+      createdAt: createdAt + 2,
+    },
+  ] satisfies ClassroomSeed[];
+}
+
+function buildStudents(classrooms: ClassroomSeed[]) {
+  const students: StudentSeed[] = [
+    {
+      id: EXISTING_STUDENT_ID,
+      firstName: "Batzorig",
+      lastName: "Chinbat",
+      email: "breexy20@gmail.com",
+      phone: "99112233",
+      grade: "10",
+      className: EXISTING_CLASSROOM_NAME,
+      inviteCode: "REALSTUDENT",
+      classroomId: EXISTING_CLASSROOM_ID,
+      teacherId: TEACHER_ID,
+      isExisting: true,
+    },
+  ];
+
+  const targets = [
+    { classroom: classrooms[0], total: 22, offset: 0 },
+    { classroom: classrooms[1], total: 22, offset: 100 },
+    { classroom: classrooms[2], total: 22, offset: 200 },
+  ];
+
+  for (const target of targets) {
+    const existingCount = students.filter(
+      (student) => student.classroomId === target.classroom.id,
+    ).length;
+    const needed = target.total - existingCount;
+
+    for (let index = 0; index < needed; index += 1) {
+      const sequence = target.offset + index;
+      const { firstName, lastName } = makeStudentName(sequence);
+      const id = makeId(["seed-demo-student", target.classroom.className, index + 1]);
+      const email = `${firstName}.${lastName}.${target.classroom.className}.${index + 1}`
+        .toLowerCase()
+        .replace(/[^a-z0-9.]/g, "") + "@pinequest.demo";
+
+      students.push({
+        id,
         firstName,
         lastName,
-        email: `seed.demo.${ordinal}@pinequest.test`,
-        phone: `9900${String(ordinal).padStart(4, "0")}`,
-        grade: classroom.grade,
-        className: classroom.className,
-        inviteCode: classroom.classCode,
-        classroomId: classroom.id,
-        teacherId,
-        studentIndex: ordinal - 1,
-      };
-    }),
-  );
-}
-
-function buildQuestions() {
-  return exams.flatMap((exam, examIndex) =>
-    Array.from({ length: 6 }, (_, questionIndex) => {
-      const questionNumber = questionIndex + 1;
-      const correctChoiceIndex = (examIndex + questionIndex) % choiceLabels.length;
-
-      return {
-        id: `seed_demo_question_${examIndex + 1}_${questionNumber}`,
-        examId: exam.id,
-        type: "mcq",
-        question: `${exam.title} - Асуулт ${questionNumber}`,
-        indexOnExam: questionNumber,
-        topic: `Topic ${questionNumber}`,
-        difficulty: questionNumber <= 2 ? "easy" : questionNumber <= 4 ? "medium" : "hard",
-        correctChoiceIndex,
-      };
-    }),
-  );
-}
-
-function buildChoices(questions: ReturnType<typeof buildQuestions>) {
-  return questions.flatMap((question) =>
-    choiceLabels.map((label, choiceIndex) => ({
-      id: `${question.id}_choice_${label.toLowerCase()}`,
-      questionId: question.id,
-      text: `${question.question} - Сонголт ${label}`,
-      label,
-      isCorrect: choiceIndex === question.correctChoiceIndex ? 1 : 0,
-    })),
-  );
-}
-
-function buildAnnouncements() {
-  return exams.flatMap((exam) =>
-    classrooms.map((classroom) => ({
-      id: `seed_demo_announcement_${exam.id}_${classroom.id}`,
-      examId: exam.id,
-      openStatus: 0,
-      scheduledDate: exam.scheduledDate,
-      startTime: exam.startTime,
-      classroomId: classroom.id,
-      createdBy: teacherId,
-    })),
-  );
-}
-
-function buildSubmissions(
-  students: ReturnType<typeof buildStudents>,
-  questions: ReturnType<typeof buildQuestions>,
-  choices: ReturnType<typeof buildChoices>,
-) {
-  const answers: Array<{
-    id: string;
-    submissionId: string;
-    questionId: string;
-    selectedChoiceId: string;
-    isCorrect: number;
-  }> = [];
-
-  const submissions = students.flatMap((student) =>
-    exams.map((exam, examIndex) => {
-      const submissionId = `seed_demo_submission_${student.id}_${exam.id}`;
-      const questionSet = questions.filter((question) => question.examId === exam.id);
-      const proficiency = performanceBands[(student.studentIndex + examIndex) % performanceBands.length];
-      const startedAt = Date.UTC(2026, 0, 10 + examIndex * 14, 7 + (student.studentIndex % 5), student.studentIndex % 50, 0);
-      let correctAnswers = 0;
-
-      questionSet.forEach((question, questionIndex) => {
-        const scoreSeed = ((student.studentIndex + 3) * 17 + (examIndex + 1) * 13 + (questionIndex + 1) * 7) % 100;
-        const shouldBeCorrect = scoreSeed / 100 < proficiency;
-        const selectedChoiceIndex = shouldBeCorrect
-          ? question.correctChoiceIndex
-          : (question.correctChoiceIndex + 1 + ((student.studentIndex + examIndex + questionIndex) % 3)) % choiceLabels.length;
-        const selectedLabel = choiceLabels[selectedChoiceIndex];
-        const selectedChoice = choices.find(
-          (choice) => choice.questionId === question.id && choice.label === selectedLabel,
-        );
-
-        if (!selectedChoice) {
-          throw new Error(`Missing choice for ${question.id} ${selectedLabel}`);
-        }
-
-        if (shouldBeCorrect) {
-          correctAnswers += 1;
-        }
-
-        answers.push({
-          id: `seed_demo_answer_${submissionId}_${question.id}`,
-          submissionId,
-          questionId: question.id,
-          selectedChoiceId: selectedChoice.id,
-          isCorrect: shouldBeCorrect ? 1 : 0,
-        });
+        email,
+        phone: makePhone(sequence),
+        grade: "10",
+        className: target.classroom.className,
+        inviteCode: makeInviteCode(sequence + 1),
+        classroomId: target.classroom.id,
+        teacherId: TEACHER_ID,
       });
+    }
+  }
 
-      const totalQuestions = questionSet.length;
-      const scorePercent = Math.round((correctAnswers / totalQuestions) * 100);
-      const submittedAt = startedAt + (18 + examIndex * 3 + (student.studentIndex % 8)) * 60_000;
+  return students;
+}
+
+function buildExamTemplate(
+  examIndex: number,
+  title: string,
+  subject: string,
+  duration: number,
+  scheduledDate: string,
+  startTime: string,
+  questionCount: number,
+) {
+  const examId = makeId(["seed-demo-exam", examIndex + 1]);
+  const announcedExamId = makeId(["seed-demo-announced-exam", examIndex + 1]);
+
+  const questions: QuestionSeed[] = Array.from(
+    { length: questionCount },
+    (_, questionIndex) => {
+      const questionId = makeId([
+        "seed-demo-question",
+        examIndex + 1,
+        questionIndex + 1,
+      ]);
+      const correctLabel = ["A", "B", "C", "D"][questionIndex % 4]!;
+      const questionText =
+        questionIndex % 3 === 0
+          ? `${questionIndex + 1}. ${title}: $x^${(questionIndex % 4) + 2}$ утгыг сонгоно уу.`
+          : `${questionIndex + 1}. ${title} сэдвийн ${questionIndex + 1}-р асуултын зөв хариуг сонгоно уу.`;
+
+      const choices: ChoiceSeed[] = ["A", "B", "C", "D"].map((label, choiceIndex) => ({
+        id: makeId([
+          "seed-demo-choice",
+          examIndex + 1,
+          questionIndex + 1,
+          label.toLowerCase(),
+        ]),
+        label,
+        text:
+          questionIndex % 3 === 0
+            ? `$${choiceIndex + 1}${questionIndex % 2 === 0 ? "x" : ""}$`
+            : `${title} ${questionIndex + 1}.${choiceIndex + 1}`,
+        isCorrect: label === correctLabel,
+      }));
 
       return {
+        id: questionId,
+        examId,
+        type: "mcq",
+        question: questionText,
+        indexOnExam: questionIndex + 1,
+        topic: title,
+        difficulty: ["easy", "medium", "hard"][questionIndex % 3]!,
+        choices,
+      };
+    },
+  );
+
+  return {
+    id: examId,
+    announcedExamId,
+    title,
+    subject,
+    description: `${title} demo seed exam`,
+    duration,
+    grade: "10",
+    createdBy: TEACHER_ID,
+    scheduledDate,
+    startTime,
+    questions,
+  } satisfies ExamSeed;
+}
+
+function buildExams() {
+  return [
+    buildExamTemplate(0, "Algebra Review", "math", 45, "2026-01-15", "09:00", 8),
+    buildExamTemplate(1, "Geometry Drill", "math", 50, "2026-01-22", "10:30", 6),
+    buildExamTemplate(2, "Functions and Graphs", "math", 60, "2026-02-05", "08:45", 10),
+    buildExamTemplate(3, "Probability Practice", "math", 40, "2026-02-19", "11:10", 7),
+    buildExamTemplate(4, "Comprehensive Math Test", "math", 70, "2026-03-03", "09:20", 12),
+  ] satisfies ExamSeed[];
+}
+
+function buildSubmissionsAndAnswers(students: StudentSeed[], exams: ExamSeed[]) {
+  const submissions: SubmissionSeed[] = [];
+  const answers: AnswerSeed[] = [];
+
+  exams.forEach((exam, examIndex) => {
+    const terminatedCount = examIndex % 2 === 0 ? 3 : 2;
+    const terminatedStudentIds = new Set(
+      students
+        .filter((student) => !student.isExisting)
+        .slice(examIndex * 3, examIndex * 3 + terminatedCount)
+        .map((student) => student.id),
+    );
+
+    students.forEach((student, studentIndex) => {
+      const startedAt = Date.UTC(
+        2026,
+        0 + examIndex,
+        15 + examIndex * 3,
+        8 + (studentIndex % 3),
+        (studentIndex * 7) % 60,
+        0,
+      );
+      const totalQuestions = exam.questions.length;
+      const minCorrect = Math.max(1, Math.floor(totalQuestions * 0.35));
+      const spread = totalQuestions - minCorrect;
+      const correctAnswers =
+        minCorrect + ((studentIndex * 5 + examIndex * 3) % (spread + 1));
+      const scorePercent = Math.round((correctAnswers / totalQuestions) * 100);
+      const submissionId = makeId(["seed-demo-submission", examIndex + 1, student.id]);
+      const durationMinutes =
+        Math.max(18, exam.duration - 12 + ((studentIndex + examIndex) % 10));
+      const submittedAt = startedAt + durationMinutes * 60 * 1000;
+      const tabSwitchCount = (studentIndex + examIndex) % 4;
+      const reasonForTermination = terminatedStudentIds.has(student.id)
+        ? TERMINATION_REASON
+        : null;
+
+      submissions.push({
         id: submissionId,
         studentId: student.id,
         examId: exam.id,
@@ -297,178 +381,312 @@ function buildSubmissions(
         totalQuestions,
         correctAnswers,
         scorePercent,
-      };
-    }),
-  );
+        tabSwitchCount,
+        reasonForTermination,
+      });
+
+      const rankedQuestions = [...exam.questions]
+        .map((question, questionIndex) => ({
+          question,
+          rank: (studentIndex * 11 + examIndex * 17 + questionIndex * 7) % 97,
+        }))
+        .sort((left, right) => left.rank - right.rank);
+      const correctQuestionIds = new Set(
+        rankedQuestions
+          .slice(0, correctAnswers)
+          .map(({ question }) => question.id),
+      );
+
+      exam.questions.forEach((question) => {
+        const correctChoice = question.choices.find((choice) => choice.isCorrect);
+        const wrongChoice = question.choices.find((choice) => !choice.isCorrect);
+
+        if (!correctChoice || !wrongChoice) {
+          throw new Error(`Question ${question.id} is missing choice data.`);
+        }
+
+        const isCorrect = correctQuestionIds.has(question.id);
+        answers.push({
+          id: makeId(["seed-demo-answer", submissionId, question.id]),
+          submissionId,
+          questionId: question.id,
+          selectedChoiceId: isCorrect ? correctChoice.id : wrongChoice.id,
+          answerText: null,
+          isCorrect,
+        });
+      });
+    });
+  });
 
   return { submissions, answers };
 }
 
-async function main() {
-  const students = buildStudents();
-  const questions = buildQuestions();
-  const choices = buildChoices(questions);
-  const announcements = buildAnnouncements();
-  const { submissions, answers } = buildSubmissions(students, questions, choices);
+function statement(values: string[]) {
+  if (values.length === 0) {
+    return ";\n";
+  }
 
-  const sqlStatements = [
-    "-- Generated by scripts/seed-demo-data.ts",
-    "PRAGMA foreign_keys = ON;",
-    "DELETE FROM student_exam_answers WHERE id LIKE 'seed_demo_%';",
-    "DELETE FROM student_exam_submissions WHERE id LIKE 'seed_demo_%';",
-    "DELETE FROM student_exam_sessions WHERE id LIKE 'seed_demo_%';",
-    "DELETE FROM announced_exam_grades WHERE id LIKE 'seed_demo_%';",
-    "DELETE FROM announced_exams WHERE id LIKE 'seed_demo_%';",
-    "DELETE FROM choices WHERE id LIKE 'seed_demo_%';",
-    "DELETE FROM questions WHERE id LIKE 'seed_demo_%';",
-    "DELETE FROM students WHERE id LIKE 'seed_demo_%';",
-    "DELETE FROM classrooms WHERE id LIKE 'seed_demo_%';",
-    "DELETE FROM exams WHERE id LIKE 'seed_demo_%';",
-    `INSERT OR IGNORE INTO teachers (id, firstName, lastName, email, phone) VALUES (${sqlString(teacherId)}, ${sqlString("Seed")}, ${sqlString("Teacher")}, ${sqlString("seed.teacher@pinequest.test")}, ${sqlString("99000000")});`,
-    insertRows(
-      "classrooms",
-      ["id", "teacherId", "className", "classCode", "createdAt"],
-      classrooms.map((classroom) => [
-        sqlString(classroom.id),
-        sqlString(teacherId),
-        sqlString(classroom.className),
-        sqlString(classroom.classCode),
-        String(classroom.createdAt),
-      ]),
-      25,
-    ),
-    insertRows(
-      "students",
-      ["id", "firstName", "lastName", "email", "phone", "grade", "className", "inviteCode", "classroomId", "teacherId"],
-      students.map((student) => [
-        sqlString(student.id),
-        sqlString(student.firstName),
-        sqlString(student.lastName),
-        sqlString(student.email),
-        sqlString(student.phone),
-        sqlString(student.grade),
-        sqlString(student.className),
-        sqlString(student.inviteCode),
-        sqlString(student.classroomId),
-        sqlString(student.teacherId),
-      ]),
-      25,
-    ),
-    insertRows(
-      "exams",
-      ["id", "title", "subject", "description", "duration", "grade", "fileUrl", "createdBy"],
-      exams.map((exam) => [
-        sqlString(exam.id),
-        sqlString(exam.title),
-        sqlString(exam.subject),
-        sqlString(exam.description),
-        String(exam.duration),
-        sqlString(exam.grade),
-        "NULL",
-        sqlString(teacherId),
-      ]),
-      10,
-    ),
-    insertRows(
-      "questions",
-      ["id", "type", "question", "examId", "indexOnExam", "imageUrl", "videoUrl", "topic", "difficulty"],
-      questions.map((question) => [
-        sqlString(question.id),
-        sqlString(question.type),
-        sqlString(question.question),
-        sqlString(question.examId),
-        String(question.indexOnExam),
-        "NULL",
-        "NULL",
-        sqlString(question.topic),
-        sqlString(question.difficulty),
-      ]),
-      25,
-    ),
-    insertRows(
-      "choices",
-      ["id", "questionId", "text", "label", "imageUrl", "videoUrl", "isCorrect"],
-      choices.map((choice) => [
-        sqlString(choice.id),
-        sqlString(choice.questionId),
-        sqlString(choice.text),
-        sqlString(choice.label),
-        "NULL",
-        "NULL",
-        String(choice.isCorrect),
-      ]),
-      40,
-    ),
-    insertRows(
-      "announced_exams",
-      ["id", "examId", "openStatus", "scheduledDate", "startTime", "createdBy"],
-      announcements.map((announcement) => [
-        sqlString(announcement.id),
-        sqlString(announcement.examId),
-        String(announcement.openStatus),
-        sqlString(announcement.scheduledDate),
-        sqlString(announcement.startTime),
-        sqlString(announcement.createdBy),
-      ]),
-      30,
-    ),
-    insertRows(
-      "announced_exam_grades",
-      ["id", "classroomId", "announcedExamId", "createdBy"],
-      announcements.map((announcement) => [
-        sqlString(`seed_demo_grade_link_${announcement.id}`),
-        sqlString(announcement.classroomId),
-        sqlString(announcement.id),
-        sqlString(teacherId),
-      ]),
-      30,
-    ),
-    insertRows(
-      "student_exam_submissions",
-      ["id", "studentId", "examId", "startedAt", "submittedAt", "totalQuestions", "correctAnswers", "scorePercent"],
-      submissions.map((submission) => [
-        sqlString(submission.id),
-        sqlString(submission.studentId),
-        sqlString(submission.examId),
-        String(submission.startedAt),
-        String(submission.submittedAt),
-        String(submission.totalQuestions),
-        String(submission.correctAnswers),
-        String(submission.scorePercent),
-      ]),
-      40,
-    ),
-    insertRows(
-      "student_exam_answers",
-      ["id", "submissionId", "questionId", "selectedChoiceId", "answerText", "isCorrect"],
-      answers.map((answer) => [
-        sqlString(answer.id),
-        sqlString(answer.submissionId),
-        sqlString(answer.questionId),
-        sqlString(answer.selectedChoiceId),
-        "NULL",
-        String(answer.isCorrect),
-      ]),
-      80,
-    ),
-    "",
-  ].filter(Boolean);
-
-  await mkdir(dirname(outputPath), { recursive: true });
-  await writeFile(outputPath, sqlStatements.join("\n\n"));
-
-  console.log(`Wrote ${outputPath}`);
-  console.log(`Classrooms: ${classrooms.length}`);
-  console.log(`Students: ${students.length}`);
-  console.log(`Exams: ${exams.length}`);
-  console.log(`Questions: ${questions.length}`);
-  console.log(`Choices: ${choices.length}`);
-  console.log(`Announcements: ${announcements.length}`);
-  console.log(`Submissions: ${submissions.length}`);
-  console.log(`Answers: ${answers.length}`);
+  const [first, ...rest] = values;
+  return `${first}\n${rest.join(",\n")};\n`;
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+function chunkArray<T>(items: T[], size: number) {
+  const chunks: T[][] = [];
+
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+
+  return chunks;
+}
+
+function buildSql() {
+  const classrooms = buildClassrooms();
+  const students = buildStudents(classrooms);
+  const exams = buildExams();
+  const { submissions, answers } = buildSubmissionsAndAnswers(students, exams);
+  const questionIds = exams.flatMap((exam) => exam.questions.map((question) => question.id));
+
+  const sql: string[] = [
+    "PRAGMA foreign_keys = OFF;",
+    "DELETE FROM student_exam_answers WHERE id LIKE 'seed-demo-answer-%';",
+    "DELETE FROM student_exam_submissions WHERE id LIKE 'seed-demo-submission-%';",
+    "DELETE FROM student_exam_sessions WHERE examId LIKE 'seed-demo-exam-%';",
+    "DELETE FROM choices WHERE id LIKE 'seed-demo-choice-%';",
+    `DELETE FROM questions WHERE id IN (${questionIds.map(escapeSql).join(", ")});`,
+    "DELETE FROM announced_exam_grades WHERE id LIKE 'seed-demo-announced-grade-%';",
+    "DELETE FROM announced_exams WHERE id LIKE 'seed-demo-announced-exam-%';",
+    "DELETE FROM exams WHERE id LIKE 'seed-demo-exam-%';",
+    "DELETE FROM students WHERE id LIKE 'seed-demo-student-%';",
+    "DELETE FROM classrooms WHERE id LIKE 'seed-demo-classroom-%';",
+  ];
+
+  const newClassrooms = classrooms.filter(
+    (classroom) => classroom.id !== EXISTING_CLASSROOM_ID,
+  );
+  sql.push(
+    statement([
+      "INSERT INTO classrooms (id, teacherId, className, classCode, createdAt) VALUES",
+      newClassrooms
+        .map(
+          (classroom) =>
+            `(${escapeSql(classroom.id)}, ${escapeSql(TEACHER_ID)}, ${escapeSql(
+              classroom.className,
+            )}, ${escapeSql(classroom.classCode)}, ${classroom.createdAt})`,
+        )
+        .join(",\n"),
+    ]),
+  );
+
+  const newStudents = students.filter((student) => !student.isExisting);
+  chunkArray(newStudents, 40).forEach((batch) => {
+    sql.push(
+      statement([
+        "INSERT INTO students (id, firstName, lastName, email, phone, grade, className, inviteCode, classroomId, teacherId) VALUES",
+        batch
+          .map(
+            (student) =>
+              `(${escapeSql(student.id)}, ${escapeSql(student.firstName)}, ${escapeSql(
+                student.lastName,
+              )}, ${escapeSql(student.email)}, ${escapeSql(student.phone)}, ${escapeSql(
+                student.grade,
+              )}, ${escapeSql(student.className)}, ${escapeSql(
+                student.inviteCode,
+              )}, ${escapeSql(student.classroomId)}, ${escapeSql(student.teacherId)})`,
+          )
+          .join(",\n"),
+      ]),
+    );
+  });
+
+  chunkArray(exams, 20).forEach((batch) => {
+    sql.push(
+      statement([
+        "INSERT INTO exams (id, title, subject, description, duration, grade, fileUrl, createdBy) VALUES",
+        batch
+          .map(
+            (exam) =>
+              `(${escapeSql(exam.id)}, ${escapeSql(exam.title)}, ${escapeSql(
+                exam.subject,
+              )}, ${escapeSql(exam.description)}, ${exam.duration}, ${escapeSql(
+                exam.grade,
+              )}, NULL, ${escapeSql(exam.createdBy)})`,
+          )
+          .join(",\n"),
+      ]),
+    );
+  });
+
+  chunkArray(exams, 20).forEach((batch) => {
+    sql.push(
+      statement([
+        "INSERT INTO announced_exams (id, examId, openStatus, scheduledDate, startTime, createdBy) VALUES",
+        batch
+          .map(
+            (exam) =>
+              `(${escapeSql(exam.announcedExamId)}, ${escapeSql(exam.id)}, 1, ${escapeSql(
+                exam.scheduledDate,
+              )}, ${escapeSql(exam.startTime)}, ${escapeSql(TEACHER_ID)})`,
+          )
+          .join(",\n"),
+      ]),
+    );
+  });
+
+  const announcedExamGradesRows = exams.flatMap((exam) =>
+    classrooms.map((classroom) => ({
+      id: makeId(["seed-demo-announced-grade", exam.id, classroom.id]),
+      classroomId: classroom.id,
+      announcedExamId: exam.announcedExamId,
+      createdBy: TEACHER_ID,
+    })),
+  );
+
+  chunkArray(announcedExamGradesRows, 40).forEach((batch) => {
+    sql.push(
+      statement([
+        "INSERT INTO announced_exam_grades (id, classroomId, announcedExamId, createdBy) VALUES",
+        batch
+          .map(
+            (row) =>
+              `(${escapeSql(row.id)}, ${escapeSql(row.classroomId)}, ${escapeSql(
+                row.announcedExamId,
+              )}, ${escapeSql(row.createdBy)})`,
+          )
+          .join(",\n"),
+      ]),
+    );
+  });
+
+  const questions = exams.flatMap((exam) => exam.questions);
+  chunkArray(questions, 40).forEach((batch) => {
+    sql.push(
+      statement([
+        "INSERT INTO questions (id, type, question, examId, indexOnExam, imageUrl, videoUrl, topic, difficulty) VALUES",
+        batch
+          .map(
+            (question) =>
+              `(${escapeSql(question.id)}, ${escapeSql(question.type)}, ${escapeSql(
+                question.question,
+              )}, ${escapeSql(question.examId)}, ${question.indexOnExam}, NULL, NULL, ${escapeSql(
+                question.topic,
+              )}, ${escapeSql(question.difficulty)})`,
+          )
+          .join(",\n"),
+      ]),
+    );
+  });
+
+  const choices = questions.flatMap((question) => question.choices.map((choice) => ({
+    ...choice,
+    questionId: question.id,
+  })));
+  chunkArray(choices, 80).forEach((batch) => {
+    sql.push(
+      statement([
+        "INSERT INTO choices (id, questionId, text, label, imageUrl, videoUrl, isCorrect) VALUES",
+        batch
+          .map(
+            (choice) =>
+              `(${escapeSql(choice.id)}, ${escapeSql(choice.questionId)}, ${escapeSql(
+                choice.text,
+              )}, ${escapeSql(choice.label)}, NULL, NULL, ${boolToInt(choice.isCorrect)})`,
+          )
+          .join(",\n"),
+      ]),
+    );
+  });
+
+  chunkArray(submissions, 80).forEach((batch) => {
+    sql.push(
+      statement([
+        "INSERT INTO student_exam_submissions (id, studentId, examId, startedAt, submittedAt, totalQuestions, correctAnswers, scorePercent, tabSwitchCount, reasonForTermination) VALUES",
+        batch
+          .map(
+            (submission) =>
+              `(${escapeSql(submission.id)}, ${escapeSql(
+                submission.studentId,
+              )}, ${escapeSql(submission.examId)}, ${submission.startedAt}, ${
+                submission.submittedAt
+              }, ${submission.totalQuestions}, ${submission.correctAnswers}, ${
+                submission.scorePercent
+              }, ${submission.tabSwitchCount}, ${escapeSql(
+                submission.reasonForTermination,
+              )})`,
+          )
+          .join(",\n"),
+      ]),
+    );
+  });
+
+  chunkArray(answers, 120).forEach((batch) => {
+    sql.push(
+      statement([
+        "INSERT INTO student_exam_answers (id, submissionId, questionId, selectedChoiceId, answerText, isCorrect) VALUES",
+        batch
+          .map(
+            (answer) =>
+              `(${escapeSql(answer.id)}, ${escapeSql(answer.submissionId)}, ${escapeSql(
+                answer.questionId,
+              )}, ${escapeSql(answer.selectedChoiceId)}, ${escapeSql(
+                answer.answerText,
+              )}, ${boolToInt(answer.isCorrect)})`,
+          )
+          .join(",\n"),
+      ]),
+    );
+  });
+
+  sql.push("PRAGMA foreign_keys = ON;");
+
+  return {
+    sql: sql.join("\n"),
+    summary: {
+      classrooms: classrooms.length,
+      students: students.length,
+      exams: exams.length,
+      questions: questions.length,
+      choices: choices.length,
+      submissions: submissions.length,
+      answers: answers.length,
+    },
+  };
+}
+
+function run() {
+  const tempDir = mkdtempSync(join(tmpdir(), "pinequest-seed-"));
+
+  try {
+    const { sql, summary } = buildSql();
+    const sqlPath = join(tempDir, "seed-demo-data.sql");
+    writeFileSync(sqlPath, sql, "utf8");
+
+    const result = spawnSync(
+      "npx",
+      ["wrangler", "d1", "execute", DATABASE_NAME, "--remote", "--file", sqlPath],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      },
+    );
+
+    if (result.stdout) {
+      process.stdout.write(result.stdout);
+    }
+
+    if (result.stderr) {
+      process.stderr.write(result.stderr);
+    }
+
+    if (result.status !== 0) {
+      throw new Error(`Seeding failed with exit code ${result.status ?? "unknown"}.`);
+    }
+
+    console.log("\nSeed complete.");
+    console.log(JSON.stringify(summary, null, 2));
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+}
+
+run();

@@ -4,8 +4,16 @@ import { gql } from "@apollo/client";
 import { useMutation, useQuery } from "@apollo/client/react";
 import { CheckCheck, Clock3, Info, Loader2, PenLine } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { cloudflareProfileSyncedEvent } from "@/components/auth/cloudflare-student-sync";
+import { MathBlock, MathInline } from "@/components/math";
 import ExamCard from "../_component/ExamCard";
 import {
   getStudentExamHeader,
@@ -208,6 +216,95 @@ function getExamSessionStorageKey(examId: string) {
   return `${EXAM_SESSION_STORAGE_PREFIX}${examId}`;
 }
 
+function hasMathContent(value: string) {
+  return /\$[^$]+\$|(\\[a-zA-Z]+)|\^|_/.test(value);
+}
+
+function splitLegacyFormulaText(value: string) {
+  const match = value.match(
+    /^(\\[a-zA-Z]+(?:_[^\s{}]+)?(?:\^[^\s{}]+)?(?:\s+\d+(?:\.\d+)?)?)(.*)$/s,
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  const [, formula, rest] = match;
+  return {
+    formula: formula.trim(),
+    rest,
+  };
+}
+
+function renderExamMathContent(value: string) {
+  if (!value.trim()) {
+    return null;
+  }
+
+  const formulaMatches = [...value.matchAll(/\$([^$]+)\$/g)];
+
+  if (formulaMatches.length > 0) {
+    const nodes: ReactNode[] = [];
+    let cursor = 0;
+
+    formulaMatches.forEach((match, index) => {
+      const [fullMatch, latex] = match;
+      const start = match.index ?? 0;
+      const plainText = value.slice(cursor, start);
+
+      if (plainText) {
+        nodes.push(
+          <span key={`text-${index}`} className="whitespace-pre-wrap">
+            {plainText}
+          </span>,
+        );
+      }
+
+      nodes.push(
+        <MathInline
+          key={`math-${index}`}
+          math={latex}
+          className="mx-1 align-middle text-[1em] text-[#27242F]"
+        />,
+      );
+
+      cursor = start + fullMatch.length;
+    });
+
+    const trailingText = value.slice(cursor);
+    if (trailingText) {
+      nodes.push(
+        <span key="text-trailing" className="whitespace-pre-wrap">
+          {trailingText}
+        </span>,
+      );
+    }
+
+    return <>{nodes}</>;
+  }
+
+  const legacyFormulaSplit = splitLegacyFormulaText(value);
+  if (legacyFormulaSplit) {
+    return (
+      <>
+        <MathInline
+          math={legacyFormulaSplit.formula}
+          className="mr-1 align-middle text-[1em] text-[#27242F]"
+        />
+        {legacyFormulaSplit.rest ? (
+          <span className="whitespace-pre-wrap">{legacyFormulaSplit.rest}</span>
+        ) : null}
+      </>
+    );
+  }
+
+  if (hasMathContent(value)) {
+    return <MathBlock math={value} className="text-[1em] text-[#27242F]" />;
+  }
+
+  return value;
+}
+
 export default function StudentAccountPage() {
   const pathname = usePathname();
   const router = useRouter();
@@ -222,6 +319,7 @@ export default function StudentAccountPage() {
     {},
   );
   const [examStartedAt, setExamStartedAt] = useState<number | null>(null);
+  const [isAttemptHydrated, setIsAttemptHydrated] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const tabSwitchCountRef = useRef(0);
   const autoSubmitTriggeredRef = useRef(false);
@@ -383,6 +481,7 @@ export default function StudentAccountPage() {
         setAnswers(persistedSession.answers ?? {});
         setFocusedQuestion(nextFocusedQuestion);
         setSecondsLeft(remainingSeconds);
+        setIsAttemptHydrated(true);
       }, 0);
 
       return () => window.clearTimeout(stateSyncTimer);
@@ -530,6 +629,7 @@ export default function StudentAccountPage() {
     setSubmitError("");
     setSubmittedExamName(null);
     autoSubmitTriggeredRef.current = false;
+    setIsAttemptHydrated(true);
     const startedAt = Date.now();
     const initialFocusedQuestion = activeExamDetail.questions[0]?.order ?? 1;
     const initialAnswers = {};
@@ -588,6 +688,7 @@ export default function StudentAccountPage() {
       setSecondsLeft(0);
       setFocusedQuestion(1);
       setAnswers({});
+      setIsAttemptHydrated(false);
       tabSwitchCountRef.current = 0;
       autoSubmitTriggeredRef.current = false;
       navigateToExam(null, "preview", true);
@@ -612,6 +713,7 @@ export default function StudentAccountPage() {
     if (
       !startedExamId ||
       !activeExamDetail ||
+      !isAttemptHydrated ||
       submitLoading ||
       secondsLeft > 0 ||
       autoSubmitTriggeredRef.current
@@ -625,7 +727,14 @@ export default function StudentAccountPage() {
     }, 0);
 
     return () => window.clearTimeout(autoSubmitTimer);
-  }, [activeExamDetail, handleSubmitExam, secondsLeft, startedExamId, submitLoading]);
+  }, [
+    activeExamDetail,
+    handleSubmitExam,
+    isAttemptHydrated,
+    secondsLeft,
+    startedExamId,
+    submitLoading,
+  ]);
 
   if (availableExamsLoading && !availableExamsData) {
     return (
@@ -728,7 +837,7 @@ export default function StudentAccountPage() {
               >
                 <div className="flex items-start justify-between gap-4">
                   <h2 className="text-[16px] font-semibold text-[#27242F]">
-                    {question.order}. {question.question}
+                    {question.order}. {renderExamMathContent(question.question)}
                   </h2>
                   <span className="shrink-0 text-[14px] font-medium text-[#5E5A68]">
                     1 оноо
@@ -782,7 +891,7 @@ export default function StudentAccountPage() {
                             ) : null}
                           </span>
                           <span className="text-[15px] font-medium text-[#383540]">
-                            {option.label}. {option.text}
+                            {option.label}. {renderExamMathContent(option.text)}
                           </span>
                         </button>
                       );

@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1774842571938,
-      "tag": "0000_daffy_mockingbird",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1774926352531,
-      "tag": "0001_workable_black_cat",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1775131210614,
-      "tag": "0002_dashing_microbe",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1775134580950,
-      "tag": "0003_cynical_bloodstrike",
+      "when": 1775160834416,
+      "tag": "0000_bumpy_otto_octavius",
       "breakpoints": true
     }
   ]

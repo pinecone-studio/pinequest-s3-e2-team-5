@@ -168,8 +168,26 @@ function formatScheduledDate(date: string | null) {
   return `${day}.${month}.${year}`;
 }
 
-function hasMathContent(value: string) {
-  return /\$[^$]+\$|(\\[a-zA-Z]+)|\^|_/.test(value);
+function isStandaloneMathExpression(value: string) {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return false;
+  }
+
+  if (trimmed.includes("$")) {
+    return false;
+  }
+
+  // Avoid treating full sentences like "Find x^2 when x = 2" as a single
+  // KaTeX expression. Standalone formulas are usually short and do not contain
+  // long prose words.
+  const proseWordMatches = trimmed.match(/[A-Za-zА-Яа-я]{3,}/g) ?? [];
+  if (proseWordMatches.length > 1) {
+    return false;
+  }
+
+  return /(\\[a-zA-Z]+)|\^|_/.test(trimmed);
 }
 
 function renderMathText(value: string) {
@@ -211,7 +229,7 @@ function renderMathText(value: string) {
     return nodes;
   }
 
-  if (hasMathContent(value)) {
+  if (isStandaloneMathExpression(value)) {
     return (
       <MathInline
         math={value}

@@ -1,1 +1,0 @@
-ALTER TABLE `student_exam_submissions` ADD `reasonForTermination` text;
