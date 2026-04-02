@@ -32,16 +32,18 @@ function parseScheduleDateTime(scheduledDate: string, startTime: string) {
 	const [, year, month, day] = dateMatch;
 	const [, hour, minute, second] = timeMatch;
 
-	// Announced exam times are entered for Ulaanbaatar local time, while the
-	// runtime may be in UTC. Convert the local wall time to a real timestamp.
+	// Announced exam times are entered as Ulaanbaatar wall time. Build the instant
+	// in UTC so visibility checks stay correct regardless of the worker runtime timezone.
 	const startsAt = new Date(
-		Number(year),
-		Number(month) - 1,
-		Number(day),
-		Number(hour) - ULAANBAATAR_UTC_OFFSET_HOURS,
-		Number(minute),
-		Number(second ?? '0'),
-		0,
+		Date.UTC(
+			Number(year),
+			Number(month) - 1,
+			Number(day),
+			Number(hour) - ULAANBAATAR_UTC_OFFSET_HOURS,
+			Number(minute),
+			Number(second ?? '0'),
+			0,
+		),
 	);
 
 	if (Number.isNaN(startsAt.getTime())) {

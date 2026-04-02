@@ -7,6 +7,8 @@ type MobileRemoteConfig = {
   studentInviteCode?: string;
 };
 
+let runtimeStudentInviteCode: string | null = null;
+
 type GraphqlError = {
   message?: string;
 };
@@ -305,11 +307,17 @@ function readEnv(name: string) {
   return process.env[name]?.trim() ?? "";
 }
 
+export function setMobileStudentInviteCode(inviteCode?: string | null) {
+  const normalizedInviteCode = inviteCode?.trim().toUpperCase() ?? "";
+  runtimeStudentInviteCode = normalizedInviteCode || null;
+}
+
 export function getMobileRemoteConfig(): MobileRemoteConfig | null {
   const graphqlUrl = readEnv("EXPO_PUBLIC_GRAPHQL_URL");
   const accessKey = readEnv("EXPO_PUBLIC_MOBILE_DEMO_ACCESS_KEY");
   const studentEmail = readEnv("EXPO_PUBLIC_MOBILE_STUDENT_EMAIL").toLowerCase();
-  const studentInviteCode = readEnv("EXPO_PUBLIC_MOBILE_STUDENT_INVITE_CODE").toUpperCase();
+  const studentInviteCode =
+    runtimeStudentInviteCode ?? readEnv("EXPO_PUBLIC_MOBILE_STUDENT_INVITE_CODE").toUpperCase();
 
   if (!graphqlUrl || !accessKey || !studentEmail) {
     return null;

@@ -21,6 +21,7 @@ import {
   fetchRemoteSubmissionById,
   fetchRemoteSubmissions,
   getMobileRemoteConfig,
+  setMobileStudentInviteCode,
   submitRemoteStudentExam,
 } from "@/lib/mobile-graphql";
 
@@ -156,6 +157,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const applyRemoteSnapshot = useCallback((snapshot: RemoteSnapshot) => {
+    setMobileStudentInviteCode(snapshot.student.inviteCode);
+
     const mergedSnapshot: RemoteSnapshot = {
       student: snapshot.student,
       availableExams: mergeExamCache(remoteAvailableExamsRef.current, snapshot.availableExams),
@@ -442,6 +445,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }
 
     const nextStudent = await changeRemoteStudentClassroom(inviteCode);
+    setMobileStudentInviteCode(nextStudent.inviteCode);
     const snapshot = await pullRemoteSnapshot();
     const mergedSnapshot = applyRemoteSnapshot({
       ...snapshot,
