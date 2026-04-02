@@ -23,6 +23,29 @@ type FormulaKeyboardDialogProps = {
   title?: string;
 };
 
+type BuiltInVirtualKeyboardLayout =
+  | "numeric"
+  | "symbols"
+  | "alphabetic"
+  | "greek";
+
+type VirtualKeyboardKeycap = {
+  label?: string;
+  latex?: string;
+  insert?: string;
+  class?: string;
+  width?: 0.5 | 1 | 1.5 | 2 | 5;
+  aside?: string;
+};
+
+type VirtualKeyboardLayout = {
+  id: string;
+  label: string;
+  tooltip?: string;
+  displayEditToolbar?: boolean;
+  rows: (string | VirtualKeyboardKeycap)[][];
+};
+
 type MathfieldElementLike = HTMLElement & {
   value: string;
   getValue?: (format?: string) => string;
@@ -33,14 +56,192 @@ type MathfieldElementLike = HTMLElement & {
   smartMode?: boolean;
 };
 
-const quickInsertSnippets = [
-  { label: "x²", value: "x^2" },
-  { label: "√x", value: "\\sqrt{x}" },
-  { label: "a/b", value: "\\frac{a}{b}" },
-  { label: "π", value: "\\pi" },
-  { label: "∑", value: "\\sum_{i=1}^{n}" },
-  { label: "∫", value: "\\int_a^b" },
+const subjectKeyboardLayouts: readonly VirtualKeyboardLayout[] = [
+  {
+    id: "subject-math",
+    label: "Math",
+    tooltip: "Math symbols and expressions",
+    displayEditToolbar: true,
+    rows: [
+      [
+        { label: "√x", insert: "\\sqrt{x}" },
+        { label: "a/b", insert: "\\frac{a}{b}" },
+        { label: "x²", insert: "x^2" },
+        { label: "x³", insert: "x^3" },
+        { label: "xₙ", insert: "x_n" },
+        { label: "|x|", insert: "\\left|x\\right|" },
+        { latex: "\\pi" },
+        { label: "θ", insert: "\\theta" },
+        { label: "∞", insert: "\\infty" },
+        { label: "%", insert: "\\%" },
+      ],
+      [
+        { label: "∑", insert: "\\sum_{i=1}^{n}" },
+        { label: "∫", insert: "\\int_a^b" },
+        { label: "lim", insert: "\\lim_{x\\to 0}" },
+        { label: "log", insert: "\\log\\left(\\right)" },
+        { label: "ln", insert: "\\ln\\left(\\right)" },
+        { label: "sin", insert: "\\sin\\left(\\right)" },
+        { label: "cos", insert: "\\cos\\left(\\right)" },
+        { label: "tan", insert: "\\tan\\left(\\right)" },
+        { label: "Δ", insert: "\\Delta" },
+        { label: "∇", insert: "\\nabla" },
+      ],
+      [
+        { label: "≤", insert: "\\le" },
+        { label: "≥", insert: "\\ge" },
+        { label: "≠", insert: "\\ne" },
+        { label: "≈", insert: "\\approx" },
+        { label: "±", insert: "\\pm" },
+        { label: "∝", insert: "\\propto" },
+        { label: "∈", insert: "\\in" },
+        { label: "∉", insert: "\\notin" },
+        { label: "∩", insert: "\\cap" },
+        { label: "∪", insert: "\\cup" },
+      ],
+      [
+        { label: "(", insert: "(" },
+        { label: ")", insert: ")" },
+        { label: "[", insert: "[" },
+        { label: "]", insert: "]" },
+        { label: "{", insert: "\\{" },
+        { label: "}", insert: "\\}" },
+        { label: "→", insert: "\\rightarrow" },
+        { label: "←", insert: "\\leftarrow" },
+        { label: "↔", insert: "\\leftrightarrow" },
+        { label: "·", insert: "\\cdot" },
+      ],
+    ],
+  },
+  {
+    id: "subject-physics",
+    label: "Physics",
+    tooltip: "Physics notation",
+    displayEditToolbar: true,
+    rows: [
+      [
+        { label: "v", insert: "v" },
+        { label: "a", insert: "a" },
+        { label: "F", insert: "F" },
+        { label: "m", insert: "m" },
+        { label: "t", insert: "t" },
+        { label: "s", insert: "s" },
+        { label: "p", insert: "p" },
+        { label: "E", insert: "E" },
+        { label: "W", insert: "W" },
+        { label: "P", insert: "P" },
+      ],
+      [
+        { label: "Δx", insert: "\\Delta x" },
+        { label: "Δv", insert: "\\Delta v" },
+        { label: "λ", insert: "\\lambda" },
+        { label: "ω", insert: "\\omega" },
+        { label: "μ", insert: "\\mu" },
+        { label: "α", insert: "\\alpha" },
+        { label: "β", insert: "\\beta" },
+        { label: "γ", insert: "\\gamma" },
+        { label: "θ", insert: "\\theta" },
+        { label: "φ", insert: "\\phi" },
+      ],
+      [
+        { label: "E=mc²", insert: "E=mc^2", class: "small" },
+        { label: "p=mv", insert: "p=mv", class: "small" },
+        { label: "v=s/t", insert: "v=\\frac{s}{t}", class: "small" },
+        {
+          label: "a=Δv/t",
+          insert: "a=\\frac{\\Delta v}{t}",
+          class: "small",
+        },
+        { label: "F=ma", insert: "F=ma", class: "small" },
+        { label: "W=Fs", insert: "W=Fs", class: "small" },
+        { label: "P=W/t", insert: "P=\\frac{W}{t}", class: "small" },
+        { label: "ρ=m/V", insert: "\\rho=\\frac{m}{V}", class: "small" },
+        { label: "p=F/S", insert: "p=\\frac{F}{S}", class: "small" },
+        { label: "q=It", insert: "q=It", class: "small" },
+      ],
+      [
+        { label: "→", insert: "\\rightarrow" },
+        { label: "←", insert: "\\leftarrow" },
+        { label: "∥", insert: "\\parallel" },
+        { label: "⟂", insert: "\\perp" },
+        { label: "°", insert: "^{\\circ}" },
+        { label: "m/s", insert: "\\frac{m}{s}", class: "small" },
+        { label: "N", insert: "\\mathrm{N}" },
+        { label: "J", insert: "\\mathrm{J}" },
+        { label: "Pa", insert: "\\mathrm{Pa}" },
+        { label: "Hz", insert: "\\mathrm{Hz}" },
+      ],
+    ],
+  },
+  {
+    id: "subject-chemistry",
+    label: "Chemistry",
+    tooltip: "Chemistry notation",
+    displayEditToolbar: true,
+    rows: [
+      [
+        { label: "H₂O", insert: "H_2O" },
+        { label: "CO₂", insert: "CO_2" },
+        { label: "O₂", insert: "O_2" },
+        { label: "NaCl", insert: "NaCl" },
+        { label: "H⁺", insert: "H^+" },
+        { label: "OH⁻", insert: "OH^-" },
+        { label: "NH₃", insert: "NH_3" },
+        { label: "HCl", insert: "HCl" },
+        { label: "CaCO₃", insert: "CaCO_3" },
+        { label: "CH₄", insert: "CH_4" },
+      ],
+      [
+        { label: "→", insert: "\\rightarrow" },
+        { label: "⇌", insert: "\\rightleftharpoons" },
+        { label: "Δ", insert: "\\Delta" },
+        { label: "·", insert: "\\cdot" },
+        { label: "(aq)", insert: "_{(aq)}", class: "small" },
+        { label: "(s)", insert: "_{(s)}", class: "small" },
+        { label: "(l)", insert: "_{(l)}", class: "small" },
+        { label: "(g)", insert: "_{(g)}", class: "small" },
+        { label: "↑", insert: "\\uparrow" },
+        { label: "↓", insert: "\\downarrow" },
+      ],
+      [
+        { label: "e⁻", insert: "e^-", class: "small" },
+        { label: "Na⁺", insert: "Na^+", class: "small" },
+        { label: "Cl⁻", insert: "Cl^-", class: "small" },
+        { label: "pH", insert: "\\mathrm{pH}", class: "small" },
+        { label: "Kc", insert: "K_c", class: "small" },
+        { label: "Kp", insert: "K_p", class: "small" },
+        { label: "n", insert: "n" },
+        { label: "M", insert: "\\mathrm{M}" },
+        { label: "mol", insert: "\\mathrm{mol}" },
+        { label: "g/mol", insert: "\\frac{g}{mol}", class: "small" },
+      ],
+      [
+        { label: "H₂SO₄", insert: "H_2SO_4", class: "small" },
+        { label: "HNO₃", insert: "HNO_3", class: "small" },
+        { label: "NaOH", insert: "NaOH", class: "small" },
+        { label: "KOH", insert: "KOH", class: "small" },
+        { label: "AgNO₃", insert: "AgNO_3", class: "small" },
+        { label: "CuSO₄", insert: "CuSO_4", class: "small" },
+        { label: "Fe₂O₃", insert: "Fe_2O_3", class: "small" },
+        { label: "SO₄²⁻", insert: "SO_4^{2-}", class: "small" },
+        { label: "CO₃²⁻", insert: "CO_3^{2-}", class: "small" },
+        { label: "NH₄⁺", insert: "NH_4^+", class: "small" },
+      ],
+    ],
+  },
 ] as const;
+
+const defaultKeyboardLayouts: readonly BuiltInVirtualKeyboardLayout[] = [
+  "numeric",
+  "symbols",
+  "alphabetic",
+  "greek",
+];
+
+const extendedKeyboardLayouts: readonly (
+  | BuiltInVirtualKeyboardLayout
+  | VirtualKeyboardLayout
+)[] = [...defaultKeyboardLayouts, ...subjectKeyboardLayouts];
 
 const MATHLIVE_KEYBOARD_SELECTOR =
   ".ML__keyboard, .ML__virtual-keyboard-toggle";
@@ -106,6 +307,28 @@ export function FormulaKeyboardDialog({
   }, [isMathLiveReady, mathFieldElement]);
 
   useEffect(() => {
+    if (!isMathLiveReady) {
+      return;
+    }
+
+    const w = window as Window & {
+      mathVirtualKeyboard?: {
+        visible: boolean;
+        show?: () => void;
+        hide?: () => void;
+        layouts?: readonly (
+          | BuiltInVirtualKeyboardLayout
+          | VirtualKeyboardLayout
+        )[];
+      };
+    };
+
+    if (w.mathVirtualKeyboard) {
+      w.mathVirtualKeyboard.layouts = extendedKeyboardLayouts;
+    }
+  }, [isMathLiveReady]);
+
+  useEffect(() => {
     if (!isMathLiveReady || !mathFieldElement) {
       return;
     }
@@ -115,9 +338,16 @@ export function FormulaKeyboardDialog({
         visible: boolean;
         show?: () => void;
         hide?: () => void;
-        layouts?: unknown;
+        layouts?: readonly (
+          | BuiltInVirtualKeyboardLayout
+          | VirtualKeyboardLayout
+        )[];
       };
     };
+
+    if (w.mathVirtualKeyboard) {
+      w.mathVirtualKeyboard.layouts = extendedKeyboardLayouts;
+    }
 
     if (!open) {
       w.mathVirtualKeyboard?.hide?.();
@@ -148,6 +378,56 @@ export function FormulaKeyboardDialog({
     return () => window.clearTimeout(timeoutId);
   }, [open, initialLatex, isMathLiveReady, mathFieldElement]);
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const root = document.documentElement;
+    const keyboardVars = {
+      "--keycap-height": "44px",
+      "--keycap-max-width": "56px",
+      "--keycap-gap": "6px",
+      "--keycap-small-font-size": "13px",
+      "--keycap-extra-small-font-size": "11px",
+      "--variant-keycap-length": "42px",
+      "--variant-keycap-font-size": "20px",
+    } as const;
+
+    const previousValues = Object.fromEntries(
+      Object.keys(keyboardVars).map((key) => [
+        key,
+        root.style.getPropertyValue(key),
+      ]),
+    );
+
+    for (const [key, value] of Object.entries(keyboardVars)) {
+      root.style.setProperty(key, value);
+    }
+
+    return () => {
+      for (const [key, value] of Object.entries(previousValues)) {
+        if (value) {
+          root.style.setProperty(key, value);
+        } else {
+          root.style.removeProperty(key);
+        }
+      }
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    document.body.classList.add("formula-keyboard-open");
+
+    return () => {
+      document.body.classList.remove("formula-keyboard-open");
+    };
+  }, [open]);
+
   const handleInteractOutside: NonNullable<
     ComponentProps<typeof DialogContent>["onInteractOutside"]
   > = (event) => {
@@ -163,14 +443,6 @@ export function FormulaKeyboardDialog({
     }, 0);
   };
 
-  const handleInsertSnippet = (snippet: string) => {
-    const mathField = mathFieldRef.current;
-    if (!mathField) return;
-
-    mathField.insert(snippet, { format: "latex" });
-    mathField.focus();
-  };
-
   const handleConfirm = () => {
     const value = getMathfieldLatex(mathFieldRef.current).trim();
     if (!value) return;
@@ -182,7 +454,7 @@ export function FormulaKeyboardDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-[720px] rounded-[24px] border border-[#E8E2F1] bg-white p-0 shadow-[0_24px_80px_rgba(32,18,72,0.18)]"
+        className="w-[calc(100vw-2rem)] max-w-[1040px] overflow-hidden rounded-[24px] border border-[#E8E2F1] bg-white p-0 shadow-[0_24px_80px_rgba(32,18,72,0.18)]"
         onOpenAutoFocus={(event) => event.preventDefault()}
         onInteractOutside={handleInteractOutside}
       >
@@ -192,21 +464,8 @@ export function FormulaKeyboardDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5 px-6 py-6">
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
-            {quickInsertSnippets.map((snippet) => (
-              <button
-                key={snippet.label}
-                type="button"
-                onClick={() => handleInsertSnippet(snippet.value)}
-                className="rounded-[14px] border border-[#E8E2F1] bg-[#FAF8FE] px-3 py-3 text-[15px] font-medium text-[#3A3247] transition hover:border-[#B59AF8] hover:bg-white"
-              >
-                {snippet.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="rounded-[20px] border border-[#E8E2F1] bg-[#FBFAFE] p-4">
+        <div className="space-y-5 px-6 py-[20px]">
+          <div className="overflow-hidden rounded-[20px] border border-[#E8E2F1] bg-[#FBFAFE] p-4">
             {isMathLiveReady &&
               createElement("math-field", {
                 ref: (node: Element | null) => {
@@ -219,11 +478,8 @@ export function FormulaKeyboardDialog({
                   );
                 },
                 className:
-                  "min-h-[72px] w-full rounded-[16px] border border-[#DCD3F1] bg-white px-4 py-4 text-[20px] text-[#1A1623] outline-none",
+                  "block min-h-[72px] w-full max-w-full overflow-hidden rounded-[16px] border border-[#DCD3F1] bg-white px-4 py-4 text-[20px] text-[#1A1623] outline-none",
               })}
-            <p className="mt-3 text-[13px] text-[#7C7688]">
-              `mathlive` суулгагдаагүй үед энэ fallback editor ажиллана.
-            </p>
           </div>
         </div>
 
@@ -244,6 +500,21 @@ export function FormulaKeyboardDialog({
             Оруулах
           </Button>
         </div>
+        <style jsx global>{`
+          body.formula-keyboard-open > .ML__keyboard .MLK__toolbar {
+            justify-content: center;
+            box-sizing: border-box;
+          }
+
+          body.formula-keyboard-open > .ML__keyboard .MLK__toolbar > .left {
+            justify-content: center;
+            margin-inline: auto;
+          }
+
+          body.formula-keyboard-open > .ML__keyboard .MLK__toolbar > .right {
+            display: none;
+          }
+        `}</style>
       </DialogContent>
     </Dialog>
   );
