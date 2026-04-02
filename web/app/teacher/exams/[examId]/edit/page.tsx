@@ -339,19 +339,19 @@ function createQuestionDraftFromParsed({
   const normalizedChoices =
     type === "mcq" && choices.length > 0
       ? normalizeQuestionChoices(
-        choices.map((choice) => ({
-          id: crypto.randomUUID(),
-          label: choice.label,
-          text: choice.text,
-          isCorrect: choice.isCorrect,
-          imageUrl: "",
-          videoUrl: "",
-          imageFileName: "",
-          videoFileName: "",
-          showImageInput: false,
-          showVideoInput: false,
-        })),
-      )
+          choices.map((choice) => ({
+            id: crypto.randomUUID(),
+            label: choice.label,
+            text: choice.text,
+            isCorrect: choice.isCorrect,
+            imageUrl: "",
+            videoUrl: "",
+            imageFileName: "",
+            videoFileName: "",
+            showImageInput: false,
+            showVideoInput: false,
+          })),
+        )
       : ["A", "B"].map(createChoice);
 
   return {
@@ -536,34 +536,41 @@ function renderPreviewContent(value: string) {
   );
 }
 
-
-
 export default function TeacherExamEditPage() {
-
-  const [pdfParsedText, setPdfParsedText] = useState<string | undefined>(undefined)
+  const [pdfParsedText, setPdfParsedText] = useState<string | undefined>(
+    undefined,
+  );
   const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
 
   const { getToken } = useAuth();
   const params = useParams<{ examId: string }>();
   const searchParams = useSearchParams();
-  const examId = Array.isArray(params.examId) ? params.examId[0] : params.examId;
+  const examId = Array.isArray(params.examId)
+    ? params.examId[0]
+    : params.examId;
   const requestedQuestionId = searchParams.get("questionId");
   const router = useRouter();
 
-  const [fallbackQuestion] = useState<QuestionDraft>(() => createQuestionDraft());
+  const [fallbackQuestion] = useState<QuestionDraft>(() =>
+    createQuestionDraft(),
+  );
   const [draftQuestions, setDraftQuestions] = useState<QuestionDraft[] | null>(
     null,
   );
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [isExamDialogOpen, setIsExamDialogOpen] = useState(false);
-  const [examMeta, setExamMeta] = useState<ExamByIdData["teacherExamDetail"]["exam"] | null>(null);
+  const [examMeta, setExamMeta] = useState<
+    ExamByIdData["teacherExamDetail"]["exam"] | null
+  >(null);
   const [editSubject, setEditSubject] = useState("");
   const [editTitle, setEditTitle] = useState("");
   const [editGrade, setEditGrade] = useState("");
   const [editDuration, setEditDuration] = useState(60);
   const [editUploadedFileName, setEditUploadedFileName] = useState("");
-  const [editUploadedPdfFile, setEditUploadedPdfFile] = useState<File | null>(null);
+  const [editUploadedPdfFile, setEditUploadedPdfFile] = useState<File | null>(
+    null,
+  );
   const [editExamError, setEditExamError] = useState("");
   const [deleteExamError, setDeleteExamError] = useState("");
   const [savedQuestionIds, setSavedQuestionIds] = useState<Set<string>>(
@@ -592,19 +599,19 @@ export default function TeacherExamEditPage() {
   async function parsePdfDraftWithApi(file: File) {
     const formData = new FormData();
     formData.set("file", file);
-  
+
     const response = await fetch("/api/pdf/parse", {
       method: "POST",
       body: formData,
     });
-  
+
     const payload = (await response.json()) as {
       text?: string;
       pageCount?: number;
       error?: string;
       stack?: string;
     };
-  
+
     if (!response.ok) {
       throw new Error(
         [payload.error || "PDF parse failed.", payload.stack]
@@ -619,11 +626,14 @@ export default function TeacherExamEditPage() {
     };
   }
 
-  const { data: examData, loading: examLoading, error: examError } =
-    useQuery<ExamByIdData>(GET_EXAM_BY_ID, {
-      variables: { examId },
-      skip: !examId,
-    });
+  const {
+    data: examData,
+    loading: examLoading,
+    error: examError,
+  } = useQuery<ExamByIdData>(GET_EXAM_BY_ID, {
+    variables: { examId },
+    skip: !examId,
+  });
 
   useEffect(() => {
     if (!examId || parsedDraftExamIdRef.current === examId) {
@@ -655,7 +665,6 @@ export default function TeacherExamEditPage() {
         console.error("Failed to parse PDF draft.", error);
         setPdfParsedText(undefined);
       });
-
   }, [examId, searchParams]);
 
   const [createQuestionWithChoices, { loading: saveQuestionLoading }] =
@@ -668,7 +677,10 @@ export default function TeacherExamEditPage() {
     useMutation<DeleteExamData>(DELETE_EXAM);
 
   const serverQuestions = useMemo(
-    () => examData?.teacherExamDetail.questions.map(createQuestionDraftFromServer) ?? [],
+    () =>
+      examData?.teacherExamDetail.questions.map(
+        createQuestionDraftFromServer,
+      ) ?? [],
     [examData],
   );
 
@@ -776,7 +788,8 @@ export default function TeacherExamEditPage() {
   ) => {
     setDraftQuestions((current) => {
       const base =
-        current ?? (serverQuestions.length > 0 ? serverQuestions : [fallbackQuestion]);
+        current ??
+        (serverQuestions.length > 0 ? serverQuestions : [fallbackQuestion]);
       return updater(base);
     });
   };
@@ -903,11 +916,11 @@ export default function TeacherExamEditPage() {
         question.choices.map((choice) =>
           choice.id === formulaTarget.choiceId
             ? {
-              ...choice,
-              text: choice.text.trim()
-                ? `${choice.text} ${trimmedLatex} `
-                : `${trimmedLatex} `,
-            }
+                ...choice,
+                text: choice.text.trim()
+                  ? `${choice.text} ${trimmedLatex} `
+                  : `${trimmedLatex} `,
+              }
             : choice,
         ),
       ),
@@ -1005,10 +1018,10 @@ export default function TeacherExamEditPage() {
       setEditExamError("");
       const fileUrl = editUploadedPdfFile
         ? await uploadExamPdfFile({
-          examId,
-          file: editUploadedPdfFile,
-          token: await getToken(),
-        })
+            examId,
+            file: editUploadedPdfFile,
+            token: await getToken(),
+          })
         : undefined;
 
       const res = await updateExam({
@@ -1036,7 +1049,10 @@ export default function TeacherExamEditPage() {
       setEditExamError("Шалгалтын мэдээлэл шинэчлэгдсэнгүй.");
     } catch (error) {
       setEditExamError(
-        getApolloErrorMessage(error, "Шалгалтын мэдээлэл шинэчлэхэд алдаа гарлаа."),
+        getApolloErrorMessage(
+          error,
+          "Шалгалтын мэдээлэл шинэчлэхэд алдаа гарлаа.",
+        ),
       );
     }
   };
@@ -1125,12 +1141,10 @@ export default function TeacherExamEditPage() {
         question.choices.map((choice) =>
           choice.id === choiceId
             ? {
-              ...choice,
-              showImageInput:
-                key === "image" ? true : choice.showImageInput,
-              showVideoInput:
-                key === "video" ? true : choice.showVideoInput,
-            }
+                ...choice,
+                showImageInput: key === "image" ? true : choice.showImageInput,
+                showVideoInput: key === "video" ? true : choice.showVideoInput,
+              }
             : choice,
         ),
       ),
@@ -1145,16 +1159,14 @@ export default function TeacherExamEditPage() {
         question.choices.map((choice) =>
           choice.id === choiceId
             ? {
-              ...choice,
-              imageUrl: key === "image" ? "" : choice.imageUrl,
-              videoUrl: key === "video" ? "" : choice.videoUrl,
-              imageFileName: key === "image" ? "" : choice.imageFileName,
-              videoFileName: key === "video" ? "" : choice.videoFileName,
-              showImageInput:
-                key === "image" ? false : choice.showImageInput,
-              showVideoInput:
-                key === "video" ? false : choice.showVideoInput,
-            }
+                ...choice,
+                imageUrl: key === "image" ? "" : choice.imageUrl,
+                videoUrl: key === "video" ? "" : choice.videoUrl,
+                imageFileName: key === "image" ? "" : choice.imageFileName,
+                videoFileName: key === "video" ? "" : choice.videoFileName,
+                showImageInput: key === "image" ? false : choice.showImageInput,
+                showVideoInput: key === "video" ? false : choice.showVideoInput,
+              }
             : choice,
         ),
       ),
@@ -1190,7 +1202,6 @@ export default function TeacherExamEditPage() {
     }
   };
 
-
   const handleChoiceAttachmentSelect = async (
     questionId: string,
     choiceId: string,
@@ -1210,18 +1221,18 @@ export default function TeacherExamEditPage() {
           question.choices.map((choice) =>
             choice.id === choiceId
               ? {
-                ...choice,
-                imageUrl: key === "image" ? dataUrl : choice.imageUrl,
-                videoUrl: key === "video" ? dataUrl : choice.videoUrl,
-                imageFileName:
-                  key === "image" ? file.name : choice.imageFileName,
-                videoFileName:
-                  key === "video" ? file.name : choice.videoFileName,
-                showImageInput:
-                  key === "image" ? true : choice.showImageInput,
-                showVideoInput:
-                  key === "video" ? true : choice.showVideoInput,
-              }
+                  ...choice,
+                  imageUrl: key === "image" ? dataUrl : choice.imageUrl,
+                  videoUrl: key === "video" ? dataUrl : choice.videoUrl,
+                  imageFileName:
+                    key === "image" ? file.name : choice.imageFileName,
+                  videoFileName:
+                    key === "video" ? file.name : choice.videoFileName,
+                  showImageInput:
+                    key === "image" ? true : choice.showImageInput,
+                  showVideoInput:
+                    key === "video" ? true : choice.showVideoInput,
+                }
               : choice,
           ),
         ),
@@ -1303,9 +1314,9 @@ export default function TeacherExamEditPage() {
         choices: hasCorrect
           ? nextChoices
           : nextChoices.map((choice, index) => ({
-            ...choice,
-            isCorrect: index === 0,
-          })),
+              ...choice,
+              isCorrect: index === 0,
+            })),
       };
     });
   };
@@ -1366,17 +1377,19 @@ export default function TeacherExamEditPage() {
       const uploadedChoices =
         activeQuestion.type === "mcq"
           ? await Promise.all(
-            normalizeQuestionChoices(activeQuestion.choices).map(async (choice) => ({
-              ...choice,
-              imageUrl:
-                (await uploadImageIfNeeded({
-                  sourceUrl: choice.imageUrl,
-                  fileName: choice.imageFileName,
-                  questionId: activeQuestion.id,
-                  choiceId: choice.id,
-                })) ?? null,
-            })),
-          )
+              normalizeQuestionChoices(activeQuestion.choices).map(
+                async (choice) => ({
+                  ...choice,
+                  imageUrl:
+                    (await uploadImageIfNeeded({
+                      sourceUrl: choice.imageUrl,
+                      fileName: choice.imageFileName,
+                      questionId: activeQuestion.id,
+                      choiceId: choice.id,
+                    })) ?? null,
+                }),
+              ),
+            )
           : [];
 
       questionInput = {
@@ -1391,13 +1404,13 @@ export default function TeacherExamEditPage() {
         choices:
           activeQuestion.type === "mcq"
             ? uploadedChoices.map((choice) => ({
-              id: choice.id,
-              label: choice.label,
-              text: choice.text.trim(),
-              isCorrect: choice.isCorrect,
-              imageUrl: choice.imageUrl,
-              videoUrl: choice.videoUrl?.trim() || null,
-            }))
+                id: choice.id,
+                label: choice.label,
+                text: choice.text.trim(),
+                isCorrect: choice.isCorrect,
+                imageUrl: choice.imageUrl,
+                videoUrl: choice.videoUrl?.trim() || null,
+              }))
             : [],
       };
     } catch (error) {
@@ -1496,7 +1509,7 @@ export default function TeacherExamEditPage() {
   const resolvedExamMeta = examMeta ?? examData.teacherExamDetail.exam;
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 pt-7">
       <FormulaKeyboardDialog
         open={formulaTarget !== null}
         onOpenChange={(open) => {
@@ -1527,8 +1540,9 @@ export default function TeacherExamEditPage() {
                 <select
                   value={editSubject}
                   onChange={(event) => setEditSubject(event.target.value)}
-                  className={`${examDialogFieldClassName} appearance-none pr-14 ${editSubject ? "" : "text-[#8E8A94]"
-                    }`}
+                  className={`${examDialogFieldClassName} appearance-none pr-14 ${
+                    editSubject ? "" : "text-[#8E8A94]"
+                  }`}
                 >
                   <option value="" disabled>
                     Хичээл сонгох
@@ -1563,8 +1577,9 @@ export default function TeacherExamEditPage() {
                 <select
                   value={editGrade}
                   onChange={(event) => setEditGrade(event.target.value)}
-                  className={`${examDialogFieldClassName} appearance-none pr-14 ${editGrade ? "" : "text-[#8E8A94]"
-                    }`}
+                  className={`${examDialogFieldClassName} appearance-none pr-14 ${
+                    editGrade ? "" : "text-[#8E8A94]"
+                  }`}
                 >
                   <option value="" disabled>
                     Анги сонгох
@@ -1606,7 +1621,9 @@ export default function TeacherExamEditPage() {
               <div className="relative">
                 <select
                   value={String(editDuration)}
-                  onChange={(event) => setEditDuration(Number(event.target.value))}
+                  onChange={(event) =>
+                    setEditDuration(Number(event.target.value))
+                  }
                   className={`${examDialogFieldClassName} appearance-none pr-14`}
                 >
                   {durationOptions.map((option) => (
@@ -1728,7 +1745,9 @@ export default function TeacherExamEditPage() {
                   </div>
                   <div className="flex items-end justify-between gap-4 text-[15px] text-[#23202A]">
                     <span className="font-semibold">Оноо</span>
-                    <span className="text-right text-[15px]">{totalPoints}</span>
+                    <span className="text-right text-[15px]">
+                      {totalPoints}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1763,7 +1782,9 @@ export default function TeacherExamEditPage() {
               </div>
 
               {deleteExamError ? (
-                <p className="mt-4 text-[14px] text-[#D25B56]">{deleteExamError}</p>
+                <p className="mt-4 text-[14px] text-[#D25B56]">
+                  {deleteExamError}
+                </p>
               ) : null}
             </section>
 
@@ -1782,10 +1803,11 @@ export default function TeacherExamEditPage() {
                         setActiveQuestionId(question.id);
                         closeMenus();
                       }}
-                      className={`flex h-11 w-11 items-center justify-center rounded-[10px] border text-[15px] font-medium transition ${isActive
-                        ? "border-[#9077F7] bg-[#F0EEFF] text-[#6F5DE2]"
-                        : "border-[#E8E2F1] bg-white text-[#2A2732] hover:border-[#D6CFF3]"
-                        }`}
+                      className={`flex h-11 w-11 items-center justify-center rounded-[10px] border text-[15px] font-medium transition ${
+                        isActive
+                          ? "border-[#9077F7] bg-[#F0EEFF] text-[#6F5DE2]"
+                          : "border-[#E8E2F1] bg-white text-[#2A2732] hover:border-[#D6CFF3]"
+                      }`}
                     >
                       {index + 1}
                     </button>
@@ -1838,10 +1860,11 @@ export default function TeacherExamEditPage() {
                               key={option.key}
                               type="button"
                               onClick={() => showQuestionMediaInput(option.key)}
-                              className={`flex w-full items-center gap-4 px-5 py-4 text-left text-[18px] text-[#111111] transition hover:bg-[#F8F6FF] ${option.key === "pdf"
-                                ? "border-t border-[#EAE4F4]"
-                                : ""
-                                }`}
+                              className={`flex w-full items-center gap-4 px-5 py-4 text-left text-[18px] text-[#111111] transition hover:bg-[#F8F6FF] ${
+                                option.key === "pdf"
+                                  ? "border-t border-[#EAE4F4]"
+                                  : ""
+                              }`}
                             >
                               <Icon className="h-6 w-6 text-[#6F687D]" />
                               <span>{option.label}</span>
@@ -1898,7 +1921,7 @@ export default function TeacherExamEditPage() {
               </div>
 
               {hasMathPreview(activeQuestion.question) &&
-                editingQuestionId !== activeQuestion.id ? (
+              editingQuestionId !== activeQuestion.id ? (
                 <button
                   type="button"
                   onClick={() => setEditingQuestionId(activeQuestion.id)}
@@ -1927,7 +1950,8 @@ export default function TeacherExamEditPage() {
                 />
               )}
 
-              {activeQuestion.showImageInput || activeQuestion.showVideoInput ? (
+              {activeQuestion.showImageInput ||
+              activeQuestion.showVideoInput ? (
                 <div className="space-y-4">
                   {activeQuestion.showImageInput ? (
                     <div className="rounded-[20px] border border-[#E8E2F1] bg-[#FBFAFE] p-4">
@@ -2053,7 +2077,8 @@ export default function TeacherExamEditPage() {
               {activeQuestion.type === "mcq" ? (
                 <div className="space-y-4">
                   {deferredChoicePreviews.map((choice) => {
-                    const isChoiceMenuOpen = choiceInsertMenuTargetId === choice.id;
+                    const isChoiceMenuOpen =
+                      choiceInsertMenuTargetId === choice.id;
                     const isRemoveDisabled = activeQuestion.choices.length <= 2;
 
                     return (
@@ -2072,10 +2097,11 @@ export default function TeacherExamEditPage() {
                                 ),
                               }))
                             }
-                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-white transition ${choice.isCorrect
-                              ? "border-[#8F76F6]"
-                              : "border-[#BAB4C5] hover:border-[#8F76F6]"
-                              }`}
+                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-white transition ${
+                              choice.isCorrect
+                                ? "border-[#8F76F6]"
+                                : "border-[#BAB4C5] hover:border-[#8F76F6]"
+                            }`}
                             aria-label={`${choice.label} зөв хариулт болгох`}
                           >
                             {choice.isCorrect ? (
@@ -2141,12 +2167,16 @@ export default function TeacherExamEditPage() {
                                       key={`choice-${choice.id}-${option.key}`}
                                       type="button"
                                       onClick={() =>
-                                        showChoiceMediaInput(choice.id, option.key)
+                                        showChoiceMediaInput(
+                                          choice.id,
+                                          option.key,
+                                        )
                                       }
-                                      className={`flex w-full items-center gap-4 px-5 py-4 text-left text-[18px] text-[#111111] transition hover:bg-[#F8F6FF] ${option.key === "pdf"
-                                        ? "border-t border-[#EAE4F4]"
-                                        : ""
-                                        }`}
+                                      className={`flex w-full items-center gap-4 px-5 py-4 text-left text-[18px] text-[#111111] transition hover:bg-[#F8F6FF] ${
+                                        option.key === "pdf"
+                                          ? "border-t border-[#EAE4F4]"
+                                          : ""
+                                      }`}
                                     >
                                       <Icon className="h-6 w-6 text-[#6F687D]" />
                                       <span>{option.label}</span>
@@ -2161,10 +2191,11 @@ export default function TeacherExamEditPage() {
                             type="button"
                             onClick={() => removeChoice(choice.id)}
                             disabled={isRemoveDisabled}
-                            className={`transition ${isRemoveDisabled
-                              ? "cursor-not-allowed opacity-45"
-                              : "hover:text-[#DE5A52]"
-                              }`}
+                            className={`transition ${
+                              isRemoveDisabled
+                                ? "cursor-not-allowed opacity-45"
+                                : "hover:text-[#DE5A52]"
+                            }`}
                             aria-label={`${choice.label} хариулт устгах`}
                           >
                             <Trash2 className="h-6 w-6 text-[#6F687D]" />
@@ -2363,7 +2394,7 @@ export default function TeacherExamEditPage() {
                 <button
                   type="button"
                   onClick={() => router.push("/teacher/exams")}
-                  className="text-[20px] font-medium text-[#111111] transition hover:text-[#7E66DC]"
+                  className="text-[16px] font-medium text-[#111111] transition hover:text-[#7E66DC]"
                 >
                   Цуцлах
                 </button>
@@ -2371,7 +2402,7 @@ export default function TeacherExamEditPage() {
                   type="button"
                   onClick={handleSave}
                   disabled={isSavingQuestion}
-                  className="inline-flex h-14 items-center justify-center rounded-[22px] bg-[#B7A3F7] px-8 text-[18px] font-semibold text-white shadow-[inset_0_-5px_0_rgba(126,102,220,0.28),0_12px_22px_rgba(183,163,247,0.24)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex h-[44px] w-[150px] items-center justify-center rounded-[999px] bg-[#B7A3F7] px-6 text-[16px] font-semibold text-white shadow-[inset_0_-5px_0_rgba(126,102,220,0.28),0_12px_22px_rgba(183,163,247,0.24)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isSavingQuestion ? "Хадгалж байна..." : "Хадгалах"}
                 </button>
@@ -2386,7 +2417,8 @@ export default function TeacherExamEditPage() {
                 Асуулт алга байна
               </h2>
               <p className="mt-2 max-w-[420px] text-[15px] leading-7 text-[#6F687D]">
-                Сүүлийн асуултыг устгасан байна. Шинэ асуулт нэмээд үргэлжлүүлнэ үү.
+                Сүүлийн асуултыг устгасан байна. Шинэ асуулт нэмээд үргэлжлүүлнэ
+                үү.
               </p>
               <button
                 type="button"
@@ -2397,12 +2429,13 @@ export default function TeacherExamEditPage() {
                 Асуулт нэмэх
               </button>
               {statusMessage ? (
-                <p className="mt-4 text-[14px] text-[#6F687D]">{statusMessage}</p>
+                <p className="mt-4 text-[14px] text-[#6F687D]">
+                  {statusMessage}
+                </p>
               ) : null}
             </div>
           )}
         </section>
-        
       </div>
     </section>
   );
