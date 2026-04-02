@@ -54,9 +54,7 @@ export default async function TeacherLayout({
         </div>
       ) : null}
 
-      <main className="mx-auto w-full max-w-[1360px] px-6 py-10 lg:px-8">
-        {children}
-      </main>
+      <main className="mx-auto w-full max-w-[1128px]">{children}</main>
     </div>
   );
 }
