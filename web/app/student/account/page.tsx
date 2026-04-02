@@ -224,6 +224,7 @@ export default function StudentAccountPage() {
   const [examStartedAt, setExamStartedAt] = useState<number | null>(null);
   const [submitError, setSubmitError] = useState("");
   const tabSwitchCountRef = useRef(0);
+  const autoSubmitTriggeredRef = useRef(false);
 
   const routeExamId = searchParams.get("exam");
   const isStartedMode = searchParams.get("mode") === "active";
@@ -298,31 +299,21 @@ export default function StudentAccountPage() {
 
   const activeExamDetail = activeExamData?.studentExamDetail ?? null;
   const activeExam = activeExamDetail ?? selectedExamSummary;
+  const activeExamSummary = useMemo(
+    () =>
+      activeExamId
+        ? (availableExams.find((exam) => exam.id === activeExamId) ?? null)
+        : null,
+    [activeExamId, availableExams],
+  );
+  const activeExamClosesAtMs =
+    typeof activeExamSummary?.startsAtMs === "number"
+      ? activeExamSummary.startsAtMs + activeExamSummary.duration * 60_000
+      : null;
   const questionPalette = useMemo(
     () => activeExamDetail?.questions.map((question) => question.order) ?? [],
     [activeExamDetail],
   );
-
-  useEffect(() => {
-    if (
-      !routeExamId ||
-      availableExamsLoading ||
-      activeExamLoading ||
-      activeExamError ||
-      activeExam
-    ) {
-      return;
-    }
-
-    navigateToExam(null, "preview", true);
-  }, [
-    activeExam,
-    activeExamError,
-    activeExamLoading,
-    availableExamsLoading,
-    routeExamId,
-    navigateToExam,
-  ]);
 
   useEffect(() => {
     if (
@@ -379,10 +370,13 @@ export default function StudentAccountPage() {
         0,
         Math.floor((Date.now() - nextStartedAt) / 1000),
       );
-      const remainingSeconds = Math.max(
-        activeExamDetail.duration * 60 - elapsedSeconds,
-        0,
-      );
+      const remainingSeconds =
+        activeExamClosesAtMs === null
+          ? Math.max(activeExamDetail.duration * 60 - elapsedSeconds, 0)
+          : Math.max(
+              Math.floor((activeExamClosesAtMs - Date.now()) / 1000),
+              0,
+            );
 
       const stateSyncTimer = window.setTimeout(() => {
         setExamStartedAt(nextStartedAt);
@@ -396,28 +390,37 @@ export default function StudentAccountPage() {
       window.sessionStorage.removeItem(sessionKey);
       navigateToExam(startedExamId, "preview", true);
     }
-  }, [activeExamDetail, navigateToExam, startedExamId]);
+  }, [activeExamClosesAtMs, activeExamDetail, navigateToExam, startedExamId]);
 
   useEffect(() => {
-    if (!startedExamId || !activeExamDetail || examStartedAt === null) {
+    if (!startedExamId || !activeExamDetail) {
       return;
     }
 
     const syncSecondsLeft = () => {
+      if (activeExamClosesAtMs !== null) {
+        setSecondsLeft(
+          Math.max(Math.floor((activeExamClosesAtMs - Date.now()) / 1000), 0),
+        );
+        return;
+      }
+
+      if (examStartedAt === null) {
+        return;
+      }
+
       const elapsedSeconds = Math.max(
         0,
         Math.floor((Date.now() - examStartedAt) / 1000),
       );
-      setSecondsLeft(
-        Math.max(activeExamDetail.duration * 60 - elapsedSeconds, 0),
-      );
+      setSecondsLeft(Math.max(activeExamDetail.duration * 60 - elapsedSeconds, 0));
     };
 
     syncSecondsLeft();
     const timer = window.setInterval(syncSecondsLeft, 1000);
 
     return () => window.clearInterval(timer);
-  }, [activeExamDetail, examStartedAt, startedExamId]);
+  }, [activeExamClosesAtMs, activeExamDetail, examStartedAt, startedExamId]);
 
   useEffect(() => {
     const handleProfileSynced = () => {
@@ -453,6 +456,7 @@ export default function StudentAccountPage() {
   useEffect(() => {
     if (!startedExamId) {
       tabSwitchCountRef.current = 0;
+      autoSubmitTriggeredRef.current = false;
       return;
     }
 
@@ -525,6 +529,7 @@ export default function StudentAccountPage() {
 
     setSubmitError("");
     setSubmittedExamName(null);
+    autoSubmitTriggeredRef.current = false;
     const startedAt = Date.now();
     const initialFocusedQuestion = activeExamDetail.questions[0]?.order ?? 1;
     const initialAnswers = {};
@@ -539,13 +544,17 @@ export default function StudentAccountPage() {
       JSON.stringify(session),
     );
     setExamStartedAt(startedAt);
-    setSecondsLeft(activeExamDetail.duration * 60);
     setFocusedQuestion(initialFocusedQuestion);
     setAnswers(initialAnswers);
+    setSecondsLeft(
+      activeExamClosesAtMs === null
+        ? activeExamDetail.duration * 60
+        : Math.max(Math.floor((activeExamClosesAtMs - Date.now()) / 1000), 0),
+    );
     navigateToExam(activeExam.id, "active");
   };
 
-  const handleSubmitExam = async () => {
+  const handleSubmitExam = useCallback(async () => {
     if (!activeExamDetail) {
       return;
     }
@@ -580,6 +589,7 @@ export default function StudentAccountPage() {
       setFocusedQuestion(1);
       setAnswers({});
       tabSwitchCountRef.current = 0;
+      autoSubmitTriggeredRef.current = false;
       navigateToExam(null, "preview", true);
     } catch (error) {
       setSubmitError(
@@ -587,8 +597,35 @@ export default function StudentAccountPage() {
           ? error.message
           : "Шалгалт илгээхэд алдаа гарлаа.",
       );
+      autoSubmitTriggeredRef.current = false;
     }
-  };
+  }, [
+    activeExamDetail,
+    answers,
+    examStartedAt,
+    navigateToExam,
+    refetchAvailableExams,
+    submitStudentExam,
+  ]);
+
+  useEffect(() => {
+    if (
+      !startedExamId ||
+      !activeExamDetail ||
+      submitLoading ||
+      secondsLeft > 0 ||
+      autoSubmitTriggeredRef.current
+    ) {
+      return;
+    }
+
+    autoSubmitTriggeredRef.current = true;
+    const autoSubmitTimer = window.setTimeout(() => {
+      void handleSubmitExam();
+    }, 0);
+
+    return () => window.clearTimeout(autoSubmitTimer);
+  }, [activeExamDetail, handleSubmitExam, secondsLeft, startedExamId, submitLoading]);
 
   if (availableExamsLoading && !availableExamsData) {
     return (

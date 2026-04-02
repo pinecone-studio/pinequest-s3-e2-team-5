@@ -145,6 +145,26 @@ export function getSubmissionResultLockState(params: {
 	};
 }
 
+export function canSubmitExamAttempt(params: {
+	openStatus: boolean;
+	scheduledDate: string;
+	startTime: string;
+	duration: number;
+	startedAt?: number | null;
+}) {
+	const startsAt = parseScheduleDateTime(params.scheduledDate, params.startTime);
+	if (!startsAt || !params.openStatus) {
+		return false;
+	}
+
+	const startsAtMs = startsAt.getTime();
+	const closesAtMs = startsAtMs + Math.max(0, params.duration) * 60_000;
+	const effectiveStartedAt = params.startedAt ?? Date.now();
+	const nowMs = Date.now();
+
+	return effectiveStartedAt >= startsAtMs && effectiveStartedAt <= closesAtMs && nowMs >= startsAtMs;
+}
+
 export function isExamScheduledForFuture(params: { openStatus: boolean; scheduledDate: string; startTime: string }) {
 	const startsAt = parseScheduleDateTime(params.scheduledDate, params.startTime);
 	if (!startsAt) {

@@ -2,6 +2,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { GraphQLContext } from '../../../server';
 import { classrooms } from '../../../db/schemas/classroom.schema';
 import { exams } from '../../../db/schemas/exam.schema';
+import { questions } from '../../../db/schemas/question.schema';
 import { studentExamAnswers } from '../../../db/schemas/student-exam-answer.schema';
 import { studentExamSubmissions } from '../../../db/schemas/student-exam-submission.schema';
 import { students } from '../../../db/schemas/student.schema';
@@ -79,8 +80,82 @@ export const examQuery = {
 		},
 		myExams: async (_: unknown, _args: unknown, context: GraphQLContext) => {
 			const teacherId = await requireTeacherId(context);
+			const teacherExams = await context.db
+				.select()
+				.from(exams)
+				.where(eq(exams.createdBy, teacherId))
+				.all();
 
-			return context.db.select().from(exams).where(eq(exams.createdBy, teacherId)).all();
+			if (teacherExams.length === 0) {
+				return [];
+			}
+
+			const examIds = teacherExams.map((exam) => exam.id);
+			const examQuestions = await context.db
+				.select({
+					examId: questions.examId,
+				})
+				.from(questions)
+				.where(inArray(questions.examId, examIds))
+				.all();
+			const questionCountByExamId = new Map<string, number>();
+
+			for (const question of examQuestions) {
+				questionCountByExamId.set(
+					question.examId,
+					(questionCountByExamId.get(question.examId) ?? 0) + 1,
+				);
+			}
+
+			const announcements = await context.db
+				.select()
+				.from(announcedExams)
+				.leftJoin(
+					announcedExamGrades,
+					eq(announcedExamGrades.announcedExamId, announcedExams.id),
+				)
+				.leftJoin(classrooms, eq(classrooms.id, announcedExamGrades.classroomId))
+				.where(inArray(announcedExams.examId, examIds))
+				.all();
+			const latestAnnouncementByExamId = new Map<
+				string,
+				{
+					openStatus: boolean;
+					scheduledDate: string | null;
+					startTime: string | null;
+					classroomName: string | null;
+				}
+			>();
+
+			for (const { announced_exams, classrooms } of announcements) {
+				const candidate = {
+					openStatus: announced_exams.openStatus,
+					scheduledDate: announced_exams.scheduledDate,
+					startTime: announced_exams.startTime,
+					classroomName: classrooms?.className ?? null,
+				};
+				const existing = latestAnnouncementByExamId.get(announced_exams.examId);
+
+				if (
+					!existing ||
+					getAnnouncementSortValue(candidate) > getAnnouncementSortValue(existing)
+				) {
+					latestAnnouncementByExamId.set(announced_exams.examId, candidate);
+				}
+			}
+
+			return teacherExams.map((exam) => {
+				const announcement = latestAnnouncementByExamId.get(exam.id);
+
+				return {
+					...exam,
+					questionCount: questionCountByExamId.get(exam.id) ?? 0,
+					openStatus: announcement?.openStatus ?? null,
+					classroomName: announcement?.classroomName ?? null,
+					scheduledDate: announcement?.scheduledDate ?? null,
+					startTime: announcement?.startTime ?? null,
+				};
+			});
 		},
 		teacherScheduledExams: async (_: unknown, _args: unknown, context: GraphQLContext) => {
 			const teacherId = await requireTeacherId(context);
@@ -93,13 +168,32 @@ export const examQuery = {
 				.where(eq(announcedExams.createdBy, teacherId))
 				.all();
 
-			return scheduledExams.map(({ exams: exam, announced_exams, classrooms }) => ({
-				...exam,
-				openStatus: announced_exams.openStatus,
-				scheduledDate: announced_exams.scheduledDate,
-				startTime: announced_exams.startTime,
-				classroomName: classrooms?.className ?? null,
-			}));
+			const uniqueExams = new Map<string, (typeof scheduledExams)[number]["exams"] & {
+				openStatus: boolean;
+				scheduledDate: string | null;
+				startTime: string | null;
+				classroomName: string | null;
+			}>();
+
+			for (const { exams: exam, announced_exams, classrooms } of scheduledExams) {
+				const candidate = {
+					...exam,
+					openStatus: announced_exams.openStatus,
+					scheduledDate: announced_exams.scheduledDate,
+					startTime: announced_exams.startTime,
+					classroomName: classrooms?.className ?? null,
+				};
+				const existing = uniqueExams.get(exam.id);
+
+				if (
+					!existing ||
+					getAnnouncementSortValue(candidate) > getAnnouncementSortValue(existing)
+				) {
+					uniqueExams.set(exam.id, candidate);
+				}
+			}
+
+			return [...uniqueExams.values()];
 
 		},
 		teacherAnalyticsExams: async (_: unknown, _args: unknown, context: GraphQLContext) => {

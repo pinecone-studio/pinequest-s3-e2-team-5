@@ -1,10 +1,14 @@
+import { announcedExamGrades } from "../../../db/schemas/announcedExamGrades.schema";
+import { announcedExams } from "../../../db/schemas/announcedExams.schema";
 import { classrooms } from "../../../db/schemas/classroom.schema";
+import { exams } from "../../../db/schemas/exam.schema";
 import { studentExamAnswers } from "../../../db/schemas/student-exam-answer.schema";
 import { studentExamSubmissions } from "../../../db/schemas/student-exam-submission.schema";
 import { students } from "../../../db/schemas/student.schema";
 import { and, eq } from "drizzle-orm";
 import type { GraphQLContext } from "../../../server";
 import {
+	canSubmitExamAttempt,
 	getAccessibleExamForStudent,
 	loadQuestionsWithChoices,
 	requireStudentRecord,
@@ -151,7 +155,60 @@ export const studentMutation = {
 			const { student, exam } = await getAccessibleExamForStudent(
 				context,
 				args.input.examId,
-			);
+			).catch(async (error) => {
+				if (
+					!(error instanceof Error) ||
+					error.message !== "Exam is not open at this time."
+				) {
+					throw error;
+				}
+
+				const student = await requireStudentRecord(context);
+				const examRecord = await context.db
+					.select()
+					.from(students)
+					.innerJoin(
+						announcedExamGrades,
+						eq(announcedExamGrades.classroomId, students.classroomId),
+					)
+					.innerJoin(
+						announcedExams,
+						eq(announcedExamGrades.announcedExamId, announcedExams.id),
+					)
+					.innerJoin(exams, eq(announcedExams.examId, exams.id))
+					.where(
+							and(
+								eq(students.id, student.id),
+								eq(announcedExams.id, args.input.examId),
+								eq(announcedExams.openStatus, true),
+							),
+						)
+					.get();
+
+				if (
+					!examRecord ||
+					!canSubmitExamAttempt({
+						openStatus: examRecord.announced_exams.openStatus,
+						scheduledDate: examRecord.announced_exams.scheduledDate,
+						startTime: examRecord.announced_exams.startTime,
+						duration: examRecord.exams.duration,
+						startedAt: args.input.startedAt ?? null,
+					})
+				) {
+					throw error;
+				}
+
+				return {
+					student,
+					exam: {
+						...examRecord.exams,
+						announcedExamId: examRecord.announced_exams.id,
+						scheduledDate: examRecord.announced_exams.scheduledDate,
+						startTime: examRecord.announced_exams.startTime,
+						openStatus: examRecord.announced_exams.openStatus,
+					},
+				};
+			});
 			const existingSubmission = await context.db
 				.select({ id: studentExamSubmissions.id })
 				.from(studentExamSubmissions)
