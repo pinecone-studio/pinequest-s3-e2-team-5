@@ -324,6 +324,7 @@ export default function StudentAccountPage() {
     routeExamId,
     navigateToExam,
   ]);
+<<<<<<< Updated upstream
 
   useEffect(() => {
     if (
@@ -345,6 +346,8 @@ export default function StudentAccountPage() {
     routeExamId,
     navigateToExam,
   ]);
+=======
+>>>>>>> Stashed changes
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -561,6 +564,7 @@ export default function StudentAccountPage() {
           input: {
             examId: activeExamDetail.id,
             startedAt: examStartedAt,
+            tabSwitchCount: tabSwitchCountRef.current,
             answers: activeExamDetail.questions.map((question) => ({
               questionId: question.id,
               selectedChoiceId: answers[question.id]?.selectedChoiceId ?? null,
@@ -581,6 +585,7 @@ export default function StudentAccountPage() {
       setSecondsLeft(0);
       setFocusedQuestion(1);
       setAnswers({});
+      tabSwitchCountRef.current = 0;
       navigateToExam(null, "preview", true);
     } catch (error) {
       setSubmitError(
@@ -627,9 +632,15 @@ export default function StudentAccountPage() {
 
   if (startedExamId && activeExamDetail) {
     return (
+<<<<<<< Updated upstream
       <section className="min-h-screen bg-[#FCFCFF]">
         <div className="border-b border-[#ECE8F6] bg-white">
           <div className="mx-auto flex h-[72px] w-full max-w-[1128px] items-center justify-between">
+=======
+      <section className="relative left-1/2 -mt-10 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#FCFCFF]">
+        <div className="sticky top-0 z-30 border-b border-[#ECE8F6] bg-white">
+          <div className="mx-auto flex h-[72px] w-full max-w-[1245px] items-center justify-between px-8">
+>>>>>>> Stashed changes
             <p className="text-[18px] font-semibold tracking-tight text-[#161616]">
               {getStudentExamHeader(
                 activeExamDetail.subject,
@@ -644,6 +655,7 @@ export default function StudentAccountPage() {
           </div>
         </div>
 
+<<<<<<< Updated upstream
         <div className="mx-auto grid w-full max-w-[1128px] gap-5 py-8 lg:grid-cols-[208px_minmax(0,1fr)]">
           <aside className="h-fit rounded-[18px] border border-[#E6E1F2] bg-white p-3 shadow-[0_4px_12px_rgba(53,31,107,0.03)]">
             <p className="mb-4 text-[14px] font-semibold text-[#2A2733]">
@@ -654,6 +666,13 @@ export default function StudentAccountPage() {
                 {tabSwitchCount}
               </div>
             ) : null}
+=======
+        <div className="mx-auto grid w-full max-w-[1245px] gap-5 px-8 py-8 lg:grid-cols-[208px_minmax(0,1fr)]">
+          <aside className="h-fit rounded-[18px] border border-[#E6E1F2] bg-white p-3 shadow-[0_4px_12px_rgba(53,31,107,0.03)] lg:sticky lg:top-[104px]">
+            <p className="mb-4 text-[14px] font-semibold text-[#2A2733]">
+              Асуулт
+            </p>
+>>>>>>> Stashed changes
 
             <div className="mx-auto grid w-fit grid-cols-5 gap-2.5">
               {questionPalette.map((order) => {
@@ -965,9 +984,9 @@ export default function StudentAccountPage() {
                   locked
                     ? undefined
                     : () => {
-                        setSubmittedExamName(null);
-                        navigateToExam(exam.id, "preview");
-                      }
+                      setSubmittedExamName(null);
+                      navigateToExam(exam.id, "preview");
+                    }
                 }
               />
             );

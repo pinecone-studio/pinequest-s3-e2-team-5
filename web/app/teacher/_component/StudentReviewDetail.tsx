@@ -3,7 +3,7 @@
 import { gql } from "@apollo/client";
 import { useQuery } from "@apollo/client/react";
 import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, TriangleAlert } from "lucide-react";
 import { useMemo, useState } from "react";
 
 type StudentReviewDetailProps = {
@@ -25,6 +25,7 @@ type TeacherStudentSubmissionDetailData = {
     durationMinutes: number;
     startedAt: number;
     submittedAt: number;
+    reasonForTermination: string | null;
     answers: {
       questionId: string;
       order: number;
@@ -59,6 +60,7 @@ const GET_TEACHER_STUDENT_SUBMISSION_DETAIL = gql`
       durationMinutes
       startedAt
       submittedAt
+      reasonForTermination
       exam {
         id
         title
@@ -309,6 +311,24 @@ export function StudentReviewDetail({
                 ))}
               </div>
             </div>
+
+            {detail.reasonForTermination ? (
+              <div className="rounded-[24px] border border-[#E6E0F4] bg-white px-7 py-8 shadow-[0_6px_16px_rgba(53,31,107,0.06)]">
+                <div className="flex items-center gap-3 text-[#24212B]">
+                  <TriangleAlert className="h-8 w-8 text-[#D96563]" />
+                  <h3 className="text-[18px] font-semibold">Зөрчил</h3>
+                </div>
+
+                <div className="mt-7 space-y-4">
+                  <p className="text-[17px] font-semibold text-[#24212B]">
+                    Автомат илгээлт
+                  </p>
+                  <p className="max-w-[240px] text-[16px] leading-8 text-[#2C2933]">
+                    {detail.reasonForTermination}
+                  </p>
+                </div>
+              </div>
+            ) : null}
           </div>
         </aside>
 

@@ -74,6 +74,7 @@ export const studentTypeDefs = gql`
 		questionCount: Int!
 		correctAnswers: Int!
 		scorePercent: Int!
+		tabSwitchCount: Int!
 		submittedAt: Float!
 	}
 
@@ -103,6 +104,7 @@ export const studentTypeDefs = gql`
 		questionCount: Int!
 		correctAnswers: Int!
 		scorePercent: Int!
+		tabSwitchCount: Int!
 		submittedAt: Float!
 		answers: [StudentExamAnswerReview!]!
 	}
@@ -138,6 +140,7 @@ export const studentTypeDefs = gql`
 	input SubmitStudentExamInput {
 		examId: String!
 		startedAt: Float
+		tabSwitchCount: Int
 		answers: [StudentExamAnswerInput!]!
 	}
 

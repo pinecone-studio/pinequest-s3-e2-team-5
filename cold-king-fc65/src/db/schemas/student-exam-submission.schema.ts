@@ -15,4 +15,6 @@ export const studentExamSubmissions = sqliteTable('student_exam_submissions', {
 	totalQuestions: int().notNull(),
 	correctAnswers: int().notNull(),
 	scorePercent: int().notNull(),
+	tabSwitchCount: int().default(0),
+	reasonForTermination: text(),
 });

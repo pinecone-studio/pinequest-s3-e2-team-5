@@ -210,6 +210,7 @@ export const studentQuery = {
 						questionCount: submission.totalQuestions,
 						correctAnswers: submission.correctAnswers,
 						scorePercent: submission.scorePercent,
+						tabSwitchCount: submission.tabSwitchCount ?? 0,
 						submittedAt: submission.submittedAt,
 					};
 				}),
@@ -277,6 +278,7 @@ export const studentQuery = {
 				questionCount: submission.totalQuestions,
 				correctAnswers: submission.correctAnswers,
 				scorePercent: submission.scorePercent,
+				tabSwitchCount: submission.tabSwitchCount ?? 0,
 				submittedAt: submission.submittedAt,
 				answers: await Promise.all(examQuestions.map(async (question) => {
 					const answer = answerRows.find((row) => row.questionId === question.id);

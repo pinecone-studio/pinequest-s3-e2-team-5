@@ -138,6 +138,7 @@ export const studentMutation = {
 					input: {
 						examId: string;
 						startedAt?: number | null;
+						tabSwitchCount?: number | null;
 						answers: {
 							questionId: string;
 							selectedChoiceId?: string | null;
@@ -219,6 +220,7 @@ export const studentMutation = {
 				totalQuestions > 0
 					? Math.round((correctAnswers / totalQuestions) * 100)
 					: 0;
+			const tabSwitchCount = Math.max(0, args.input.tabSwitchCount ?? 0);
 
 			await context.db.insert(studentExamSubmissions).values({
 				id: submissionId,
@@ -229,6 +231,7 @@ export const studentMutation = {
 				totalQuestions,
 				correctAnswers,
 				scorePercent,
+				tabSwitchCount,
 			});
 
 			await context.db.insert(studentExamAnswers).values(answerRows);
@@ -243,6 +246,7 @@ export const studentMutation = {
 				questionCount: totalQuestions,
 				correctAnswers,
 				scorePercent,
+				tabSwitchCount,
 				submittedAt,
 			};
 		},
