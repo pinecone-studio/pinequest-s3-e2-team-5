@@ -436,6 +436,10 @@ export default function TeacherAnalyticsPage() {
       [...(selectedExamSummary?.questionInsights ?? [])].sort(
         (left, right) => left.order - right.order,
       ),
+    () =>
+      [...(selectedExamSummary?.questionInsights ?? [])].sort(
+        (left, right) => left.order - right.order,
+      ),
     [selectedExamSummary],
   );
 
@@ -494,7 +498,9 @@ export default function TeacherAnalyticsPage() {
   const questionDetailById = useMemo(
     () =>
       new Map(
-        selectedExamQuestions.map((question) => [question.id, question] as const),
+        selectedExamQuestions.map(
+          (question) => [question.id, question] as const,
+        ),
       ),
     [selectedExamQuestions],
   );
@@ -537,8 +543,10 @@ export default function TeacherAnalyticsPage() {
 
   if (!completedExams.length) {
     return (
-      <div className="rounded-[20px] border border-[#E8E2F1] bg-white px-6 py-8 text-[15px] text-[#6F687D]">
-        Дууссан шалгалт одоогоор алга байна.
+      <div className="pt-4">
+        <div className="rounded-[20px] border border-[#E8E2F1] bg-white px-6 py-8 text-[15px] text-[#6F687D]">
+          Дууссан шалгалт одоогоор алга байна.
+        </div>
       </div>
     );
   }
@@ -619,7 +627,9 @@ export default function TeacherAnalyticsPage() {
               <h1 className="text-[18px] font-semibold text-[#1D1A24]">
                 Хамгийн их алдаатай асуултууд
               </h1>
-              <p className="text-[14px] text-[#7E889D]">Алдааны давтамж өндөртэй</p>
+              <p className="text-[14px] text-[#7E889D]">
+                Алдааны давтамж өндөртэй
+              </p>
             </div>
 
             <div className="mt-5 border-t border-[#ECEFF5] pt-5">
@@ -639,7 +649,9 @@ export default function TeacherAnalyticsPage() {
                     options={interactiveChartOptions}
                     className="h-[270px]"
                   />
-                  <div className="mt-2 flex justify-end text-[14px] text-[#8A8397]">Асуултууд</div>
+                  <div className="mt-2 flex justify-end text-[14px] text-[#8A8397]">
+                    Асуултууд
+                  </div>
                 </>
               ) : (
                 <div className="flex h-[300px] items-center justify-center text-[#6F687D]">
@@ -663,7 +675,9 @@ export default function TeacherAnalyticsPage() {
               const detail = item.questionDetail;
               const choices = detail?.choices ?? [];
               const emphasizedWrongChoiceId =
-                detail?.choices.find((choice) => choice.id !== detail.correctChoiceId)?.id ?? null;
+                detail?.choices.find(
+                  (choice) => choice.id !== detail.correctChoiceId,
+                )?.id ?? null;
 
               return (
                 <article
@@ -680,20 +694,27 @@ export default function TeacherAnalyticsPage() {
                       {item.order}. {detail?.question ?? item.question}
                     </h2>
                     <span className="shrink-0 pt-1 text-[18px] font-medium text-[#2B2C34]">
-                      {item.incorrectCount}/{Math.max(item.submissionCount, 1)} алдаа
+                      {item.incorrectCount}/{Math.max(item.submissionCount, 1)}{" "}
+                      алдаа
                     </span>
                   </div>
 
                   {choices.length ? (
                     <div className="mt-5 space-y-3">
                       {choices.map((choice) => {
-                        const isEmphasized = choice.id === emphasizedWrongChoiceId;
+                        const isEmphasized =
+                          choice.id === emphasizedWrongChoiceId;
 
                         return (
-                          <div key={choice.id} className="flex items-center gap-3.5">
+                          <div
+                            key={choice.id}
+                            className="flex items-center gap-3.5"
+                          >
                             <span
                               className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
-                                isEmphasized ? "border-[#CB6A68]" : "border-[#D5D9E5]"
+                                isEmphasized
+                                  ? "border-[#CB6A68]"
+                                  : "border-[#D5D9E5]"
                               }`}
                             >
                               {isEmphasized ? (

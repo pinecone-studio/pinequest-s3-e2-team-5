@@ -53,7 +53,7 @@ export function TeacherExamCard({ card, href }: TeacherExamCardProps) {
         <SubjectIcon className="h-5 w-5 text-[#111111]" strokeWidth={2} />
       </div>
 
-      <div className="mt-4">
+      <div className="mt-2">
         <h2 className="text-[18px] font-semibold text-[#111111]">
           {card.title}
           {topicLabel ? (
@@ -63,7 +63,7 @@ export function TeacherExamCard({ card, href }: TeacherExamCardProps) {
         <p className="mt-1 text-sm text-[#6B6B6B]">{classLabel}</p>
       </div>
 
-      <div className="mt-5 flex gap-2 text-xs">
+      <div className="mt-3 flex gap-2 text-xs">
         <span className="flex items-center gap-1 rounded-full bg-white/85 px-3 py-1 shadow-sm">
           <Clock3 className="h-3.5 w-3.5" />
           {card.duration} мин

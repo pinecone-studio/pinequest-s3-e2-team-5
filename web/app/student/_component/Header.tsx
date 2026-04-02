@@ -100,7 +100,7 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[#ECE8F6] bg-white/95 backdrop-blur-sm">
-      <div className="mx-auto flex h-[72px] max-w-[1245px] items-center justify-between px-8">
+      <div className="mx-auto flex h-[72px] max-w-[1128px] items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5">
           <Image
             src="/logo.png"

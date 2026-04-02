@@ -39,8 +39,8 @@ export function TeacherMaterialCard({
       }}
     >
       <Link href={href} className="block">
-        <div className="flex flex-col gap-5">
-          <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             <div
               className="flex h-12 w-12 items-center justify-center rounded-[18px]"
               style={{ backgroundColor: palette.iconBackground }}
@@ -63,7 +63,7 @@ export function TeacherMaterialCard({
             </div>
           </div>
 
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             <p className="text-[16px] font-medium text-[#111111]">
               {classLabel}
             </p>
@@ -81,7 +81,7 @@ export function TeacherMaterialCard({
         </div>
       </Link>
 
-      <div className="mt-auto flex items-center justify-center pt-4">
+      <div className="mt-auto flex items-center justify-center pt-3">
         <button
           type="button"
           onClick={() => onActionClick?.(card)}

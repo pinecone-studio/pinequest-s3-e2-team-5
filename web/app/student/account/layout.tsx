@@ -1,8 +1,7 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { CloudflareStudentSync } from "@/components/auth/cloudflare-student-sync";
 import { isUserRole } from "@/lib/auth-role";
-import Header from "../_component/Header";
+import { StudentAccountShell } from "../_component/StudentAccountShell";
 
 export default async function StudentLayout({
   children,
@@ -43,23 +42,20 @@ export default async function StudentLayout({
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F8FC]">
-      <Header />
-      <div className="mx-auto max-w-[1245px] px-8 pt-4">
-        {hasStudentSyncMetadata ? (
-          <CloudflareStudentSync
-            email={email}
-            firstName={firstName}
-            lastName={lastName}
-            phone={phone}
-            grade={grade}
-            className={className}
-            inviteCode={inviteCode}
-            role={role}
-          />
-        ) : null}
-      </div>
-      <main className="mx-auto max-w-[1245px] px-8 py-10">{children}</main>
-    </div>
+    <StudentAccountShell
+      hasStudentSyncMetadata={hasStudentSyncMetadata}
+      syncProps={{
+        email,
+        firstName,
+        lastName,
+        phone,
+        grade,
+        className,
+        inviteCode,
+        role,
+      }}
+    >
+      {children}
+    </StudentAccountShell>
   );
 }

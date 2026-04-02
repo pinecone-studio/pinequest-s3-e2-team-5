@@ -6,6 +6,7 @@ import { CheckCheck, Clock3, Info, Loader2, PenLine } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cloudflareProfileSyncedEvent } from "@/components/auth/cloudflare-student-sync";
+import { studentExamLayoutModeEvent } from "../_component/StudentAccountShell";
 import ExamCard from "../_component/ExamCard";
 import {
   getStudentExamHeader,
@@ -231,29 +232,34 @@ export default function StudentAccountPage() {
   const startedExamId = isStartedMode ? routeExamId : null;
   const activeExamId = startedExamId ?? selectedExamId;
 
-  const navigateToExam = useCallback((
-    examId: string | null,
-    mode: "preview" | "active" = "preview",
-    replace = false,
-  ) => {
-    const params = new URLSearchParams(searchParams.toString());
+  const navigateToExam = useCallback(
+    (
+      examId: string | null,
+      mode: "preview" | "active" = "preview",
+      replace = false,
+    ) => {
+      const params = new URLSearchParams(searchParams.toString());
 
-    if (!examId) {
-      params.delete("exam");
-      params.delete("mode");
-    } else {
-      params.set("exam", examId);
-      params.set("mode", mode);
-    }
+      if (!examId) {
+        params.delete("exam");
+        params.delete("mode");
+      } else {
+        params.set("exam", examId);
+        params.set("mode", mode);
+      }
 
-    const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-    if (replace) {
-      router.replace(nextUrl);
-      return;
-    }
+      const nextUrl = params.toString()
+        ? `${pathname}?${params.toString()}`
+        : pathname;
+      if (replace) {
+        router.replace(nextUrl);
+        return;
+      }
 
-    router.push(nextUrl);
-  }, [pathname, router, searchParams]);
+      router.push(nextUrl);
+    },
+    [pathname, router, searchParams],
+  );
 
   const {
     data: availableExamsData,
@@ -313,11 +319,32 @@ export default function StudentAccountPage() {
   }, [
     activeExam,
     activeExamError,
-      activeExamLoading,
-      availableExamsLoading,
-      routeExamId,
-      navigateToExam,
-    ]);
+    activeExamLoading,
+    availableExamsLoading,
+    routeExamId,
+    navigateToExam,
+  ]);
+
+  useEffect(() => {
+    if (
+      !routeExamId ||
+      availableExamsLoading ||
+      activeExamLoading ||
+      activeExamError ||
+      activeExam
+    ) {
+      return;
+    }
+
+    navigateToExam(null, "preview", true);
+  }, [
+    activeExam,
+    activeExamError,
+    activeExamLoading,
+    availableExamsLoading,
+    routeExamId,
+    navigateToExam,
+  ]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -598,9 +625,9 @@ export default function StudentAccountPage() {
 
   if (startedExamId && activeExamDetail) {
     return (
-      <section className="relative left-1/2 -mt-10 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#FCFCFF]">
+      <section className="min-h-screen bg-[#FCFCFF]">
         <div className="border-b border-[#ECE8F6] bg-white">
-          <div className="mx-auto flex h-[72px] w-full max-w-[1245px] items-center justify-between px-8">
+          <div className="mx-auto flex h-[72px] w-full max-w-[1128px] items-center justify-between">
             <p className="text-[18px] font-semibold tracking-tight text-[#161616]">
               {getStudentExamHeader(
                 activeExamDetail.subject,
@@ -615,7 +642,7 @@ export default function StudentAccountPage() {
           </div>
         </div>
 
-        <div className="mx-auto grid w-full max-w-[1245px] gap-5 px-8 py-8 lg:grid-cols-[208px_minmax(0,1fr)]">
+        <div className="mx-auto grid w-full max-w-[1128px] gap-5 py-8 lg:grid-cols-[208px_minmax(0,1fr)]">
           <aside className="h-fit rounded-[18px] border border-[#E6E1F2] bg-white p-3 shadow-[0_4px_12px_rgba(53,31,107,0.03)]">
             <p className="mb-4 text-[14px] font-semibold text-[#2A2733]">
               Асуулт
