@@ -6,7 +6,6 @@ import { CheckCheck, Clock3, Info, Loader2, PenLine } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cloudflareProfileSyncedEvent } from "@/components/auth/cloudflare-student-sync";
-import { studentExamLayoutModeEvent } from "../_component/StudentAccountShell";
 import ExamCard from "../_component/ExamCard";
 import {
   getStudentExamHeader,
@@ -225,6 +224,7 @@ export default function StudentAccountPage() {
   const [examStartedAt, setExamStartedAt] = useState<number | null>(null);
   const [submitError, setSubmitError] = useState("");
   const tabSwitchCountRef = useRef(0);
+  const [tabSwitchCount, setTabSwitchCount] = useState(0);
 
   const routeExamId = searchParams.get("exam");
   const isStartedMode = searchParams.get("mode") === "active";
@@ -454,6 +454,7 @@ export default function StudentAccountPage() {
   useEffect(() => {
     if (!startedExamId) {
       tabSwitchCountRef.current = 0;
+      setTabSwitchCount(0);
       return;
     }
 
@@ -463,6 +464,7 @@ export default function StudentAccountPage() {
       }
 
       tabSwitchCountRef.current += 1;
+      setTabSwitchCount(tabSwitchCountRef.current);
       console.log(
         `[Exam Tab Switch] examId=${startedExamId} count=${tabSwitchCountRef.current}`,
       );
@@ -647,9 +649,9 @@ export default function StudentAccountPage() {
             <p className="mb-4 text-[14px] font-semibold text-[#2A2733]">
               Асуулт
             </p>
-            {tabSwitchCountRef.current > 0 ? (
+            {tabSwitchCount > 0 ? (
               <div className="mb-4 text-[14px] font-semibold text-[#2A2733]">
-                {tabSwitchCountRef.current}
+                {tabSwitchCount}
               </div>
             ) : null}
 
@@ -925,11 +927,9 @@ export default function StudentAccountPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-[24px] font-bold text-gray-900">
-          Боломжтой шалгалтууд
-        </h1>
-        <p className="mt-1 text-[14px] text-[#5B5B5B]">
-          Одоогоор идэвхтэй байгаа шалгалтуудаа өгнө үү.
+        <h1 className="text-[28px] font-medium text-gray-900">Шалгалтууд</h1>
+        <p className="mt-1 text-[16px]  font-medium text-[#5B5B5B]">
+          Боломжит болон товлогдсон шалгалтууд
         </p>
       </div>
 
