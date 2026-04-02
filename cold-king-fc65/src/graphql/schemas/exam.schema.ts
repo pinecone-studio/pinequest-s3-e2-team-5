@@ -68,6 +68,7 @@ export const examTypeDefs = gql`
         percent: Int!
         submittedAt: Float!
         durationMinutes: Int!
+        reasonForTermination: String
     }
 
     type TeacherExamQuestionInsight {
@@ -114,6 +115,7 @@ export const examTypeDefs = gql`
         durationMinutes: Int!
         startedAt: Float!
         submittedAt: Float!
+        reasonForTermination: String
         answers: [TeacherStudentExamAnswer!]!
     }
 

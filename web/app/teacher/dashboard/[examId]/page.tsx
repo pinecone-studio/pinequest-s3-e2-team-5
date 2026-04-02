@@ -2,7 +2,13 @@
 
 import { gql } from "@apollo/client";
 import { useQuery } from "@apollo/client/react";
-import { ChevronDown, ChevronLeft, PencilLine, Search } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronLeft,
+  PencilLine,
+  Search,
+  TriangleAlert,
+} from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -23,6 +29,7 @@ type TeacherExamAnalyticsData = {
       percent: number;
       submittedAt: number;
       durationMinutes: number;
+      reasonForTermination: string | null;
     }[];
   };
 };
@@ -44,6 +51,7 @@ const GET_TEACHER_EXAM_ANALYTICS = gql`
         percent
         submittedAt
         durationMinutes
+        reasonForTermination
       }
     }
   }
@@ -139,13 +147,14 @@ export default function TeacherExamAnalysisPage() {
       </div>
 
       <div className="space-y-5">
-        <div className="grid grid-cols-[56px_minmax(240px,1.45fr)_160px_160px_160px_160px_56px] items-center px-8 text-[16px] font-semibold text-[#111111]">
+        <div className="grid grid-cols-[56px_minmax(240px,1.45fr)_160px_160px_160px_160px_110px_56px] items-center px-8 text-[16px] font-semibold text-[#111111]">
           <span>№</span>
           <span>Сурагч</span>
           <span>Бүлэг</span>
           <span>Оноо</span>
           <span>Хувь</span>
           <span>Хугацаа</span>
+          <span>Зөрчил</span>
           <span />
         </div>
 
@@ -153,7 +162,7 @@ export default function TeacherExamAnalysisPage() {
           {filteredStudents.map((student, index) => (
             <div
               key={student.id}
-              className={`grid grid-cols-[56px_minmax(240px,1.45fr)_160px_160px_160px_160px_56px] items-center rounded-[6px] px-8 py-7 text-[16px] text-[#1A1A1A] ${
+              className={`grid grid-cols-[56px_minmax(240px,1.45fr)_160px_160px_160px_160px_110px_56px] items-center rounded-[6px] px-8 py-7 text-[16px] text-[#1A1A1A] ${
                 index % 2 === 0 ? "bg-[#F7F6FE]" : "bg-[#FCFCFE]"
               }`}
             >
@@ -163,6 +172,14 @@ export default function TeacherExamAnalysisPage() {
               <span>{student.score}</span>
               <span>{student.percent}%</span>
               <span>{student.durationMinutes} мин</span>
+              <span className="flex items-center">
+                {student.reasonForTermination ? (
+                  <TriangleAlert
+                    className="h-5 w-5 text-[#D25B56]"
+                    aria-label={student.reasonForTermination}
+                  />
+                ) : null}
+              </span>
               <Link
                 href={`/teacher/dashboard/${examId}/students/${student.studentId}`}
                 className="flex justify-center text-[#A5AEC5] transition hover:text-[#8B6FF7]"
