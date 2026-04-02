@@ -9,7 +9,6 @@ import { useEffect } from "react";
 import { cloudflareProfileSyncedEvent } from "@/components/auth/cloudflare-student-sync";
 import ExamCard from "../../_component/ExamCard";
 import {
-  formatStudentExamTimestamp,
   getStudentExamPresentation,
 } from "../../_data/student-exam-presentation";
 
@@ -19,6 +18,8 @@ type SubmissionSummary = {
   title: string;
   subject: string;
   grade: string;
+  scheduledDate: string | null;
+  startTime: string | null;
   duration: number;
   questionCount: number;
   correctAnswers: number;
@@ -66,6 +67,8 @@ const GET_MY_EXAM_SUBMISSIONS = gql`
       title
       subject
       grade
+      scheduledDate
+      startTime
       duration
       questionCount
       correctAnswers
@@ -184,12 +187,80 @@ function addMinutes(timeValue: string, minutesToAdd: number) {
   return formatClock(date);
 }
 
+const ULAANBAATAR_UTC_OFFSET_HOURS = 8;
+
+function parseSubmissionStartMs(
+  scheduledDate: string | null | undefined,
+  startTime: string | null | undefined,
+) {
+  if (!scheduledDate || !startTime) {
+    return null;
+  }
+
+  const normalizedDate = scheduledDate.trim().split("T")[0]?.replaceAll("/", "-");
+  const normalizedTime = startTime
+    .trim()
+    .split("T")
+    .pop()
+    ?.replace("Z", "")
+    .split(".")[0]
+    .replace(/[+-]\d{2}:\d{2}$/, "");
+
+  const dateMatch = normalizedDate?.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const timeMatch = normalizedTime?.match(/^(\d{2}):(\d{2})(?::(\d{2}))?$/);
+
+  if (!dateMatch || !timeMatch) {
+    return null;
+  }
+
+  const [, year, month, day] = dateMatch;
+  const [, hour, minute, second] = timeMatch;
+  const startsAtMs = Date.UTC(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hour) - ULAANBAATAR_UTC_OFFSET_HOURS,
+    Number(minute),
+    Number(second ?? "0"),
+    0,
+  );
+
+  return Number.isNaN(startsAtMs) ? null : startsAtMs;
+}
+
+function getSubmissionResultLockState(
+  submission: Pick<SubmissionSummary, "scheduledDate" | "startTime" | "duration"> | null,
+  nowMs: number,
+) {
+  if (!submission) {
+    return { locked: false, secondsUntilUnlock: 0 };
+  }
+
+  const startMs = parseSubmissionStartMs(
+    submission.scheduledDate,
+    submission.startTime,
+  );
+
+  if (startMs === null) {
+    return { locked: false, secondsUntilUnlock: 0 };
+  }
+
+  const unlockAtMs = startMs + Math.max(0, submission.duration) * 60_000;
+  const locked = nowMs < unlockAtMs;
+  const secondsUntilUnlock = locked
+    ? Math.max(1, Math.ceil((unlockAtMs - nowMs) / 1000))
+    : 0;
+
+  return { locked, secondsUntilUnlock };
+}
+
 export default function StudentResultPage() {
   const { user } = useUser();
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<
     string | null
   >(null);
   const [focusedQuestion, setFocusedQuestion] = useState(1);
+  const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now());
 
   const {
     data: submissionsData,
@@ -197,6 +268,19 @@ export default function StudentResultPage() {
     error: submissionsError,
     refetch: refetchSubmissions,
   } = useQuery<MyExamSubmissionsData>(GET_MY_EXAM_SUBMISSIONS);
+  const submissions = submissionsData?.myExamSubmissions ?? [];
+  const selectedSubmissionSummary = useMemo(
+    () =>
+      selectedSubmissionId
+        ? (submissions.find((item) => item.id === selectedSubmissionId) ?? null)
+        : null,
+    [selectedSubmissionId, submissions],
+  );
+  const selectedSubmissionLockState = useMemo(
+    () => getSubmissionResultLockState(selectedSubmissionSummary, currentTimeMs),
+    [currentTimeMs, selectedSubmissionSummary],
+  );
+
   const {
     data: detailData,
     loading: detailLoading,
@@ -205,11 +289,10 @@ export default function StudentResultPage() {
     GET_STUDENT_EXAM_SUBMISSION_DETAIL,
     {
       variables: { submissionId: selectedSubmissionId ?? "" },
-      skip: !selectedSubmissionId,
+      skip: !selectedSubmissionId || selectedSubmissionLockState.locked,
     },
   );
 
-  const submissions = submissionsData?.myExamSubmissions ?? [];
   const selectedResult = detailData?.studentExamSubmissionDetail ?? null;
   const displayName =
     [user?.lastName, user?.firstName].filter(Boolean).join(" ") ||
@@ -231,6 +314,16 @@ export default function StudentResultPage() {
       );
     };
   }, [refetchSubmissions]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setCurrentTimeMs(Date.now());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, []);
 
   const palette = useMemo<
     { order: number; status: ReviewPaletteStatus }[]
@@ -512,6 +605,10 @@ export default function StudentResultPage() {
         <div className="mx-auto grid gap-10 [grid-template-columns:repeat(auto-fit,minmax(264px,264px))]">
           {submissions.map((submission) => {
             const presentation = getStudentExamPresentation(submission.subject);
+            const { locked, secondsUntilUnlock } = getSubmissionResultLockState(
+              submission,
+              currentTimeMs,
+            );
 
             return (
               <ExamCard
@@ -522,13 +619,21 @@ export default function StudentResultPage() {
                 grade={submission.grade}
                 minutes={submission.duration}
                 exercises={submission.questionCount}
-                date={formatStudentExamTimestamp(submission.submittedAt)}
+                scheduledDate={submission.scheduledDate ?? undefined}
+                startTime={submission.startTime ?? undefined}
+                date="Үр дүн"
                 bg={presentation.bg}
                 iconBg={presentation.iconBg}
-                onClick={() => {
-                  setSelectedSubmissionId(submission.id);
-                  setFocusedQuestion(1);
-                }}
+                locked={locked}
+                secondsUntilStart={secondsUntilUnlock}
+                onClick={
+                  locked
+                    ? undefined
+                    : () => {
+                        setSelectedSubmissionId(submission.id);
+                        setFocusedQuestion(1);
+                      }
+                }
               />
             );
           })}

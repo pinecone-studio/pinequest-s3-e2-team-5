@@ -7,6 +7,7 @@ import type { GraphQLContext } from '../../../server';
 import {
 	getAccessibleExamForStudent,
 	getExamPreStartLockState,
+	getSubmissionResultLockState,
 	isExamVisibleForStudent,
 	isExamScheduledForFuture,
 	loadQuestionsWithChoices,
@@ -15,7 +16,7 @@ import {
 import { generateIncorrectAnswerExplanation } from '../ai-explanation';
 import { announcedExamGrades } from '../../../db/schemas/announcedExamGrades.schema';
 import { announcedExams } from '../../../db/schemas/announcedExams.schema';
-import { notFoundError } from '../../errors';
+import { badUserInputError, notFoundError } from '../../errors';
 
 export const studentQuery = {
 	Query: {
@@ -252,6 +253,15 @@ export const studentQuery = {
 			}
 
 			const announcedExam = examRecord?.announced_exams ?? null;
+			const resultLockState = getSubmissionResultLockState({
+				scheduledDate: announcedExam?.scheduledDate ?? null,
+				startTime: announcedExam?.startTime ?? null,
+				duration: exam.duration,
+			});
+			if (resultLockState.isLocked) {
+				throw badUserInputError('Үр дүнг шалгалтын хугацаа дууссаны дараа харах боломжтой.');
+			}
+
 			const examQuestions = await loadQuestionsWithChoices(context, exam.id);
 			const answerRows = await context.db.select().from(studentExamAnswers).where(eq(studentExamAnswers.submissionId, submission.id)).all();
 

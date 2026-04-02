@@ -101,6 +101,40 @@ export function getExamPreStartLockState(params: { scheduledDate: string; startT
 	};
 }
 
+export function getSubmissionResultLockState(params: {
+	scheduledDate?: string | null;
+	startTime?: string | null;
+	duration: number;
+}) {
+	if (!params.scheduledDate || !params.startTime) {
+		return {
+			isLocked: false,
+			secondsUntilUnlock: 0,
+			unlockAtMs: null as number | null,
+		};
+	}
+
+	const startsAt = parseScheduleDateTime(params.scheduledDate, params.startTime);
+	if (!startsAt) {
+		return {
+			isLocked: false,
+			secondsUntilUnlock: 0,
+			unlockAtMs: null as number | null,
+		};
+	}
+
+	const nowMs = Date.now();
+	const unlockAtMs = startsAt.getTime() + Math.max(0, params.duration) * 60_000;
+	const isLocked = nowMs < unlockAtMs;
+	const secondsUntilUnlock = isLocked ? Math.max(1, Math.ceil((unlockAtMs - nowMs) / 1000)) : 0;
+
+	return {
+		isLocked,
+		secondsUntilUnlock,
+		unlockAtMs,
+	};
+}
+
 export function isExamScheduledForFuture(params: { openStatus: boolean; scheduledDate: string; startTime: string }) {
 	const startsAt = parseScheduleDateTime(params.scheduledDate, params.startTime);
 	if (!startsAt) {
