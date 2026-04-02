@@ -5,7 +5,7 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import { useAuth } from "@clerk/nextjs";
 import { CalendarDays, ChevronDown, Clock3, Plus, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { TeacherMaterialCard } from "../_component/TeacherMaterialCard";
 import {
   subjectTabs,
