@@ -8,6 +8,7 @@ import type {
   NativeCaptureStateEvent,
   NativeFaceCountEvent,
   NativeFaceEvent,
+  NormalizedFaceCount,
   NativeRecordingEvent,
 } from "@/security/types";
 
@@ -79,6 +80,18 @@ function getEventTimestamp(event: { ts: number }) {
   return typeof event.ts === "number" ? event.ts : Date.now();
 }
 
+function normalizeFaceCount(faceCount: number): NormalizedFaceCount {
+  if (faceCount <= 0) {
+    return 0;
+  }
+
+  if (faceCount === 1) {
+    return 1;
+  }
+
+  return 2;
+}
+
 export function subscribeCaptureState(listener: (event: CaptureStateSnapshot) => void): NativeSubscription {
   if (!nativeModule) {
     return {
@@ -110,9 +123,17 @@ export function subscribeFaceEvents(listener: (event: NativeFaceCountEvent) => v
     };
   }
 
-  const subscription = nativeModule.addListener?.("onFaceCountChanged", listener) ?? {
-    remove() {},
-  };
+  const subscription =
+    nativeModule.addListener?.("onFaceCountChanged", (event: NativeFaceCountEvent) => {
+      listener({
+        faceCount: normalizeFaceCount(event.faceCount),
+        supported: event.supported !== false,
+        integrityEvent: event.integrityEvent ?? null,
+        ts: getEventTimestamp(event),
+      });
+    }) ?? {
+      remove() {},
+    };
   return {
     remove() {
       subscription.remove();
@@ -134,14 +155,13 @@ export function addNativeRecordingListener(
 export function addNativeFaceListener(listener: (event: NativeFaceEvent) => void): NativeSubscription {
   return subscribeFaceEvents((event) => {
     listener({
-      status:
-        event.faceCount < 0
-          ? "unsupported"
-          : event.faceCount === 0
-            ? "no_face"
-            : event.faceCount === 1
-              ? "single_face"
-              : "multiple_faces",
+      status: !event.supported
+        ? "unsupported"
+        : event.faceCount === 0
+          ? "no_face"
+          : event.faceCount === 1
+            ? "single_face"
+            : "multiple_faces",
       timestamp: getEventTimestamp(event),
     });
   });

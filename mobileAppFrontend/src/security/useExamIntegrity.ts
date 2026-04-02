@@ -1,6 +1,7 @@
 import { usePreventScreenCapture, useScreenshotListener } from "expo-screen-capture";
 import { AppState } from "react-native";
 import { useEffect, useRef, useState } from "react";
+import { useFaceIntegrity } from "@/hooks/useFaceIntegrity";
 import {
   disableSecureSnapshot,
   enableSecureSnapshot,
@@ -12,7 +13,6 @@ import {
   stopNativeSecureExamMonitoring,
 } from "@/security/native-secure-exam";
 import { appendViolationLog, listViolationLogsForExam } from "@/security/violation-log";
-import { createFaceIntegrityService } from "@/security/face-integrity";
 import { createSessionIntegrity } from "@/security/session-integrity";
 import type { NativeFaceStatus, ViolationLog, ViolationType } from "@/security/types";
 
@@ -29,7 +29,11 @@ export function useExamIntegrity({ userId, examId, onAutoSubmit }: UseExamIntegr
   const [violationLogs, setViolationLogs] = useState<ViolationLog[]>([]);
   const [warningMessage, setWarningMessage] = useState("");
   const [recordingBlurActive, setRecordingBlurActive] = useState(false);
-  const [faceStatus, setFaceStatus] = useState<NativeFaceStatus>("unsupported");
+  const {
+    faceStatus,
+    lastViolation: lastFaceViolation,
+    nativeMonitoringAvailable,
+  } = useFaceIntegrity();
 
   const leaveCountRef = useRef(0);
   const appStateRef = useRef(AppState.currentState);
@@ -41,6 +45,7 @@ export function useExamIntegrity({ userId, examId, onAutoSubmit }: UseExamIntegr
   const overlayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionReplaceHandledRef = useRef(false);
   const lastCaptureStateRef = useRef<boolean | null>(null);
+  const lastHandledFaceViolationTsRef = useRef(0);
 
   usePreventScreenCapture(`exam-${examId}`);
 
@@ -78,6 +83,12 @@ export function useExamIntegrity({ userId, examId, onAutoSubmit }: UseExamIntegr
       setViolationLogs(existing);
     })();
   }, [examId, userId]);
+
+  useEffect(() => {
+    noFaceStartedAtRef.current = null;
+    noFaceViolationCountRef.current = 0;
+    lastHandledFaceViolationTsRef.current = 0;
+  }, [examId]);
 
   useEffect(() => {
     void enableSecureSnapshot().catch(() => {});
@@ -176,36 +187,63 @@ export function useExamIntegrity({ userId, examId, onAutoSubmit }: UseExamIntegr
       });
     })();
 
-    const faceIntegrity = createFaceIntegrityService({
-      onStatusChange: setFaceStatus,
-    });
-    const removeFaceViolationListener = faceIntegrity.onFaceViolation((violation) => {
-      if (violation.type === "multiple_faces") {
-        showWarning("Олон нүүр илэрлээ. Энэ үйлдэл зөрчлийн бүртгэлд хадгалагдлаа.");
-        void pushViolation("multi_face");
-        return;
-      }
-
-      noFaceViolationCountRef.current += 1;
-      noFaceStartedAtRef.current = null;
-      showWarning(
-        noFaceViolationCountRef.current > 1
-          ? "Нүүр олон дахин алдагдлаа. Энэ үйлдэл зөрчлийн бүртгэлд хадгалагдлаа."
-          : "5 секундээс илүү хугацаанд нүүр илрээгүй байна.",
-      );
-      void pushViolation("no_face", violation.duration);
-    });
-    void faceIntegrity.startFaceMonitoring().catch(() => {});
-
     return () => {
       recordingSubscription.remove();
-      removeFaceViolationListener();
       lastCaptureStateRef.current = null;
-      void faceIntegrity.stopFaceMonitoring().catch(() => {});
       void setNativeSensitiveBlurEnabled(false).catch(() => {});
       void stopNativeSecureExamMonitoring().catch(() => {});
     };
   }, [examId, onAutoSubmit, userId]);
+
+  useEffect(() => {
+    if (!lastFaceViolation) {
+      return;
+    }
+
+    if (lastFaceViolation.timestamp <= lastHandledFaceViolationTsRef.current) {
+      return;
+    }
+
+    lastHandledFaceViolationTsRef.current = lastFaceViolation.timestamp;
+
+    if (lastFaceViolation.type === "NO_FACE") {
+      if (!noFaceStartedAtRef.current) {
+        noFaceStartedAtRef.current = lastFaceViolation.timestamp;
+      }
+      return;
+    }
+
+    if (lastFaceViolation.type === "MULTIPLE_FACES") {
+      showWarning("Олон нүүр илэрлээ. Энэ үйлдэл зөрчлийн бүртгэлд хадгалагдлаа.");
+      void pushViolation("multi_face");
+      return;
+    }
+
+    if (!noFaceStartedAtRef.current) {
+      return;
+    }
+
+    const duration = Math.max(lastFaceViolation.timestamp - noFaceStartedAtRef.current, 0);
+    noFaceStartedAtRef.current = null;
+
+    if (duration < 5000) {
+      return;
+    }
+
+    noFaceViolationCountRef.current += 1;
+    showWarning(
+      noFaceViolationCountRef.current > 1
+        ? "Нүүр олон дахин алдагдлаа. Энэ үйлдэл зөрчлийн бүртгэлд хадгалагдлаа."
+        : "5 секундээс илүү хугацаанд нүүр илрээгүй байна.",
+    );
+    void pushViolation("no_face", duration);
+  }, [lastFaceViolation]);
+
+  useEffect(() => {
+    if (faceStatus === "unsupported" || faceStatus === "checking") {
+      noFaceStartedAtRef.current = null;
+    }
+  }, [faceStatus]);
 
   useEffect(() => {
     const sessionIntegrity = createSessionIntegrity({
@@ -247,6 +285,6 @@ export function useExamIntegrity({ userId, examId, onAutoSubmit }: UseExamIntegr
     warningMessage,
     recordingBlurActive,
     faceStatus,
-    nativeMonitoringAvailable: isNativeSecureExamAvailable,
+    nativeMonitoringAvailable,
   };
 }

@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { useKeepAwake } from "expo-keep-awake";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -79,11 +79,79 @@ export default function TakeExamScreen() {
     leaveCount,
     warningMessage,
     recordingBlurActive,
+    faceStatus,
+    nativeMonitoringAvailable,
   } = useExamIntegrity({
     userId: student.id,
     examId,
     onAutoSubmit: handleAutoSubmit,
   });
+
+  const faceMonitor = useMemo(() => {
+    if (!nativeMonitoringAvailable) {
+      return {
+        icon: "camera-off-outline" as const,
+        label: "Камерын хяналт байхгүй",
+        helper: "Энэ функц зөвхөн iOS development build дээр бүрэн ажиллана.",
+        backgroundColor: "#FFF7E7",
+        borderColor: "#F3D7A3",
+        textColor: "#8A5A00",
+      };
+    }
+
+    if (faceStatus === "single_face") {
+      return {
+        icon: "account-check-outline" as const,
+        label: "1 хүн илэрсэн",
+        helper: "Камерын хяналт хэвийн ажиллаж байна.",
+        backgroundColor: "#F0FAF4",
+        borderColor: "#C7E9D6",
+        textColor: "#2D7D46",
+      };
+    }
+
+    if (faceStatus === "no_face") {
+      return {
+        icon: "account-alert-outline" as const,
+        label: "Хүн алга",
+        helper: "Камерт зөвхөн 1 хүн тод харагдаж байх ёстой.",
+        backgroundColor: "#FFF7E7",
+        borderColor: "#F3D7A3",
+        textColor: "#8A5A00",
+      };
+    }
+
+    if (faceStatus === "multiple_faces") {
+      return {
+        icon: "account-multiple-outline" as const,
+        label: "2+ хүн илэрсэн",
+        helper: "Олон хүн илэрвэл зөрчилд бүртгэгдэнэ.",
+        backgroundColor: "#FFF7F7",
+        borderColor: colors.dangerBorder,
+        textColor: colors.dangerText,
+      };
+    }
+
+    if (faceStatus === "unsupported") {
+      return {
+        icon: "camera-off-outline" as const,
+        label: "Камерын хяналт идэвхжсэнгүй",
+        helper: "Camera permission болон iOS development build-ээ шалгана уу.",
+        backgroundColor: "#FFF7F7",
+        borderColor: colors.dangerBorder,
+        textColor: colors.dangerText,
+      };
+    }
+
+    return {
+      icon: "camera-outline" as const,
+      label: "Камер шалгаж байна",
+      helper: "Царай илрүүлэлт идэвхжиж байна.",
+      backgroundColor: "#F6F1FF",
+      borderColor: "#DCD5FA",
+      textColor: colors.primaryDark,
+    };
+  }, [faceStatus, nativeMonitoringAvailable]);
 
   useEffect(() => {
     answersRef.current = answers;
@@ -338,6 +406,35 @@ export default function TakeExamScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <View
+          style={[
+            styles.faceMonitorCard,
+            {
+              backgroundColor: faceMonitor.backgroundColor,
+              borderColor: faceMonitor.borderColor,
+            },
+          ]}
+        >
+          <View style={styles.faceMonitorRow}>
+            <MaterialCommunityIcons
+              name={faceMonitor.icon}
+              size={18}
+              color={faceMonitor.textColor}
+            />
+            <SecureText
+              style={[
+                styles.faceMonitorLabel,
+                { color: faceMonitor.textColor },
+              ]}
+            >
+              {faceMonitor.label}
+            </SecureText>
+          </View>
+          <SecureText style={styles.faceMonitorHelper}>
+            {faceMonitor.helper}
+          </SecureText>
+        </View>
+
         {leaveCount > 0 ? (
           <StatusCard
             tone="warning"
@@ -460,6 +557,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 22,
     paddingBottom: 110,
+  },
+  faceMonitorCard: {
+    marginBottom: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  faceMonitorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  faceMonitorLabel: {
+    fontFamily: fonts.sans.semibold,
+    fontSize: 14,
+  },
+  faceMonitorHelper: {
+    marginTop: 6,
+    fontFamily: fonts.sans.regular,
+    fontSize: 13,
+    lineHeight: 20,
+    color: colors.textMuted,
   },
   questionStack: {
     gap: 22,

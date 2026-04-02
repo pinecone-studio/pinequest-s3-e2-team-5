@@ -26,6 +26,7 @@ public final class SecureExamGuardModule: Module {
 
   private var sensitiveOverlay: UIVisualEffectView?
   private var faceStream: SecureExamFaceStream?
+  private var lastEmittedNormalizedFaceCount: Int?
 
   private var keyWindow: UIWindow? {
     UIApplication.shared.connectedScenes
@@ -258,18 +259,48 @@ public final class SecureExamGuardModule: Module {
   private func startFaceStreamInternal() {
     if faceStream == nil {
       faceStream = SecureExamFaceStream { [weak self] faceCount, ts in
-        self?.sendEvent(self?.faceEventName ?? "onFaceCountChanged", [
-          "faceCount": faceCount,
-          "ts": ts,
-        ])
+        self?.sendEvent(self?.faceEventName ?? "onFaceCountChanged", self?.makeFacePayload(faceCount: faceCount, ts: ts) ?? [:])
       }
     }
 
+    lastEmittedNormalizedFaceCount = nil
     faceStream?.start()
   }
 
   private func stopFaceStreamInternal() {
     faceStream?.stop()
     faceStream = nil
+    lastEmittedNormalizedFaceCount = nil
+  }
+
+  private func makeFacePayload(faceCount: Int, ts: Double) -> [String: Any] {
+    let isSupported = faceCount >= 0
+    let normalizedFaceCount = isSupported ? min(max(faceCount, 0), 2) : 0
+    let previousFaceCount = lastEmittedNormalizedFaceCount
+    let integrityEvent: String?
+
+    if !isSupported {
+      integrityEvent = nil
+      lastEmittedNormalizedFaceCount = nil
+    } else if normalizedFaceCount == 0 {
+      integrityEvent = "NO_FACE"
+      lastEmittedNormalizedFaceCount = normalizedFaceCount
+    } else if normalizedFaceCount >= 2 {
+      integrityEvent = "MULTIPLE_FACES"
+      lastEmittedNormalizedFaceCount = normalizedFaceCount
+    } else if let previousFaceCount, previousFaceCount != 1 {
+      integrityEvent = "FACE_RETURNED"
+      lastEmittedNormalizedFaceCount = normalizedFaceCount
+    } else {
+      integrityEvent = nil
+      lastEmittedNormalizedFaceCount = normalizedFaceCount
+    }
+
+    return [
+      "faceCount": normalizedFaceCount,
+      "supported": isSupported,
+      "integrityEvent": integrityEvent ?? NSNull(),
+      "ts": ts,
+    ]
   }
 }

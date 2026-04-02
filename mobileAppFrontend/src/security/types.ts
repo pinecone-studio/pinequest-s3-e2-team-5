@@ -6,6 +6,13 @@ export type ViolationType =
   | "screenshot"
   | "session_replaced";
 
+export type NormalizedFaceCount = 0 | 1 | 2;
+
+export type NativeFaceIntegrityEventType =
+  | "NO_FACE"
+  | "MULTIPLE_FACES"
+  | "FACE_RETURNED";
+
 export type ViolationLog = {
   id: string;
   userId: string;
@@ -15,7 +22,12 @@ export type ViolationLog = {
   duration: number;
 };
 
-export type NativeFaceStatus = "single_face" | "no_face" | "multiple_faces" | "unsupported";
+export type NativeFaceStatus =
+  | "checking"
+  | "single_face"
+  | "no_face"
+  | "multiple_faces"
+  | "unsupported";
 
 export type NativeRecordingEvent = {
   isCaptured: boolean;
@@ -33,8 +45,16 @@ export type NativeFaceEvent = {
 };
 
 export type NativeFaceCountEvent = {
-  faceCount: number;
+  faceCount: NormalizedFaceCount;
+  supported: boolean;
+  integrityEvent: NativeFaceIntegrityEventType | null;
   ts: number;
+};
+
+export type NativeFaceIntegrityEvent = {
+  type: NativeFaceIntegrityEventType;
+  faceCount: NormalizedFaceCount;
+  timestamp: number;
 };
 
 export type CaptureStateSnapshot = {
