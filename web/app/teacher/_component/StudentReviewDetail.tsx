@@ -26,6 +26,14 @@ type TeacherStudentSubmissionDetailData = {
     startedAt: number;
     submittedAt: number;
     reasonForTermination: string | null;
+    hasIntegrityViolation: boolean;
+    integrityReason:
+      | "BACKGROUND"
+      | "SESSION_REPLACED"
+      | "NO_FACE"
+      | "MULTIPLE_FACES"
+      | null;
+    integrityMessage: string | null;
     answers: {
       questionId: string;
       order: number;
@@ -61,6 +69,9 @@ const GET_TEACHER_STUDENT_SUBMISSION_DETAIL = gql`
       startedAt
       submittedAt
       reasonForTermination
+      hasIntegrityViolation
+      integrityReason
+      integrityMessage
       exam {
         id
         title
@@ -160,6 +171,23 @@ function formatTimestamp(timestamp: number) {
   )}.${String(date.getDate()).padStart(2, "0")} ${String(
     date.getHours(),
   ).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+function getIntegrityReasonLabel(
+  reason: TeacherStudentSubmissionDetailData["teacherStudentSubmissionDetail"]["integrityReason"],
+) {
+  switch (reason) {
+    case "BACKGROUND":
+      return "Аппаас гарсан";
+    case "SESSION_REPLACED":
+      return "Төхөөрөмж солигдсон";
+    case "NO_FACE":
+      return "Нүүр илрээгүй";
+    case "MULTIPLE_FACES":
+      return "Олон нүүр илэрсэн";
+    default:
+      return "Зөрчил";
+  }
 }
 
 function getPercentRingStyle(percent: number) {
@@ -285,6 +313,22 @@ export function StudentReviewDetail({
                   </div>
                 </div>
               </div>
+
+              {detail.hasIntegrityViolation ? (
+                <div className="mt-4 rounded-[16px] border border-[#F1C7C4] bg-[#FFF6F5] p-4">
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-[#E86A61]/12 px-3 py-1 text-[12px] font-semibold text-[#C94A41]">
+                      Зөрчил
+                    </span>
+                    <span className="text-[13px] font-medium text-[#B24B44]">
+                      {getIntegrityReasonLabel(detail.integrityReason)}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-[14px] leading-6 text-[#7D3A36]">
+                    {detail.integrityMessage ?? "Integrity зөрчлийн улмаас шалгалт автоматаар илгээгдсэн."}
+                  </p>
+                </div>
+              ) : null}
             </div>
 
             <div className="rounded-[18px] border border-[#E8E2F1] bg-white p-4 shadow-[0_4px_12px_rgba(53,31,107,0.04)]">

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import teacherHome from "/public/teacherHome.png";
 
-export function TeacherIllustration() {
+function TeacherIllustration() {
   return (
     <div className="relative w-[413px] h-[428px] mx-auto">
           

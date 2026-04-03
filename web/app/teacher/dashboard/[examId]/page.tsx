@@ -30,6 +30,13 @@ type TeacherExamAnalyticsData = {
       submittedAt: number;
       durationMinutes: number;
       reasonForTermination: string | null;
+      hasIntegrityViolation: boolean;
+      integrityReason:
+        | "BACKGROUND"
+        | "SESSION_REPLACED"
+        | "NO_FACE"
+        | "MULTIPLE_FACES"
+        | null;
     }[];
   };
 };
@@ -52,10 +59,29 @@ const GET_TEACHER_EXAM_ANALYTICS = gql`
         submittedAt
         durationMinutes
         reasonForTermination
+        hasIntegrityViolation
+        integrityReason
       }
     }
   }
 `;
+
+function getIntegrityReasonLabel(
+  reason: TeacherExamAnalyticsData["teacherExamAnalytics"]["students"][number]["integrityReason"],
+) {
+  switch (reason) {
+    case "BACKGROUND":
+      return "Аппаас гарсан";
+    case "SESSION_REPLACED":
+      return "Session солигдсон";
+    case "NO_FACE":
+      return "Нүүр алга";
+    case "MULTIPLE_FACES":
+      return "Олон нүүр";
+    default:
+      return "Зөрчил";
+  }
+}
 
 export default function TeacherExamAnalysisPage() {
   const params = useParams<{ examId: string }>();
@@ -167,7 +193,14 @@ export default function TeacherExamAnalysisPage() {
               }`}
             >
               <span>{index + 1}</span>
-              <span className="font-medium">{student.name}</span>
+              <div className="flex flex-col gap-1">
+                <span className="font-medium">{student.name}</span>
+                {student.hasIntegrityViolation ? (
+                  <span className="inline-flex w-fit rounded-full bg-[#FFF1F0] px-2.5 py-1 text-[12px] font-semibold text-[#C84C43]">
+                    Зөрчил: {getIntegrityReasonLabel(student.integrityReason)}
+                  </span>
+                ) : null}
+              </div>
               <span>{student.section}</span>
               <span>{student.score}</span>
               <span>{student.percent}%</span>

@@ -293,6 +293,9 @@ export const examQuery = {
 						submittedAt: submission.submittedAt,
 						durationMinutes: Math.max(1, Math.round((submission.submittedAt - submission.startedAt) / 60000)),
 						reasonForTermination: submission.reasonForTermination ?? null,
+						hasIntegrityViolation: Boolean(submission.integrityReason),
+						integrityReason: submission.integrityReason,
+						integrityMessage: submission.integrityMessage,
 					};
 				}),
 			);
@@ -379,6 +382,9 @@ export const examQuery = {
 				startedAt: submission.startedAt,
 				submittedAt: submission.submittedAt,
 				reasonForTermination: submission.reasonForTermination ?? null,
+				hasIntegrityViolation: Boolean(submission.integrityReason),
+				integrityReason: submission.integrityReason,
+				integrityMessage: submission.integrityMessage,
 				answers: await Promise.all(questions.map(async (question) => {
 					const answer = answerRows.find((row) => row.questionId === question.id);
 					const correctChoiceId = question.type === 'mcq' ? (question.choices.find((choice) => choice.isCorrect)?.id ?? null) : null;

@@ -20,6 +20,25 @@ function getGradeFromClassName(className: string) {
 	return match ? match[1] : className;
 }
 
+type SubmissionIntegrityReason =
+	| "BACKGROUND"
+	| "SESSION_REPLACED"
+	| "NO_FACE"
+	| "MULTIPLE_FACES";
+
+function buildIntegrityMessage(reason: SubmissionIntegrityReason) {
+	switch (reason) {
+		case "BACKGROUND":
+			return "Сурагч 5 секундээс илүү апп-аас гарсан тул шалгалтыг автоматаар илгээсэн.";
+		case "SESSION_REPLACED":
+			return "Өөр төхөөрөмжөөс шалгалтын төлөв орлогдсон тул шалгалтыг автоматаар илгээсэн.";
+		case "NO_FACE":
+			return "Нүүр 5 секундээс илүү хугацаанд илрээгүй тул шалгалтыг автоматаар илгээсэн.";
+		case "MULTIPLE_FACES":
+			return "Олон нүүр 7 секундээс илүү хугацаанд илэрсэн тул шалгалтыг автоматаар илгээсэн.";
+	}
+}
+
 export const studentMutation = {
 	Mutation: {
 		upsertStudent: async (
@@ -139,14 +158,17 @@ export const studentMutation = {
 		submitStudentExam: async (
 			_: unknown,
 			args: {
-					input: {
-						examId: string;
-						startedAt?: number | null;
-						tabSwitchCount?: number | null;
-						answers: {
-							questionId: string;
-							selectedChoiceId?: string | null;
-							answerText?: string | null;
+				input: {
+					examId: string;
+					startedAt?: number | null;
+					tabSwitchCount?: number | null;
+					integrityIncident?: {
+						reason: SubmissionIntegrityReason;
+					} | null;
+					answers: {
+						questionId: string;
+						selectedChoiceId?: string | null;
+						answerText?: string | null;
 					}[];
 				};
 			},
@@ -237,6 +259,10 @@ export const studentMutation = {
 			const submissionId = crypto.randomUUID();
 			const startedAt = args.input.startedAt ?? Date.now();
 			const submittedAt = Date.now();
+			const integrityReason = args.input.integrityIncident?.reason ?? null;
+			const integrityMessage = integrityReason
+				? buildIntegrityMessage(integrityReason)
+				: null;
 
 			const answerRows = examQuestions.map((question) => {
 				const inputAnswer = inputAnswers.get(question.id);
@@ -289,6 +315,8 @@ export const studentMutation = {
 				correctAnswers,
 				scorePercent,
 				tabSwitchCount,
+				integrityReason,
+				integrityMessage,
 			});
 
 			await context.db.insert(studentExamAnswers).values(answerRows);

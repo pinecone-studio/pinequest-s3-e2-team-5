@@ -19,12 +19,21 @@ import {
   getStudentExamPresentation,
 } from "@/lib/student-exam";
 import { shuffleQuestionsForUser } from "@/security/question-order";
+import type { IntegrityAutoSubmitReason } from "@/security/types";
 import { useExamIntegrity } from "@/security/useExamIntegrity";
 
 function getRemainingSeconds(durationMinutes: number, startedAt: number) {
   const expiresAt = startedAt + durationMinutes * 60 * 1000;
   return Math.max(Math.floor((expiresAt - Date.now()) / 1000), 0);
 }
+
+type SubmitSource =
+  | "manual"
+  | "auto"
+  | "background"
+  | "session_replaced"
+  | "no_face"
+  | "multiple_faces";
 
 export default function TakeExamScreen() {
   const params = useLocalSearchParams<{ examId: string }>();
@@ -41,9 +50,7 @@ export default function TakeExamScreen() {
   const autoSubmittedRef = useRef(false);
   const answersRef = useRef<Record<string, StudentAnswerDraft>>({});
   const startedAtRef = useRef<number | null>(null);
-  const submitExamRef = useRef<
-    (source: "manual" | "auto" | "background" | "session_replaced") => Promise<void>
-  >(async () => {});
+  const submitExamRef = useRef<(source: SubmitSource) => Promise<void>>(async () => {});
   const exam = getExamById(examId);
   const subjectOrder = useMemo(
     () => buildStudentExamSubjectOrder(exam ? [...availableExams, exam] : availableExams),
@@ -65,10 +72,13 @@ export default function TakeExamScreen() {
   );
 
   const handleAutoSubmit = useCallback(
-    async (reason: "timer" | "background" | "session_replaced") => {
-      await submitExamRef.current(
-        reason === "timer" ? "auto" : reason === "session_replaced" ? "session_replaced" : "background",
-      );
+    async (reason: "timer" | IntegrityAutoSubmitReason) => {
+      if (reason === "timer") {
+        await submitExamRef.current("auto");
+        return;
+      }
+
+      await submitExamRef.current(reason);
     },
     [],
   );
@@ -250,9 +260,7 @@ export default function TakeExamScreen() {
     };
   }, [answers, exam, isRestoring, startedAt]);
 
-  submitExamRef.current = async (
-    source: "manual" | "auto" | "background" | "session_replaced",
-  ) => {
+  submitExamRef.current = async (source: SubmitSource) => {
     if (!exam || !startedAtRef.current) {
       return;
     }
@@ -269,6 +277,13 @@ export default function TakeExamScreen() {
           selectedChoiceId: answersRef.current[question.id]?.selectedChoiceId ?? null,
           answerText: null,
         })),
+        integrityReason:
+          source === "background" ||
+          source === "session_replaced" ||
+          source === "no_face" ||
+          source === "multiple_faces"
+            ? source
+            : undefined,
       });
 
       await clearExamDraft(exam.id);
@@ -281,6 +296,10 @@ export default function TakeExamScreen() {
             ? "Өөр төхөөрөмжөөс шалгалтын төлөв солигдсон тул автоматаар илгээхэд алдаа гарлаа."
           : source === "background"
             ? "Та аппаас удаан гарсан тул автоматаар илгээхэд алдаа гарлаа."
+            : source === "no_face"
+              ? "Нүүр 5 секундээс илүү алдагдсан тул автоматаар илгээхэд алдаа гарлаа."
+            : source === "multiple_faces"
+              ? "Олон нүүр 7 секундээс илүү илэрсэн тул автоматаар илгээхэд алдаа гарлаа."
             : source === "auto"
               ? "Хугацаа дууссан ч шалгалтыг автоматаар илгээж чадсангүй."
               : "Шалгалт илгээхэд алдаа гарлаа.",

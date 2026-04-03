@@ -22,6 +22,9 @@ export const classroomTypeDefs = gql`
         percent: Int
         durationMinutes: Int
         submittedAt: Float
+        hasIntegrityViolation: Boolean!
+        integrityReason: SubmissionIntegrityReason
+        integrityMessage: String
     }
 
     type TeacherClassroomDetail {

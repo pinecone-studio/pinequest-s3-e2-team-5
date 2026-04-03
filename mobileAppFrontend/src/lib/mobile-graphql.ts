@@ -1,4 +1,5 @@
 import type { Exam, Submission, StudentProfile } from "@/data/types";
+import type { IntegrityAutoSubmitReason } from "@/security/types";
 
 type MobileRemoteConfig = {
   graphqlUrl: string;
@@ -502,6 +503,19 @@ function mapSubmission(payload: RemoteSubmissionDetail["studentExamSubmissionDet
   };
 }
 
+function mapIntegrityReason(reason: IntegrityAutoSubmitReason) {
+  switch (reason) {
+    case "background":
+      return "BACKGROUND";
+    case "session_replaced":
+      return "SESSION_REPLACED";
+    case "no_face":
+      return "NO_FACE";
+    case "multiple_faces":
+      return "MULTIPLE_FACES";
+  }
+}
+
 export async function fetchRemoteStudentProfile() {
   const payload = await fetchGraphql<RemoteStudentProfile>(GET_CURRENT_STUDENT);
   return mapStudentProfile(payload.studentById);
@@ -538,8 +552,22 @@ export async function submitRemoteStudentExam(input: {
   examId: string;
   startedAt: number;
   answers: { questionId: string; selectedChoiceId: string | null; answerText: string | null }[];
+  integrityReason?: IntegrityAutoSubmitReason;
 }) {
-  const payload = await fetchGraphql<SubmitStudentExamResponse>(SUBMIT_STUDENT_EXAM, { input });
+  const payload = await fetchGraphql<SubmitStudentExamResponse>(SUBMIT_STUDENT_EXAM, {
+    input: {
+      examId: input.examId,
+      startedAt: input.startedAt,
+      answers: input.answers,
+      ...(input.integrityReason
+        ? {
+            integrityIncident: {
+              reason: mapIntegrityReason(input.integrityReason),
+            },
+          }
+        : {}),
+    },
+  });
   return payload.submitStudentExam;
 }
 

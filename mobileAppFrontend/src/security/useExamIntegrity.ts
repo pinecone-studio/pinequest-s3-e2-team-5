@@ -1,6 +1,6 @@
 import { usePreventScreenCapture, useScreenshotListener } from "expo-screen-capture";
 import { AppState } from "react-native";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useFaceIntegrity } from "@/hooks/useFaceIntegrity";
 import {
   disableSecureSnapshot,
@@ -14,12 +14,15 @@ import {
 } from "@/security/native-secure-exam";
 import { appendViolationLog, listViolationLogsForExam } from "@/security/violation-log";
 import { createSessionIntegrity } from "@/security/session-integrity";
-import type { NativeFaceStatus, ViolationLog, ViolationType } from "@/security/types";
+import type { IntegrityAutoSubmitReason, NativeFaceStatus, ViolationLog, ViolationType } from "@/security/types";
+
+const NO_FACE_AUTO_SUBMIT_MS = 5000;
+const MULTIPLE_FACES_AUTO_SUBMIT_MS = 7000;
 
 type UseExamIntegrityOptions = {
   userId: string;
   examId: string;
-  onAutoSubmit: (reason: "timer" | "background" | "session_replaced") => Promise<void>;
+  onAutoSubmit: (reason: "timer" | IntegrityAutoSubmitReason) => Promise<void>;
 };
 
 export function useExamIntegrity({ userId, examId, onAutoSubmit }: UseExamIntegrityOptions) {
@@ -29,27 +32,25 @@ export function useExamIntegrity({ userId, examId, onAutoSubmit }: UseExamIntegr
   const [violationLogs, setViolationLogs] = useState<ViolationLog[]>([]);
   const [warningMessage, setWarningMessage] = useState("");
   const [recordingBlurActive, setRecordingBlurActive] = useState(false);
-  const {
-    faceStatus,
-    lastViolation: lastFaceViolation,
-    nativeMonitoringAvailable,
-  } = useFaceIntegrity();
+  const { faceStatus, nativeMonitoringAvailable } = useFaceIntegrity();
 
   const leaveCountRef = useRef(0);
   const appStateRef = useRef(AppState.currentState);
   const backgroundStartedAtRef = useRef<number | null>(null);
   const recordingStartedAtRef = useRef<number | null>(null);
+  const currentFaceStatusRef = useRef<NativeFaceStatus>(faceStatus);
   const noFaceStartedAtRef = useRef<number | null>(null);
-  const noFaceViolationCountRef = useRef(0);
+  const noFaceAutoSubmitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const multipleFacesStartedAtRef = useRef<number | null>(null);
+  const multipleFacesAutoSubmitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoSubmitInFlightRef = useRef(false);
   const overlayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionReplaceHandledRef = useRef(false);
   const lastCaptureStateRef = useRef<boolean | null>(null);
-  const lastHandledFaceViolationTsRef = useRef(0);
 
   usePreventScreenCapture(`exam-${examId}`);
 
-  const showWarning = (message: string, durationMs = 2600) => {
+  const showWarning = useCallback((message: string, durationMs = 2600) => {
     setWarningMessage(message);
 
     if (overlayTimerRef.current) {
@@ -60,9 +61,9 @@ export function useExamIntegrity({ userId, examId, onAutoSubmit }: UseExamIntegr
       setWarningMessage("");
       overlayTimerRef.current = null;
     }, durationMs);
-  };
+  }, []);
 
-  const pushViolation = async (type: ViolationType, duration = 0) => {
+  const pushViolation = useCallback(async (type: ViolationType, duration = 0) => {
     const log = await appendViolationLog({
       userId,
       examId,
@@ -75,7 +76,7 @@ export function useExamIntegrity({ userId, examId, onAutoSubmit }: UseExamIntegr
     if (type === "recording") {
       setRecordingCount((current) => current + 1);
     }
-  };
+  }, [examId, userId]);
 
   useEffect(() => {
     void (async () => {
@@ -85,9 +86,91 @@ export function useExamIntegrity({ userId, examId, onAutoSubmit }: UseExamIntegr
   }, [examId, userId]);
 
   useEffect(() => {
+    currentFaceStatusRef.current = faceStatus;
+  }, [faceStatus]);
+
+  const clearNoFaceWatch = useCallback(() => {
     noFaceStartedAtRef.current = null;
-    noFaceViolationCountRef.current = 0;
-    lastHandledFaceViolationTsRef.current = 0;
+
+    if (noFaceAutoSubmitTimerRef.current) {
+      clearTimeout(noFaceAutoSubmitTimerRef.current);
+      noFaceAutoSubmitTimerRef.current = null;
+    }
+  }, []);
+
+  const clearMultipleFacesWatch = useCallback(() => {
+    multipleFacesStartedAtRef.current = null;
+
+    if (multipleFacesAutoSubmitTimerRef.current) {
+      clearTimeout(multipleFacesAutoSubmitTimerRef.current);
+      multipleFacesAutoSubmitTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    sessionReplaceHandledRef.current = false;
+    autoSubmitInFlightRef.current = false;
+    clearNoFaceWatch();
+    clearMultipleFacesWatch();
+  }, [clearMultipleFacesWatch, clearNoFaceWatch, examId]);
+
+  useEffect(() => {
+    if (faceStatus !== "no_face") {
+      clearNoFaceWatch();
+    }
+
+    if (faceStatus !== "multiple_faces") {
+      clearMultipleFacesWatch();
+    }
+
+    if (faceStatus === "no_face" && !noFaceAutoSubmitTimerRef.current) {
+      const startedAt = Date.now();
+      noFaceStartedAtRef.current = startedAt;
+      showWarning("Нүүр илрэхгүй байна. 5 секунд үргэлжилбэл шалгалтыг автоматаар илгээнэ.");
+
+      noFaceAutoSubmitTimerRef.current = setTimeout(() => {
+        noFaceAutoSubmitTimerRef.current = null;
+
+        if (currentFaceStatusRef.current !== "no_face" || autoSubmitInFlightRef.current) {
+          return;
+        }
+
+        const duration = Math.max(Date.now() - startedAt, NO_FACE_AUTO_SUBMIT_MS);
+        autoSubmitInFlightRef.current = true;
+        void pushViolation("no_face", duration);
+        showWarning("5 секундээс илүү хугацаанд нүүр илрээгүй тул шалгалтыг автоматаар илгээнэ.");
+        void onAutoSubmit("no_face").finally(() => {
+          autoSubmitInFlightRef.current = false;
+        });
+      }, NO_FACE_AUTO_SUBMIT_MS);
+    }
+
+    if (faceStatus === "multiple_faces" && !multipleFacesAutoSubmitTimerRef.current) {
+      const startedAt = Date.now();
+      multipleFacesStartedAtRef.current = startedAt;
+      showWarning("Олон нүүр илэрлээ. 7 секунд үргэлжилбэл шалгалтыг автоматаар илгээнэ.");
+
+      multipleFacesAutoSubmitTimerRef.current = setTimeout(() => {
+        multipleFacesAutoSubmitTimerRef.current = null;
+
+        if (currentFaceStatusRef.current !== "multiple_faces" || autoSubmitInFlightRef.current) {
+          return;
+        }
+
+        const duration = Math.max(Date.now() - startedAt, MULTIPLE_FACES_AUTO_SUBMIT_MS);
+        autoSubmitInFlightRef.current = true;
+        void pushViolation("multi_face", duration);
+        showWarning("7 секундээс илүү хугацаанд олон нүүр илэрсэн тул шалгалтыг автоматаар илгээнэ.");
+        void onAutoSubmit("multiple_faces").finally(() => {
+          autoSubmitInFlightRef.current = false;
+        });
+      }, MULTIPLE_FACES_AUTO_SUBMIT_MS);
+    }
+  }, [clearMultipleFacesWatch, clearNoFaceWatch, faceStatus, onAutoSubmit, pushViolation, showWarning]);
+
+  useEffect(() => {
+    noFaceStartedAtRef.current = null;
+    multipleFacesStartedAtRef.current = null;
   }, [examId]);
 
   useEffect(() => {
@@ -146,7 +229,7 @@ export function useExamIntegrity({ userId, examId, onAutoSubmit }: UseExamIntegr
     return () => {
       subscription.remove();
     };
-  }, [onAutoSubmit]);
+  }, [onAutoSubmit, pushViolation, showWarning]);
 
   useEffect(() => {
     if (!isNativeSecureExamAvailable) {
@@ -193,57 +276,7 @@ export function useExamIntegrity({ userId, examId, onAutoSubmit }: UseExamIntegr
       void setNativeSensitiveBlurEnabled(false).catch(() => {});
       void stopNativeSecureExamMonitoring().catch(() => {});
     };
-  }, [examId, onAutoSubmit, userId]);
-
-  useEffect(() => {
-    if (!lastFaceViolation) {
-      return;
-    }
-
-    if (lastFaceViolation.timestamp <= lastHandledFaceViolationTsRef.current) {
-      return;
-    }
-
-    lastHandledFaceViolationTsRef.current = lastFaceViolation.timestamp;
-
-    if (lastFaceViolation.type === "NO_FACE") {
-      if (!noFaceStartedAtRef.current) {
-        noFaceStartedAtRef.current = lastFaceViolation.timestamp;
-      }
-      return;
-    }
-
-    if (lastFaceViolation.type === "MULTIPLE_FACES") {
-      showWarning("Олон нүүр илэрлээ. Энэ үйлдэл зөрчлийн бүртгэлд хадгалагдлаа.");
-      void pushViolation("multi_face");
-      return;
-    }
-
-    if (!noFaceStartedAtRef.current) {
-      return;
-    }
-
-    const duration = Math.max(lastFaceViolation.timestamp - noFaceStartedAtRef.current, 0);
-    noFaceStartedAtRef.current = null;
-
-    if (duration < 5000) {
-      return;
-    }
-
-    noFaceViolationCountRef.current += 1;
-    showWarning(
-      noFaceViolationCountRef.current > 1
-        ? "Нүүр олон дахин алдагдлаа. Энэ үйлдэл зөрчлийн бүртгэлд хадгалагдлаа."
-        : "5 секундээс илүү хугацаанд нүүр илрээгүй байна.",
-    );
-    void pushViolation("no_face", duration);
-  }, [lastFaceViolation]);
-
-  useEffect(() => {
-    if (faceStatus === "unsupported" || faceStatus === "checking") {
-      noFaceStartedAtRef.current = null;
-    }
-  }, [faceStatus]);
+  }, [examId, userId, pushViolation, showWarning]);
 
   useEffect(() => {
     const sessionIntegrity = createSessionIntegrity({
@@ -257,7 +290,10 @@ export function useExamIntegrity({ userId, examId, onAutoSubmit }: UseExamIntegr
         sessionReplaceHandledRef.current = true;
         showWarning("Өөр төхөөрөмжөөс шалгалтын төлөв орлогдсон тул шалгалтыг автоматаар илгээнэ.");
         void pushViolation("session_replaced");
-        void onAutoSubmit("session_replaced");
+        autoSubmitInFlightRef.current = true;
+        void onAutoSubmit("session_replaced").finally(() => {
+          autoSubmitInFlightRef.current = false;
+        });
       },
     });
 
@@ -266,15 +302,18 @@ export function useExamIntegrity({ userId, examId, onAutoSubmit }: UseExamIntegr
     return () => {
       void sessionIntegrity.stop().catch(() => {});
     };
-  }, [examId, onAutoSubmit, userId]);
+  }, [examId, onAutoSubmit, pushViolation, showWarning, userId]);
 
   useEffect(() => {
     return () => {
+      clearNoFaceWatch();
+      clearMultipleFacesWatch();
+
       if (overlayTimerRef.current) {
         clearTimeout(overlayTimerRef.current);
       }
     };
-  }, []);
+  }, [clearMultipleFacesWatch, clearNoFaceWatch]);
 
   return {
     leaveCount,

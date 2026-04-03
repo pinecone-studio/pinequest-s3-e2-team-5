@@ -24,6 +24,7 @@ import {
   setMobileStudentInviteCode,
   submitRemoteStudentExam,
 } from "@/lib/mobile-graphql";
+import type { IntegrityAutoSubmitReason } from "@/security/types";
 
 type RemoteSnapshot = {
   student: StudentProfile;
@@ -48,6 +49,7 @@ type AppDataContextValue = {
     examId: string;
     startedAt: number;
     answers: { questionId: string; selectedChoiceId: string | null; answerText: string | null }[];
+    integrityReason?: IntegrityAutoSubmitReason;
   }) => Promise<{ id: string }>;
   resetData: () => void;
 };
@@ -370,12 +372,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setSubmissions(cachedSubmissions ?? [...seedSubmissions]);
   }, [refreshRemoteSnapshot, useRemoteData]);
 
-  const submitExam = useCallback<AppDataContextValue["submitExam"]>(async ({ examId, startedAt, answers }) => {
+  const submitExam = useCallback<AppDataContextValue["submitExam"]>(async ({ examId, startedAt, answers, integrityReason }) => {
     if (useRemoteData) {
       const submission = await submitRemoteStudentExam({
         examId,
         startedAt,
         answers,
+        integrityReason,
       });
       await refreshRemoteSnapshot();
       return { id: submission.id };

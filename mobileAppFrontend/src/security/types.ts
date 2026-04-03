@@ -6,6 +6,12 @@ export type ViolationType =
   | "screenshot"
   | "session_replaced";
 
+export type IntegrityAutoSubmitReason =
+  | "background"
+  | "session_replaced"
+  | "no_face"
+  | "multiple_faces";
+
 export type NormalizedFaceCount = 0 | 1 | 2;
 
 export type NativeFaceIntegrityEventType =

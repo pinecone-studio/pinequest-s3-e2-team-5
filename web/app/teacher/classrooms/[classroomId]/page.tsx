@@ -39,6 +39,14 @@ type TeacherClassroomDetailData = {
       percent: number | null;
       durationMinutes: number | null;
       submittedAt: number | null;
+      hasIntegrityViolation: boolean;
+      integrityReason:
+        | "BACKGROUND"
+        | "SESSION_REPLACED"
+        | "NO_FACE"
+        | "MULTIPLE_FACES"
+        | null;
+      integrityMessage: string | null;
     }[];
   };
 };
@@ -83,6 +91,9 @@ const GET_TEACHER_CLASSROOM_DETAIL = gql`
         percent
         durationMinutes
         submittedAt
+        hasIntegrityViolation
+        integrityReason
+        integrityMessage
       }
     }
   }
@@ -151,6 +162,23 @@ function formatRowValue(value: number | string | null, suffix = "") {
   }
 
   return `${value}${suffix}`;
+}
+
+function getIntegrityReasonLabel(
+  reason: TeacherClassroomDetailData["teacherClassroomDetail"]["students"][number]["integrityReason"],
+) {
+  switch (reason) {
+    case "BACKGROUND":
+      return "Аппаас гарсан";
+    case "SESSION_REPLACED":
+      return "Session солигдсон";
+    case "NO_FACE":
+      return "Нүүр алга";
+    case "MULTIPLE_FACES":
+      return "Олон нүүр";
+    default:
+      return "Зөрчил";
+  }
 }
 
 export default function TeacherClassroomDetailPage() {
@@ -323,7 +351,17 @@ export default function TeacherClassroomDetailPage() {
                   }`}
                 >
                   <span>{index + 1}</span>
-                  <span className="font-medium">{student.name}</span>
+                  <div className="flex flex-col gap-1">
+                    <span className="font-medium">{student.name}</span>
+                    {student.hasIntegrityViolation ? (
+                      <span
+                        title={student.integrityMessage ?? undefined}
+                        className="inline-flex w-fit rounded-full bg-[#FFF1F0] px-2.5 py-1 text-[11px] font-semibold text-[#C84C43]"
+                      >
+                        Зөрчил: {getIntegrityReasonLabel(student.integrityReason)}
+                      </span>
+                    ) : null}
+                  </div>
                   <span>{formatRowValue(student.score)}</span>
                   <span>{formatRowValue(student.percent, "%")}</span>
                   <span>{formatRowValue(student.durationMinutes, " мин")}</span>

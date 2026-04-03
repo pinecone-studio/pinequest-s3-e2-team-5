@@ -92,6 +92,13 @@ export const studentTypeDefs = gql`
 		choices: [StudentExamChoice!]!
 	}
 
+	enum SubmissionIntegrityReason {
+		BACKGROUND
+		SESSION_REPLACED
+		NO_FACE
+		MULTIPLE_FACES
+	}
+
 	type StudentExamSubmissionDetail {
 		id: ID!
 		examId: String!
@@ -137,11 +144,16 @@ export const studentTypeDefs = gql`
 		answerText: String
 	}
 
+	input SubmissionIntegrityIncidentInput {
+		reason: SubmissionIntegrityReason!
+	}
+
 	input SubmitStudentExamInput {
 		examId: String!
 		startedAt: Float
 		tabSwitchCount: Int
 		answers: [StudentExamAnswerInput!]!
+		integrityIncident: SubmissionIntegrityIncidentInput
 	}
 
 	type Mutation {

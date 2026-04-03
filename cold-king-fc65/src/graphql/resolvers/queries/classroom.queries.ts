@@ -114,19 +114,22 @@ export const classRoomQuery = {
 							)
 						: null;
 
-					return {
-						id: student.id,
-						studentId: student.id,
-						name: formatStudentListName(student.firstName, student.lastName),
-						score: latestSubmission
-							? `${latestSubmission.correctAnswers}/${latestSubmission.totalQuestions}`
-							: null,
-						percent: latestSubmission?.scorePercent ?? null,
-						durationMinutes,
-						submittedAt: latestSubmission?.submittedAt ?? null,
-					};
-				}),
-			};
+						return {
+							id: student.id,
+							studentId: student.id,
+							name: formatStudentListName(student.firstName, student.lastName),
+							score: latestSubmission
+								? `${latestSubmission.correctAnswers}/${latestSubmission.totalQuestions}`
+								: null,
+							percent: latestSubmission?.scorePercent ?? null,
+							durationMinutes,
+							submittedAt: latestSubmission?.submittedAt ?? null,
+							hasIntegrityViolation: Boolean(latestSubmission?.integrityReason),
+							integrityReason: latestSubmission?.integrityReason ?? null,
+							integrityMessage: latestSubmission?.integrityMessage ?? null,
+						};
+					}),
+				};
 		},
 	},
 	Classroom: {

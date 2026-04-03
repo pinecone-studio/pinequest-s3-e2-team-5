@@ -69,6 +69,9 @@ export const examTypeDefs = gql`
         submittedAt: Float!
         durationMinutes: Int!
         reasonForTermination: String
+        hasIntegrityViolation: Boolean!
+        integrityReason: SubmissionIntegrityReason
+        integrityMessage: String
     }
 
     type TeacherExamQuestionInsight {
@@ -116,6 +119,9 @@ export const examTypeDefs = gql`
         startedAt: Float!
         submittedAt: Float!
         reasonForTermination: String
+        hasIntegrityViolation: Boolean!
+        integrityReason: SubmissionIntegrityReason
+        integrityMessage: String
         answers: [TeacherStudentExamAnswer!]!
     }
 
