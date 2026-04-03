@@ -1,7 +1,15 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Image,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { SvgUri } from "react-native-svg";
 import { BrandHeader } from "@/components/BrandHeader";
@@ -17,7 +25,9 @@ import {
 } from "@/lib/student-exam";
 import { colors, fonts, shadows } from "@/lib/theme";
 
-const simplificationIllustration = Image.resolveAssetSource(require("../../../Simplification.svg"));
+const simplificationIllustration = Image.resolveAssetSource(
+  require("../../../Simplification.svg"),
+);
 
 type FeedExam = Exam & {
   isScheduledFeed: boolean;
@@ -68,7 +78,10 @@ export default function StudentHomeScreen() {
       return leftStartsAt - rightStartsAt;
     });
   }, [availableExams, scheduledExams]);
-  const subjectOrder = useMemo(() => buildStudentExamSubjectOrder(visibleExams), [visibleExams]);
+  const subjectOrder = useMemo(
+    () => buildStudentExamSubjectOrder(visibleExams),
+    [visibleExams],
+  );
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -107,12 +120,13 @@ export default function StudentHomeScreen() {
           />
         ) : (
           <View style={styles.cards}>
-            {visibleExams.map((exam) => (
+            {visibleExams.map((exam, index) => (
               <HomeExamCard
                 key={exam.id}
                 exam={exam}
                 subjectOrder={subjectOrder}
                 nowMs={nowMs}
+                stackOrder={visibleExams.length - index}
                 onPress={() => {
                   const isLocked = exam.isScheduledFeed || exam.isLocked;
 
@@ -142,11 +156,17 @@ const styles = StyleSheet.create({
   },
   cards: {
     gap: 18,
+    overflow: "visible",
+  },
+  cardShell: {
+    position: "relative",
+    overflow: "visible",
   },
   card: {
     position: "relative",
+    overflow: "visible",
     width: "100%",
-    minHeight: 264,
+    minHeight: 280,
     justifyContent: "space-between",
     borderRadius: 32,
     borderWidth: 1,
@@ -158,7 +178,7 @@ const styles = StyleSheet.create({
     opacity: 0.95,
   },
   cardLocked: {
-    opacity: 0.62,
+    opacity: 0.78,
   },
   cardTimeBadge: {
     position: "absolute",
@@ -180,35 +200,37 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   cardIcon: {
-    height: 62,
-    width: 62,
+    height: 54,
+    width: 54,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 18,
+    borderRadius: 16,
   },
   cardTop: {
+    position: "relative",
+    overflow: "visible",
     alignItems: "flex-start",
   },
   cardBottom: {
     alignItems: "flex-start",
   },
   cardTitleRow: {
-    marginTop: 18,
+    marginTop: 16,
     width: "82%",
   },
   cardTitleText: {
     fontFamily: fonts.display.semibold,
-    fontSize: 24,
+    fontSize: 21,
     color: colors.textPrimary,
   },
   cardSubject: {
     fontFamily: fonts.display.semibold,
-    fontSize: 24,
+    fontSize: 21,
     color: colors.textPrimary,
   },
   cardTopic: {
     fontFamily: fonts.sans.regular,
-    fontSize: 22,
+    fontSize: 17,
     color: colors.textMuted,
   },
   cardGrade: {
@@ -245,16 +267,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textPrimary,
   },
-  lockWrap: {
-    alignSelf: "center",
-    marginTop: 18,
-    marginBottom: 8,
-    height: 64,
-    width: 64,
+  lockOverlay: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    zIndex: 10,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.22)",
   },
   cardTime: {
     fontFamily: fonts.sans.medium,
@@ -277,11 +298,13 @@ function HomeExamCard({
   exam,
   subjectOrder,
   nowMs,
+  stackOrder,
   onPress,
 }: {
   exam: FeedExam;
   subjectOrder: string[];
   nowMs: number;
+  stackOrder: number;
   onPress: () => void;
 }) {
   const presentation = getStudentExamPresentation(exam.subject, subjectOrder);
@@ -289,69 +312,107 @@ function HomeExamCard({
   const countdownLabel = getStartsInLabel(exam.startsAtMs, nowMs);
 
   return (
-    <Pressable
-      disabled={isLocked}
-      style={({ pressed }) => [
-        styles.card,
-        {
-          backgroundColor: presentation.background,
-          borderColor: presentation.borderColor,
-        },
-        isLocked ? styles.cardLocked : null,
-        pressed ? styles.cardPressed : null,
-      ]}
-      onPress={onPress}
-    >
-      {isLocked && countdownLabel ? (
-        <View style={styles.cardTimeBadge}>
-          <Text style={styles.cardTimeBadgeText}>{countdownLabel}</Text>
-        </View>
-      ) : null}
-
-      <View style={styles.cardTop}>
-        <View style={[styles.cardIcon, { backgroundColor: presentation.iconBackground }]}>
-          <MaterialCommunityIcons name={presentation.iconName} size={22} color={colors.textPrimary} />
-        </View>
-
-        <View style={styles.cardTitleRow}>
-          <Text style={styles.cardTitleText} numberOfLines={1} ellipsizeMode="tail">
-            <Text style={styles.cardSubject}>{presentation.subjectLabel}</Text>
-            <Text style={styles.cardTopic}> /{exam.title}/</Text>
-          </Text>
-        </View>
-
-        <Text style={styles.cardGrade}>{exam.grade}</Text>
-
-        <View style={styles.cardChipRow}>
-          <View style={[styles.cardChip, styles.cardChipDuration]}>
-            <MaterialCommunityIcons name="clock-outline" size={16} color={colors.textPrimary} />
-            <Text style={styles.cardChipText}>{exam.duration} мин</Text>
-          </View>
-
-          <View style={[styles.cardChip, styles.cardChipQuestions]}>
-            <MaterialCommunityIcons name="pencil-outline" size={16} color={colors.textPrimary} />
-            <Text style={styles.cardChipText}>{exam.questionCount} дасгал</Text>
-          </View>
-        </View>
-
-        {isLocked ? (
-          <View style={styles.lockWrap}>
-            <MaterialCommunityIcons name="lock-outline" size={40} color={colors.textPrimary} />
+    <View style={[styles.cardShell, { zIndex: stackOrder }]}>
+      <Pressable
+        disabled={isLocked}
+        style={({ pressed }) => [
+          styles.card,
+          {
+            backgroundColor: presentation.background,
+            borderColor: presentation.borderColor,
+          },
+          isLocked ? styles.cardLocked : null,
+          pressed ? styles.cardPressed : null,
+        ]}
+        onPress={onPress}
+      >
+        {isLocked && countdownLabel ? (
+          <View style={styles.cardTimeBadge}>
+            <Text style={styles.cardTimeBadgeText}>{countdownLabel}</Text>
           </View>
         ) : null}
-      </View>
-      <View style={styles.cardBottom}>
-        <Text style={styles.cardTime}>
-          {isLocked ? "Эхлэх цаг" : "Эхэлсэн цаг"} -{" "}
-          <Text style={styles.cardTimeAccent}>/{formatScheduledTime(exam.startTime)}/</Text>
-        </Text>
-        <Text style={styles.cardDate}>{formatScheduledDate(exam.scheduledDate)}</Text>
-      </View>
-    </Pressable>
+
+        <View style={styles.cardTop}>
+          <View
+            style={[
+              styles.cardIcon,
+              { backgroundColor: presentation.iconBackground },
+            ]}
+          >
+            <MaterialCommunityIcons
+              name={presentation.iconName}
+              size={19}
+              color={colors.textPrimary}
+            />
+          </View>
+
+          <View style={styles.cardTitleRow}>
+            <Text
+              style={styles.cardTitleText}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              <Text style={styles.cardSubject}>
+                {presentation.subjectLabel}
+              </Text>
+              <Text style={styles.cardTopic}> /{exam.title}/</Text>
+            </Text>
+          </View>
+
+          <Text style={styles.cardGrade}>{exam.grade}</Text>
+
+          <View style={styles.cardChipRow}>
+            <View style={[styles.cardChip, styles.cardChipDuration]}>
+              <MaterialCommunityIcons
+                name="clock-outline"
+                size={14}
+                color={colors.textPrimary}
+              />
+              <Text style={styles.cardChipText}>{exam.duration} мин</Text>
+            </View>
+
+            <View style={[styles.cardChip, styles.cardChipQuestions]}>
+              <MaterialCommunityIcons
+                name="help-circle-outline"
+                size={14}
+                color={colors.textPrimary}
+              />
+              <Text style={styles.cardChipText}>
+                {exam.questionCount} дасгал
+              </Text>
+            </View>
+          </View>
+        </View>
+        <View style={styles.cardBottom}>
+          <Text style={styles.cardTime}>
+            {isLocked ? "Эхлэх цаг" : "Эхэлсэн цаг"} -{" "}
+            <Text style={styles.cardTimeAccent}>
+              /{formatScheduledTime(exam.startTime)}/
+            </Text>
+          </Text>
+          <Text style={styles.cardDate}>
+            {formatScheduledDate(exam.scheduledDate)}
+          </Text>
+        </View>
+      </Pressable>
+
+      {isLocked ? (
+        <View pointerEvents="none" style={styles.lockOverlay}>
+          <MaterialCommunityIcons
+            name="lock-outline"
+            size={34}
+            color={colors.textPrimary}
+          />
+        </View>
+      ) : null}
+    </View>
   );
 }
 
-function getStartsInLabel(startsAtMs: number | null | undefined, nowMs: number) {
+function getStartsInLabel(
+  startsAtMs: number | null | undefined,
+  nowMs: number,
+) {
   if (!startsAtMs || startsAtMs <= nowMs) {
     return null;
   }
