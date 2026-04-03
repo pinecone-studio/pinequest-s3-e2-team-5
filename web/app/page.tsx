@@ -30,9 +30,10 @@ function TeacherIllustration() {
           {/* Image */}
           <Image
             src={teacherHome}
-            alt="Student illustration"
+            alt="Teacher illustration"
             width={413}
             height={428}
+            priority
             className="
               relative
               z-10

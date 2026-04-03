@@ -7,6 +7,7 @@ import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import studentHome from "/public/studentHome.png";
 
 type FormValues = {
   email: string;
@@ -251,10 +252,11 @@ function StudentIllustration() {
         }}
       />
       <Image
-        src="/studentHome.png"
+        src={studentHome}
         alt="Student illustration"
         width={560}
         height={560}
+        priority
         style={{
           position: "relative",
           zIndex: 10,

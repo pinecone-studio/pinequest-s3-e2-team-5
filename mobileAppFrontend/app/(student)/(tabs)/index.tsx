@@ -1,28 +1,73 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { SvgUri } from "react-native-svg";
+import { BrandHeader } from "@/components/BrandHeader";
 import { EmptyState } from "@/components/EmptyState";
+import type { Exam } from "@/data/types";
 import { useAppData } from "@/data/app-data";
 import {
   buildStudentExamSubjectOrder,
+  formatCountdown,
   formatScheduledDate,
   formatScheduledTime,
   getStudentExamPresentation,
 } from "@/lib/student-exam";
 import { colors, fonts, shadows } from "@/lib/theme";
 
-const learningMsLogo = require("../../../assets/learning-ms-logo.png");
 const simplificationIllustration = Image.resolveAssetSource(require("../../../Simplification.svg"));
+
+type FeedExam = Exam & {
+  isScheduledFeed: boolean;
+};
 
 export default function StudentHomeScreen() {
   const { availableExams, scheduledExams, refreshData } = useAppData();
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [selectedTab, setSelectedTab] = useState<"active" | "scheduled">("active");
+  const [nowMs, setNowMs] = useState(Date.now());
 
-  const visibleExams = selectedTab === "active" ? availableExams : scheduledExams;
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNowMs(Date.now());
+    }, 30_000);
+
+    return () => {
+      clearInterval(timer);
+    };
+  }, []);
+
+  const visibleExams = useMemo<FeedExam[]>(() => {
+    const combined = [
+      ...availableExams.map((exam) => ({
+        ...exam,
+        isScheduledFeed: false,
+      })),
+      ...scheduledExams.map((exam) => ({
+        ...exam,
+        isScheduledFeed: true,
+      })),
+    ];
+
+    return combined.sort((left, right) => {
+      const leftLocked = left.isScheduledFeed || left.isLocked;
+      const rightLocked = right.isScheduledFeed || right.isLocked;
+
+      if (leftLocked !== rightLocked) {
+        return leftLocked ? 1 : -1;
+      }
+
+      const leftStartsAt =
+        left.startsAtMs ??
+        Date.parse(`${left.scheduledDate}T${left.startTime || "00:00"}:00`);
+      const rightStartsAt =
+        right.startsAtMs ??
+        Date.parse(`${right.scheduledDate}T${right.startTime || "00:00"}:00`);
+
+      return leftStartsAt - rightStartsAt;
+    });
+  }, [availableExams, scheduledExams]);
   const subjectOrder = useMemo(() => buildStudentExamSubjectOrder(visibleExams), [visibleExams]);
 
   const handleRefresh = async () => {
@@ -37,31 +82,7 @@ export default function StudentHomeScreen() {
 
   return (
     <SafeAreaView edges={["top", "left", "right"]} style={styles.page}>
-      <View style={styles.header}>
-        <View style={styles.brandMarkWrap}>
-          <Image source={learningMsLogo} style={styles.brandImage} resizeMode="contain" />
-        </View>
-        <View>
-          <Text style={styles.brandTop}>Learning</Text>
-          <Text style={styles.brandBottom}>MS</Text>
-        </View>
-      </View>
-
-      <View style={styles.segmentWrap}>
-        <Pressable style={styles.segmentButton} onPress={() => setSelectedTab("active")}>
-          <Text style={[styles.segmentLabel, selectedTab === "active" ? styles.segmentLabelActive : null]}>
-            Идэвхтэй
-          </Text>
-          <View style={[styles.segmentLine, selectedTab === "active" ? styles.segmentLineActive : null]} />
-        </Pressable>
-
-        <Pressable style={styles.segmentButton} onPress={() => setSelectedTab("scheduled")}>
-          <Text style={[styles.segmentLabel, selectedTab === "scheduled" ? styles.segmentLabelActive : null]}>
-            Товлогдсон
-          </Text>
-          <View style={[styles.segmentLine, selectedTab === "scheduled" ? styles.segmentLineActive : null]} />
-        </Pressable>
-      </View>
+      <BrandHeader />
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -82,11 +103,7 @@ export default function StudentHomeScreen() {
                 height={232}
               />
             }
-            title={
-              selectedTab === "active"
-                ? "Одоогоор идэвхтэй шалгалт алга."
-                : "Одоогоор товлогдсон шалгалт алга."
-            }
+            title="Одоогоор харагдах шалгалт алга."
           />
         ) : (
           <View style={styles.cards}>
@@ -95,8 +112,11 @@ export default function StudentHomeScreen() {
                 key={exam.id}
                 exam={exam}
                 subjectOrder={subjectOrder}
+                nowMs={nowMs}
                 onPress={() => {
-                  if (selectedTab === "active") {
+                  const isLocked = exam.isScheduledFeed || exam.isLocked;
+
+                  if (!isLocked) {
                     router.push(`/(student)/exam/${exam.id}`);
                   }
                 }}
@@ -114,96 +134,57 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingHorizontal: 24,
-    paddingBottom: 18,
-    paddingTop: 10,
-    backgroundColor: "#FFFFFF",
-  },
-  brandMarkWrap: {
-    height: 32,
-    width: 43,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  brandImage: {
-    width: 43,
-    height: 32,
-  },
-  brandTop: {
-    fontFamily: fonts.display.medium,
-    fontSize: 19,
-    color: colors.textPrimary,
-  },
-  brandBottom: {
-    marginTop: -2,
-    fontFamily: fonts.display.medium,
-    fontSize: 19,
-    color: colors.textPrimary,
-  },
-  segmentWrap: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    backgroundColor: "#FFFFFF",
-  },
-  segmentButton: {
-    flex: 1,
-    alignItems: "center",
-  },
-  segmentLabel: {
-    paddingVertical: 14,
-    fontFamily: fonts.display.medium,
-    fontSize: 18,
-    color: colors.textPrimary,
-  },
-  segmentLabelActive: {
-    color: colors.primary,
-  },
-  segmentLine: {
-    height: 2,
-    width: "100%",
-    backgroundColor: "transparent",
-  },
-  segmentLineActive: {
-    backgroundColor: colors.primary,
-  },
   content: {
     flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingTop: 18,
+    paddingHorizontal: 24,
+    paddingTop: 20,
     paddingBottom: 136,
   },
   cards: {
     gap: 18,
   },
   card: {
-    alignSelf: "center",
-    width: 350,
-    height: 263,
+    position: "relative",
+    width: "100%",
+    minHeight: 264,
     justifyContent: "space-between",
-    borderRadius: 34,
+    borderRadius: 32,
     borderWidth: 1,
-    borderColor: "#CEC8FF",
     paddingHorizontal: 22,
-    paddingVertical: 20,
+    paddingVertical: 22,
     ...shadows.card,
   },
   cardPressed: {
     opacity: 0.95,
   },
-  cardIcon: {
-    height: 43,
-    width: 43,
+  cardLocked: {
+    opacity: 0.62,
+  },
+  cardTimeBadge: {
+    position: "absolute",
+    top: 20,
+    right: 18,
+    minWidth: 92,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 12,
+    borderRadius: 999,
+    borderWidth: 2,
+    borderColor: "rgba(18, 18, 18, 0.14)",
+    backgroundColor: "#FFFFFF",
+  },
+  cardTimeBadgeText: {
+    fontFamily: fonts.display.medium,
+    fontSize: 18,
+    color: colors.textPrimary,
+  },
+  cardIcon: {
+    height: 62,
+    width: 62,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 18,
   },
   cardTop: {
     alignItems: "flex-start",
@@ -213,27 +194,27 @@ const styles = StyleSheet.create({
   },
   cardTitleRow: {
     marginTop: 18,
-    width: "100%",
+    width: "82%",
   },
   cardTitleText: {
     fontFamily: fonts.display.semibold,
-    fontSize: 22,
+    fontSize: 24,
     color: colors.textPrimary,
   },
   cardSubject: {
     fontFamily: fonts.display.semibold,
-    fontSize: 20,
+    fontSize: 24,
     color: colors.textPrimary,
   },
   cardTopic: {
     fontFamily: fonts.sans.regular,
-    fontSize: 18,
+    fontSize: 22,
     color: colors.textMuted,
   },
   cardGrade: {
     marginTop: 14,
     fontFamily: fonts.sans.medium,
-    fontSize: 16,
+    fontSize: 18,
     color: colors.textPrimary,
   },
   cardChipRow: {
@@ -248,24 +229,36 @@ const styles = StyleSheet.create({
     gap: 8,
     borderRadius: 999,
     backgroundColor: "#FFFFFF",
+    paddingHorizontal: 12,
     justifyContent: "center",
   },
   cardChipDuration: {
-    width: 85,
-    height: 28,
+    minWidth: 92,
+    height: 30,
   },
   cardChipQuestions: {
-    width: 101,
-    height: 28,
+    minWidth: 110,
+    height: 30,
   },
   cardChipText: {
     fontFamily: fonts.sans.medium,
     fontSize: 12,
     color: colors.textPrimary,
   },
+  lockWrap: {
+    alignSelf: "center",
+    marginTop: 18,
+    marginBottom: 8,
+    height: 64,
+    width: 64,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.22)",
+  },
   cardTime: {
     fontFamily: fonts.sans.medium,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.textPrimary,
   },
   cardTimeAccent: {
@@ -275,47 +268,46 @@ const styles = StyleSheet.create({
   cardDate: {
     marginTop: 6,
     fontFamily: fonts.sans.regular,
-    fontSize: 13,
-    color: colors.textMuted,
-  },
-  emptyDescriptionTight: {
-    fontFamily: fonts.sans.medium,
     fontSize: 14,
+    color: colors.textMuted,
   },
 });
 
 function HomeExamCard({
   exam,
   subjectOrder,
+  nowMs,
   onPress,
 }: {
-  exam: {
-    id: string;
-    title: string;
-    subject: string;
-    grade: string;
-    duration: number;
-    questionCount: number;
-    scheduledDate: string;
-    startTime: string;
-  };
+  exam: FeedExam;
   subjectOrder: string[];
+  nowMs: number;
   onPress: () => void;
 }) {
   const presentation = getStudentExamPresentation(exam.subject, subjectOrder);
+  const isLocked = exam.isScheduledFeed || exam.isLocked;
+  const countdownLabel = getStartsInLabel(exam.startsAtMs, nowMs);
 
   return (
     <Pressable
+      disabled={isLocked}
       style={({ pressed }) => [
         styles.card,
         {
           backgroundColor: presentation.background,
           borderColor: presentation.borderColor,
         },
+        isLocked ? styles.cardLocked : null,
         pressed ? styles.cardPressed : null,
       ]}
       onPress={onPress}
     >
+      {isLocked && countdownLabel ? (
+        <View style={styles.cardTimeBadge}>
+          <Text style={styles.cardTimeBadgeText}>{countdownLabel}</Text>
+        </View>
+      ) : null}
+
       <View style={styles.cardTop}>
         <View style={[styles.cardIcon, { backgroundColor: presentation.iconBackground }]}>
           <MaterialCommunityIcons name={presentation.iconName} size={22} color={colors.textPrimary} />
@@ -341,13 +333,37 @@ function HomeExamCard({
             <Text style={styles.cardChipText}>{exam.questionCount} дасгал</Text>
           </View>
         </View>
+
+        {isLocked ? (
+          <View style={styles.lockWrap}>
+            <MaterialCommunityIcons name="lock-outline" size={40} color={colors.textPrimary} />
+          </View>
+        ) : null}
       </View>
       <View style={styles.cardBottom}>
         <Text style={styles.cardTime}>
-          Эхэлсэн цаг - <Text style={styles.cardTimeAccent}>/{formatScheduledTime(exam.startTime)}/</Text>
+          {isLocked ? "Эхлэх цаг" : "Эхэлсэн цаг"} -{" "}
+          <Text style={styles.cardTimeAccent}>/{formatScheduledTime(exam.startTime)}/</Text>
         </Text>
         <Text style={styles.cardDate}>{formatScheduledDate(exam.scheduledDate)}</Text>
       </View>
     </Pressable>
   );
+}
+
+function getStartsInLabel(startsAtMs: number | null | undefined, nowMs: number) {
+  if (!startsAtMs || startsAtMs <= nowMs) {
+    return null;
+  }
+
+  const totalSeconds = Math.max(0, Math.floor((startsAtMs - nowMs) / 1000));
+
+  if (totalSeconds >= 60 * 60) {
+    const totalMinutes = Math.ceil(totalSeconds / 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+  }
+
+  return formatCountdown(totalSeconds);
 }

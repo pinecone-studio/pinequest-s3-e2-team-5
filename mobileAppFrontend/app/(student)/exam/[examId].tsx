@@ -3,7 +3,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { BrandHeader } from "@/components/BrandHeader";
 import { StatusCard } from "@/components/StatusCard";
 import { useAppData } from "@/data/app-data";
 import {
@@ -27,8 +27,6 @@ import {
   getStudentExamPresentation,
 } from "@/lib/student-exam";
 import { colors, fonts, shadows } from "@/lib/theme";
-
-const learningMsLogo = require("../../../assets/learning-ms-logo.png");
 
 export default function ExamDetailScreen() {
   const params = useLocalSearchParams<{ examId: string }>();
@@ -181,15 +179,7 @@ export default function ExamDetailScreen() {
 
   return (
     <SafeAreaView edges={["top", "left", "right"]} style={styles.page}>
-      <View style={styles.header}>
-        <View style={styles.brandMarkWrap}>
-          <Image source={learningMsLogo} style={styles.brandImage} resizeMode="contain" />
-        </View>
-        <View>
-          <Text style={styles.brandTop}>Learning</Text>
-          <Text style={styles.brandBottom}>MS</Text>
-        </View>
-      </View>
+      <BrandHeader />
 
       <ScrollView contentContainerStyle={styles.content}>
         {reminderMessage ? (
@@ -343,38 +333,6 @@ const styles = StyleSheet.create({
   page: {
     flex: 1,
     backgroundColor: "#FFFFFF",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingHorizontal: 24,
-    paddingBottom: 18,
-    paddingTop: 10,
-    backgroundColor: "#FFFFFF",
-  },
-  brandMarkWrap: {
-    height: 32,
-    width: 43,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  brandImage: {
-    width: 43,
-    height: 32,
-  },
-  brandTop: {
-    fontFamily: fonts.display.medium,
-    fontSize: 19,
-    color: colors.textPrimary,
-  },
-  brandBottom: {
-    marginTop: -2,
-    fontFamily: fonts.display.medium,
-    fontSize: 19,
-    color: colors.textPrimary,
   },
   content: {
     paddingHorizontal: 20,

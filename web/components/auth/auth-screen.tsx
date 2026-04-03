@@ -14,6 +14,7 @@ import {
 } from "react";
 import { Button } from "@/components/ui/button";
 import { getRoleHomePath, isUserRole, type UserRole } from "@/lib/auth-role";
+import studentHome from "/public/studentHome.png";
 import teacherHome from "/public/teacherHome.png";
 
 
@@ -259,10 +260,11 @@ export default function StudentIllustration() {
 
       {/* Image */}
       <Image
-        src="/studentHome.png"
+        src={studentHome}
         alt="Student illustration"
         width={413}
         height={428}
+        priority
         className="
           relative
           z-10
@@ -304,6 +306,7 @@ export function TeacherIllustration() {
         alt="Student illustration"
         width={413}
         height={428}
+        priority
         className="
               relative
               z-10

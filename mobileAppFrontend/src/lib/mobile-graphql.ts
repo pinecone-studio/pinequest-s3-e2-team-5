@@ -44,6 +44,9 @@ type RemoteAvailableExams = {
     startTime: string | null;
     duration: number;
     questionCount: number;
+    isLocked: boolean;
+    minutesUntilStart: number;
+    startsAtMs: number | null;
   }[];
 };
 
@@ -101,6 +104,9 @@ type RemoteScheduledExams = {
     startTime: string | null;
     duration: number;
     questionCount: number;
+    isLocked: boolean;
+    minutesUntilStart: number;
+    startsAtMs: number | null;
   }[];
 };
 
@@ -176,6 +182,9 @@ const GET_AVAILABLE_EXAMS = `
       startTime
       duration
       questionCount
+      isLocked
+      minutesUntilStart
+      startsAtMs
     }
   }
 `;
@@ -239,6 +248,9 @@ const GET_SCHEDULED_EXAMS = `
       startTime
       duration
       questionCount
+      isLocked
+      minutesUntilStart
+      startsAtMs
     }
   }
 `;
@@ -302,7 +314,7 @@ const CHANGE_STUDENT_CLASSROOM = `
   }
 `;
 
-const NETWORK_TIMEOUT_MS = 8_000;
+const NETWORK_TIMEOUT_MS = 90_000;
 
 function readEnv(name: string) {
   return process.env[name]?.trim() ?? "";
@@ -419,6 +431,9 @@ function mapAvailableExamSummary(
     scheduledDate: payload.scheduledDate ?? "",
     startTime: payload.startTime ?? "",
     questionCount: payload.questionCount,
+    isLocked: payload.isLocked,
+    minutesUntilStart: payload.minutesUntilStart,
+    startsAtMs: payload.startsAtMs,
     questions: [],
   };
 }

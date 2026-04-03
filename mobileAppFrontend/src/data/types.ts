@@ -23,6 +23,9 @@ export type Exam = {
   scheduledDate: string;
   startTime: string;
   questionCount: number;
+  isLocked?: boolean;
+  minutesUntilStart?: number;
+  startsAtMs?: number | null;
   questions: Question[];
 };
 
