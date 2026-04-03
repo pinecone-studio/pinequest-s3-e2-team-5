@@ -45,6 +45,17 @@ const initialFormValues: FormValues = {
   confirmPassword: "",
 };
 
+const demoCredentials = {
+  student: {
+    email: "breexy20@gmail.com",
+    password: "teamPassword!",
+  },
+  teacher: {
+    email: "batzorig.chinbat19@gmail.com",
+    password: "teamPassword!",
+  },
+} as const;
+
 const inputClassName =
   "h-12 w-full rounded-[14px] border border-[#EAE6F5] bg-white px-4 text-[15px] text-[#1F1B2D] shadow-none outline-none transition-colors placeholder:text-[#B7B0C8] focus:border-[#A592FF] focus:ring-4 focus:ring-[#A592FF]/10";
 
@@ -225,7 +236,7 @@ function PasswordField({
 export default function StudentIllustration() {
   return (
     <div className="relative w-[413px] h-[428px] mx-auto">
-      
+
       {/* Blur Ellipse (Figma background) */}
       <div
         className="
@@ -266,10 +277,10 @@ export default function StudentIllustration() {
 export function TeacherIllustration() {
   return (
     <div className="relative w-[413px] h-[428px] mx-auto">
-          
-          {/* Blur Ellipse (Figma background) */}
-          <div
-            className="
+
+      {/* Blur Ellipse (Figma background) */}
+      <div
+        className="
               absolute
               w-[642px]
               h-[600px]
@@ -281,27 +292,27 @@ export function TeacherIllustration() {
               opacity-400
               blur-[40px]
             "
-            style={{
-              background:
-                "linear-gradient(180deg, #E9D0F7 10%, #B8CBF7 100%)",
-            }}
-          />
-    
-          {/* Image */}
-          <Image
-            src={teacherHome}
-            alt="Student illustration"
-            width={413}
-            height={428}
-            className="
+        style={{
+          background:
+            "linear-gradient(180deg, #E9D0F7 10%, #B8CBF7 100%)",
+        }}
+      />
+
+      {/* Image */}
+      <Image
+        src={teacherHome}
+        alt="Student illustration"
+        width={413}
+        height={428}
+        className="
               relative
               z-10
               w-full
               h-full
               object-contain
             "
-          />
-        </div>
+      />
+    </div>
   );
 }
 
@@ -363,6 +374,21 @@ export function AuthScreen({ mode }: AuthScreenProps) {
     if (feedback) {
       setFeedback(null);
     }
+  };
+
+  const autofillDemoCredentials = (
+    role: keyof typeof demoCredentials,
+  ) => {
+    const credentials = demoCredentials[role];
+
+    setFormValues((previous) => ({
+      ...previous,
+      email: credentials.email,
+      password: credentials.password,
+    }));
+    setPendingSignInVerification(false);
+    setCode("");
+    setFeedback(null);
   };
 
   const handleSignUp = async (event: FormEvent<HTMLFormElement>) => {
@@ -653,9 +679,25 @@ export function AuthScreen({ mode }: AuthScreenProps) {
             <p className="text-[13px] font-semibold tracking-[0.24em] text-[#A29AB9] uppercase">
               {isSignUpMode ? "Create Account" : "Account Login"}
             </p>
-            <h1 className="text-[40px] leading-tight font-semibold tracking-tight text-[#201A2F]">
-              {isSignUpMode ? "Бүртгэл үүсгэх" : "Нэвтрэх"}
-            </h1>
+            <div className="flex items-center w-full justify-between">
+              <h1 className="text-[40px] leading-tight font-semibold tracking-tight text-[#201A2F]">
+                {isSignUpMode ? "Бүртгэл үүсгэх" : "Нэвтрэх"}
+              </h1>
+              <div className="flex flex-col">
+                <Button
+                  type="button"
+                  onClick={() => autofillDemoCredentials("student")}
+                >
+                  Demo as student
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => autofillDemoCredentials("teacher")}
+                >
+                  Demo as teacher
+                </Button>
+              </div>
+            </div>
           </div>
 
           {feedback ? (

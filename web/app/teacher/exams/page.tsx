@@ -137,6 +137,13 @@ const gradeOptions = Array.from({ length: 12 }, (_, index) =>
 );
 const durationOptions = [30, 45, 60, 90, 120] as const;
 
+const examCreateDemoValues = {
+  subject: "math",
+  title: "Математик Тест-1",
+  grade: "5",
+  duration: 30,
+} as const;
+
 const fieldClassName =
   "h-[56px] w-full rounded-[14px] border border-[#E9E0F7] bg-white px-4 text-[16px] text-[#1A1623] outline-none transition placeholder:text-[#8E8A94] focus:border-[#B69AF8] focus:ring-4 focus:ring-[#B69AF8]/15";
 const scheduleDialogFieldClassName =
@@ -336,6 +343,14 @@ export default function TeacherExamsPage() {
     }
   };
 
+  const autofillCreateExamDemo = () => {
+    setSubject(examCreateDemoValues.subject);
+    setTitle(examCreateDemoValues.title);
+    setExamGrade(examCreateDemoValues.grade);
+    setDuration(examCreateDemoValues.duration);
+    setCreateError("");
+  };
+
   const openScheduleDialog = (exam: ExamCard) => {
     setSchedulingExam(exam);
     setScheduleError("");
@@ -415,9 +430,18 @@ export default function TeacherExamsPage() {
               className="max-w-[calc(100%-2rem)] rounded-[20px] border border-[#E8E2F1] bg-white px-6 py-6 shadow-[0_20px_70px_rgba(28,18,54,0.18)] sm:max-w-[580px]"
             >
               <DialogHeader className="gap-0">
-                <DialogTitle className="text-[28px] font-semibold tracking-tight text-[#111111]">
-                  Үндсэн мэдээлэл
-                </DialogTitle>
+                <div className="flex items-start justify-between gap-4">
+                  <DialogTitle className="text-[28px] font-semibold tracking-tight text-[#111111]">
+                    Үндсэн мэдээлэл
+                  </DialogTitle>
+                  <button
+                    type="button"
+                    onClick={autofillCreateExamDemo}
+                    className="inline-flex h-10 items-center justify-center rounded-full border border-[#DCCFFD] bg-[#F8F4FF] px-4 text-[14px] font-semibold text-[#6F5AD8] transition hover:bg-[#F1EAFF]"
+                  >
+                    Demo btn
+                  </button>
+                </div>
               </DialogHeader>
 
               <div className="mt-3 space-y-5">
